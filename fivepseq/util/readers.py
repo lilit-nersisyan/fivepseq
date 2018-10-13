@@ -65,8 +65,8 @@ class BamReader(TopReader):
         """
         Initializes a BamReader with the given file path.
         Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
-        Checks the file type through its extension. Raises Exception for invalid extensions.
 
+        Checks the file type through its extension. Raises Exception for invalid extensions.
         Valid extensions/compressions are:
             .bam    .bam.gz .bam.bz
             .sam
@@ -86,8 +86,8 @@ class FastaReader(TopReader):
         """
         Initializes a FastaReader with the given file path.
         Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
-        Checks the file type through its extension. Raises Exception for invalid extensions.
 
+        Checks the file type through its extension. Raises Exception for invalid extensions.
         Valid extensions/compressions are:
             .fa     .fa.gz      .fa.bz
             .fasta  .fasta.gz   .fasta.bz
@@ -101,7 +101,6 @@ class FastaReader(TopReader):
 def check_file_path(file_path):
     """
     Checks if the file exists. If it does checks if it is not a directory. Raises IOError otherwise.
-    Checks if the extension of the file corresponds to a bam or sam file. Raises a new Exception otherwise.
 
     :return:
     """
@@ -134,9 +133,9 @@ def get_base_file_name(file_path):
 @preconditions(lambda file_path: isinstance(file_path, str))
 def get_file_extension(file_path):
     """
-    Returns file extension without compression.
-    If the file is uncompressed, returns the string followed by the last dot.
-    If the file is compressed, returns the string followed by the last dot coming before ".gz" or ".bz" compressions.
+    Returns file extension excluding compression.
+        - If the file is uncompressed, returns the string followed by the last dot.
+        - If the file is compressed, returns the string followed by the last dot coming before ".gz" or ".bz" compressions.
     :param file_path: the path to the file
     :return: file extension as string
     """
