@@ -63,6 +63,8 @@ class BamReaderTest(unittest.TestCase):
         self.assertEqual(bamreader.file_basename, "S1_11_S11_R1_001.fastqAligned.sortedByCoord.out")
         self.assertEqual(bamreader.compression, readers.COMPRESSION_None)
         self.assertEqual(bamreader.extension, bamreader.EXTENSION_BAM)
+        self.assertTrue("Initialized BamReader" in out.getvalue())
+
 
     def test_check_file_validity_d(self):
         with self.assertRaises(IOError):
@@ -90,6 +92,7 @@ class FastaReaderTest(unittest.TestCase):
         self.assertEqual(fastareader.file_basename, "Bacillus_subtilis.ASM69118v1.dna.toplevel")
         self.assertEqual(fastareader.compression, readers.COMPRESSION_None)
         self.assertEqual(fastareader.extension, fastareader.EXTENSION_FA)
+        self.assertTrue("Initialized FastaReader" in out.getvalue())
 
 
     def test_check_file_validity_d(self):
