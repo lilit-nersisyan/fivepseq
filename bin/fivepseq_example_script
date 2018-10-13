@@ -1,0 +1,4 @@
+#!/usr/bin/env python
+
+import fivepseq
+print "fivepseq example script"

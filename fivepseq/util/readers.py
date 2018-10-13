@@ -2,8 +2,7 @@
 They also retrieve and store the file properties (e.g. compression, extension) for further reference.
 """
 import os
-
-# PORT: this package is for python version 2.7 <>
+# PORT: pathlib2 is for python version 2.7, use pathlib in version 3  <>
 import pathlib2
 from preconditions import preconditions
 
