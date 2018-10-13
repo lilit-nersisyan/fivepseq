@@ -22,13 +22,13 @@ class TopReader:
     def __init__(self, file_path):
         """
         Initializes a TopReader with the given file path.
-        Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
+        Checks validity of the file. Raises IOError if the file does not exist or is a directory.
         Checks the file type through its extension. Raises Exception for invalid extensions.
         Stores file compression and extension as attributes.
         :param file_path
         """
 
-        # check the validity of the file
+        # check if file exists
         try:
             check_file_path(file_path)
         except IOError as e:
@@ -36,7 +36,6 @@ class TopReader:
         except Exception as ex:
             raise Exception("Could not instantiate %s. Reason: %s." % (self.__class__.__name__, ex.message))
 
-        # check for valid file extension (also store the extension/compression as instance attributes)
         # check for valid file extension (also store the extension/compression as instance attributes)
         if get_file_extension(file_path) in self.valid_extensions:
             self.compression = get_file_compression(file_path)
