@@ -105,6 +105,35 @@ class FastaReaderTest(unittest.TestCase):
             FastaReader(self.FASTA_FILE_PATH_INVALID_EXT)
 
 
+
+class AnnotationReaderTest(unittest.TestCase):
+    ANNOT_FILE_PATH_VALID_F = "/proj/sllstore2017018/lilit/5pseq_microbiome/gff/Bacillus_subtilis.ASM69118v1.37.gff3"
+    ANNOT_FILE_PATH_INVALID_EXT = "/proj/sllstore2017018/lilit/5pseq_microbiome/genome/Bacillus_subtilis.ASM69118v1.dna.toplevel.fa"
+    FASTA_FILE_PATH_D = "/proj/sllstore2017018/lilit/5pseq_microbiome/genome"
+    FASTA_FILE_PATH_INVALID_F = "/proj/sllstore2017018/lilit/5pseq_microbiome/genome/Bacillus_subtilis.ASM69118v1.dna.toplevel.fa_invalid"
+
+    def test_check_file_validity_valid_f(self):
+        with console_output() as (out, err):
+            annotationreader = AnnotationReader(self.ANNOT_FILE_PATH_VALID_F)
+        self.assertEqual(annotationreader.file_basename, "Bacillus_subtilis.ASM69118v1.37")
+        self.assertEqual(annotationreader.compression, readers.COMPRESSION_None)
+        self.assertEqual(annotationreader.extension, annotationreader.EXTENSION_GFF3)
+        self.assertTrue("Initialized AnnotationReader" in out.getvalue())
+
+
+    def test_check_file_validity_d(self):
+        with self.assertRaises(IOError):
+            check_file_path(self.FASTA_FILE_PATH_D)
+
+    def test_check_file_validity_invalid_f(self):
+        with self.assertRaises(IOError):
+            check_file_path(self.FASTA_FILE_PATH_INVALID_F)
+
+    def test_check_file_extension(self):
+        with self.assertRaises(Exception):
+            AnnotationReader(self.ANNOT_FILE_PATH_INVALID_EXT)
+
+
 @contextmanager
 def console_output():
     new_out, new_err = StringIO(), StringIO()

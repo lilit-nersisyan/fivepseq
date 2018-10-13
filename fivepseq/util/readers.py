@@ -97,6 +97,28 @@ class FastaReader(TopReader):
         """
         TopReader.__init__(self, file_path)
 
+class AnnotationReader(TopReader):
+    EXTENSION_GTF = "gtf"
+    EXTENSION_GFF = "gff"
+    EXTENSION_GFF3 = "gff3"
+    valid_extensions = [EXTENSION_GTF, EXTENSION_GFF, EXTENSION_GFF3]
+
+    def __init__(self, file_path):
+        """
+        Initializes an AnnotationReader with the given file path.
+        Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
+
+        Checks the file type through its extension. Raises Exception for invalid extensions.
+        Valid extensions/compressions are:
+            .gtf .gtf.gz   .gtf.bz
+            .gff .gff.gz   .gff.bz
+            .gff3 .gff3.gz   .gff3.bz
+
+        Stores file compression and extension as attributes.
+        :param file_path:
+        """
+        TopReader.__init__(self, file_path)
+
 @preconditions(lambda file_path: isinstance(file_path, str))
 def check_file_path(file_path):
     """
