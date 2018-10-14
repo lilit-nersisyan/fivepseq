@@ -8,6 +8,7 @@ def readme():
 
 setup(name='fivepseq',
       version='0.1',
+      entry_points = {'console_scripts': ['fivepseq = fivepseq.__main__:main']},
       description='A package for analysis of 5pseq datasets',
       url='http://github.com/lilit-nersisyan/fivepseq',
       dependency_links=['http://github.com/lilit-nersisyan/fivepseq/tarball/master#egg=package-1.0'],

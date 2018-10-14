@@ -46,14 +46,16 @@ class TopReader:
 
         # set the file as an instance attribute
         self.file = pathlib2.Path(file_path)
-        print "Initialized %s with file path %s" % (self.__class__.__name__, self.__str__())
+        print "Initialized %s with file path %s" % (self.__class__.__name__, file_path)
 
     def __str__(self):
-        print("Reader: %s" % self.__class__.__name__)
-        print ("\tFile: %s" % self.file.as_uri())
-        print ("\tFile basename: %s" % self.file_basename)
-        print ("\tFile extension: %s" % self.extension)
-        print ("\tFile compression: %s" % (self.compression if not self.compression == COMPRESSION_None else "None"))
+        reader_string = ""
+        reader_string += "\tReader: %s\n" % self.__class__.__name__
+        reader_string += "\tFile: %s\n" % self.file.name
+        reader_string += "\tFile basename: %s\n" % self.file_basename
+        reader_string += "\tFile extension: %s\n" % self.extension
+        reader_string += "\tFile compression: %s\n" % ("None" if self.compression == COMPRESSION_None else self.compression )
+        return reader_string
 
 
 class BamReader(TopReader):
