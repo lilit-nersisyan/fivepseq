@@ -8,6 +8,8 @@ The fivepseq entry point.
 import argparse
 import os
 
+import logging
+
 from util.formatting import pad_spaces
 from util.readers import BamReader
 
@@ -20,6 +22,7 @@ class FivepseqArguments:
     bam = None
     genome = None
     annot = None
+    logger = None
 
     def __init__(self):
         """
@@ -50,14 +53,13 @@ class FivepseqArguments:
                             help="the file containing gene names of interest",
                             type=str,
                             required=False)
-        parser.add_argument("-l", "-log",
-                            help="the log file",
-                            type=str,
-                            required=False,
-                            default="fivepseq.log")
+        parser.add_argument("-f", "--force_overwrite",
+                            help="silently overwrite files in the output directory",
+                            action="store_false",
+                            required=False)
         parser.add_argument("-v", "--verbosity",
                             help="increase output verbosity",
-                            action="count",
+                            action="store_false",
                             default=0)
         parser.add_argument("-lv", "--log_verbosity",
                             help="increase log verbosity",
@@ -79,15 +81,23 @@ class FivepseqArguments:
         print "%s%s" % (pad_spaces("\tAlignment file:"), os.path.abspath(self.args.b))
         print "%s%s" % (pad_spaces("\tGenome file:"), os.path.abspath(self.args.g))
         print "%s%s" % (pad_spaces("\tAnnotation file:"), os.path.abspath(self.args.a))
-        if self.args.s != None:
+
+        if self.args.s is not None:
             print "%s%s" % (pad_spaces("\tGene set file:"), os.path.abspath(self.args.s))
         print "%s%s" % (pad_spaces("\tOutput directory:"), os.path.abspath(self.args.o))
 
-        if self.args.verbosity >= 1:
+        if self.args.verbosity:
             print "\n\tverbosity turned on"
-        else:
-            print "%s" % pad_spaces("\tMode:") + "quiet"
 
+    def logger_setup(self):
+        self.logger = logging.getLogger(__name__)
+        if self.args.verbosity:
+            self.logger.setLevel(logging.INFO)
+        else:
+            self.logger.setLevel(logging.DEBUG)
+        logfile = os.path.join(self.args.o, "fivepseq.log")
+        handler = logging.FileHandler(logfile)
+        self.logger.addHandler(handler)
 
 def main():
     fivepseq_arguments = FivepseqArguments()
