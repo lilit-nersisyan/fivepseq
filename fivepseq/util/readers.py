@@ -3,8 +3,16 @@ They also retrieve and store the file properties (e.g. compression, extension) f
 """
 import os
 # PORT: pathlib2 is for python version 2.7, use pathlib in version 3  <>
+import sys
+
 import pathlib2
+import plastid
+import pysam
 from preconditions import preconditions
+
+import fivepseq.config
+from fivepseq.logic.structures.alignment import Alignment
+from fivepseq.logic.structures.annotation import Annotation
 
 COMPRESSION_GZ = ".gz"
 COMPRESSION_BZ = ".bz"
@@ -45,8 +53,8 @@ class TopReader:
             raise Exception("Could not instantiate %s. Wrong extension of file %s" % (self.__class__.__name__, file_path))
 
         # set the file as an instance attribute
-        self.file = pathlib2.Path(file_path)
-        print "Initialized %s with file path %s" % (self.__class__.__name__, file_path)
+        self.file = os.path.abspath(file_path)
+        fivepseq.config.logger.debug("Initialized %s with file path %s" % (self.__class__.__name__, file_path))
 
     def __str__(self):
         reader_string = ""
@@ -59,9 +67,12 @@ class TopReader:
 
 
 class BamReader(TopReader):
+    # TODO should we allow for sam files?
     EXTENSION_BAM = "bam"
     EXTENSION_SAM = "sam"
     valid_extensions = [EXTENSION_BAM, EXTENSION_SAM]
+
+    alignment = None
 
     def __init__(self, file_path):
         """
@@ -77,6 +88,19 @@ class BamReader(TopReader):
         :param file_path:
         """
         TopReader.__init__(self, file_path)
+        self.create_bam_array()
+        # TODO check if index file exists
+
+    def create_bam_array(self):
+        """
+        Reads the alignment file and converts it to plastid-specific array of
+        :return:
+        """
+        # REQ this will work only if the index file is in the same directory as the bam file, and is named in a standard manner : https://pysam.readthedocs.io/en/latest/api.html
+        alignment_file = pysam.AlignmentFile(self.file)
+        self.alignment = Alignment(alignment_file)
+        # TODO the gene set file should be converted to a filter and then used to filter the transcript assembly
+        # TODO (or should it be added to the mapping function?)
 
 
 class FastaReader(TopReader):
@@ -104,6 +128,7 @@ class AnnotationReader(TopReader):
     EXTENSION_GFF = "gff"
     EXTENSION_GFF3 = "gff3"
     valid_extensions = [EXTENSION_GTF, EXTENSION_GFF, EXTENSION_GFF3]
+    annotation = None
 
     def __init__(self, file_path):
         """
@@ -117,9 +142,47 @@ class AnnotationReader(TopReader):
             .gff3 .gff3.gz   .gff3.bz
 
         Stores file compression and extension as attributes.
+
+        Creates a plastid transcript assembly and initiates an Annotation object.
+        Raises Exception  when transcript assembly generation is not successful.
         :param file_path:
         """
+
         TopReader.__init__(self, file_path)
+
+        try:
+            transcript_assembly= self.create_transcript_assembly()
+        except Exception as e:
+            error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (self.file, e.message)
+            fivepseq.config.logger.error(error_message)
+            raise Exception(error_message)
+
+        self.annotation = Annotation(transcript_assembly, file_path)
+
+
+
+    def create_transcript_assembly(self):
+        """
+        Uses the plastid transcript assembly generator to retrieve transcripts from the annotation file.
+        Stores the transcripts in a list, to be accessed repeatedly later.
+        :return:
+        """
+        # TODO dill.dump and load
+        fivepseq.config.logger.debug("Reading in transcript assembly...")
+        if self.extension == self.EXTENSION_GTF:
+            transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)
+        else:
+            transcript_assembly_generator = plastid.GFF3_TranscriptAssembler(self.file, return_type=plastid.Transcript)
+        transcript_assembly = []
+        i = 1
+        progress_bar = ""
+        for transcript in transcript_assembly_generator:
+            if i % 100 == 0:
+                progress_bar += "#"
+                print "\r>>Transcript count: %d\t%s" % (i, progress_bar),
+            transcript_assembly.append(transcript)
+            i += 1
+        return transcript_assembly
 
 @preconditions(lambda file_path: isinstance(file_path, str))
 def check_file_path(file_path):

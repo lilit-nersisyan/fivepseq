@@ -1,10 +1,8 @@
-import sys
 import unittest
 from StringIO import StringIO
 from contextlib import contextmanager
 from fivepseq.util.readers import *
 from fivepseq.util import readers
-
 
 # FIXME currently tests files on the server. Use local test files in the future to support external builds.
 
@@ -18,11 +16,9 @@ class FileCheckTest(unittest.TestCase):
     def test_check_file_validity_valid_f(self):
         check_file_path(ALIGNMENT_FILE_PATH_VALID_F)
 
-
     def test_check_file_validity_d(self):
         with self.assertRaises(IOError):
             check_file_path(ALIGNMENT_FILE_PATH_D)
-
 
     def test_check_file_validity_invalid_f(self):
         with self.assertRaises(IOError):
@@ -44,11 +40,13 @@ class FileCheckTest(unittest.TestCase):
         self.assertEqual(readers.get_file_extension(""), "")
 
     def test_get_base_file_name(self):
-        self.assertEqual(readers.get_base_file_name(ALIGNMENT_FILE_PATH_VALID_F), "S1_11_S11_R1_001.fastqAligned.sortedByCoord.out")
+        self.assertEqual(readers.get_base_file_name(ALIGNMENT_FILE_PATH_VALID_F),
+                         "S1_11_S11_R1_001.fastqAligned.sortedByCoord.out")
 
         with self.assertRaises(IOError):
             readers.get_base_file_name("this.file.does.not.exist")
             readers.get_base_file_name(ALIGNMENT_FILE_PATH_D)
+
 
 class BamReaderTest(unittest.TestCase):
     ALIGNMENT_FILE_PATH_VALID_F = "/proj/sllstore2017018/lilit/5pseq_microbiome/staralign/b_sub_align/S1_11_S11_R1_001.fastqAligned.sortedByCoord.out.bam"
@@ -63,8 +61,10 @@ class BamReaderTest(unittest.TestCase):
         self.assertEqual(bamreader.file_basename, "S1_11_S11_R1_001.fastqAligned.sortedByCoord.out")
         self.assertEqual(bamreader.compression, readers.COMPRESSION_None)
         self.assertEqual(bamreader.extension, bamreader.EXTENSION_BAM)
-        self.assertTrue("Initialized BamReader" in out.getvalue())
-
+        self.assertIsNotNone(bamreader.alignment)
+        self.assertIsNotNone(bamreader.alignment.bam_array)
+        # FIXME cannot get stdout value after logging to streamhandler
+        # self.assertTrue("Initialized BamReader" in out.getvalue())
 
     def test_check_file_validity_d(self):
         with self.assertRaises(IOError):
@@ -73,7 +73,6 @@ class BamReaderTest(unittest.TestCase):
     def test_check_file_validity_invalid_f(self):
         with self.assertRaises(IOError):
             check_file_path(self.ALIGNMENT_FILE_PATH_INVALID_F)
-
 
     def test_check_file_extension(self):
         with self.assertRaises(Exception):
@@ -92,8 +91,8 @@ class FastaReaderTest(unittest.TestCase):
         self.assertEqual(fastareader.file_basename, "Bacillus_subtilis.ASM69118v1.dna.toplevel")
         self.assertEqual(fastareader.compression, readers.COMPRESSION_None)
         self.assertEqual(fastareader.extension, fastareader.EXTENSION_FA)
-        self.assertTrue("Initialized FastaReader" in out.getvalue())
-
+        # FIXME cannot get stdout value after logging to streamhandler
+        # self.assertTrue("Initialized FastaReader" in out.getvalue())
 
     def test_check_file_validity_d(self):
         with self.assertRaises(IOError):
@@ -108,7 +107,6 @@ class FastaReaderTest(unittest.TestCase):
             FastaReader(self.FASTA_FILE_PATH_INVALID_EXT)
 
 
-
 class AnnotationReaderTest(unittest.TestCase):
     ANNOT_FILE_PATH_VALID_F = "/proj/sllstore2017018/lilit/5pseq_microbiome/gff/Bacillus_subtilis.ASM69118v1.37.gff3"
     ANNOT_FILE_PATH_INVALID_EXT = "/proj/sllstore2017018/lilit/5pseq_microbiome/genome/Bacillus_subtilis.ASM69118v1.dna.toplevel.fa"
@@ -117,12 +115,15 @@ class AnnotationReaderTest(unittest.TestCase):
 
     def test_check_file_validity_valid_f(self):
         with console_output() as (out, err):
-            annotationreader = AnnotationReader(self.ANNOT_FILE_PATH_VALID_F)
-        self.assertEqual(annotationreader.file_basename, "Bacillus_subtilis.ASM69118v1.37")
-        self.assertEqual(annotationreader.compression, readers.COMPRESSION_None)
-        self.assertEqual(annotationreader.extension, annotationreader.EXTENSION_GFF3)
-        self.assertTrue("Initialized AnnotationReader" in out.getvalue())
+            annotation_reader = AnnotationReader(self.ANNOT_FILE_PATH_VALID_F)
+        self.assertEqual(annotation_reader.file_basename, "Bacillus_subtilis.ASM69118v1.37")
+        self.assertEqual(annotation_reader.compression, readers.COMPRESSION_None)
+        self.assertEqual(annotation_reader.extension, annotation_reader.EXTENSION_GFF3)
 
+        self.assertIsNotNone(annotation_reader.annotation)
+        self.assertIsNotNone(annotation_reader.annotation.transcript_assembly)
+        # FIXME cannot get stdout value after logging to streamhandler
+        # self.assertTrue("Initialized AnnotationReader" in out.getvalue())
 
     def test_check_file_validity_d(self):
         with self.assertRaises(IOError):

@@ -30,5 +30,5 @@ setup(name='fivepseq',
       packages=['fivepseq'],
       test_suite='nose.collector',
       tests_require=['nose'],
-      install_requires=['pathlib2'],
+      install_requires=['pathlib2', 'preconditions'],
       zip_safe=False)
