@@ -191,8 +191,8 @@ def main():
     bam_reader = BamReader(config.bam)
     annotation_reader = AnnotationReader(config.annot)
     fivepseq_counts =  FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation)
-    fivepseq_counts.get_counts(config.span_size,FivePSeqCounts.TERM)
-    fivepseq_counts.get_counts(config.span_size,FivePSeqCounts.TERM)
+    term_counts = fivepseq_counts.get_counts(config.span_size,FivePSeqCounts.TERM)
+    start_counts = fivepseq_counts.get_counts(config.span_size,FivePSeqCounts.START)
 
 
     # wrap-up

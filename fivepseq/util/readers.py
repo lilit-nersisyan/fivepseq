@@ -3,8 +3,6 @@ They also retrieve and store the file properties (e.g. compression, extension) f
 """
 import os
 # PORT: pathlib2 is for python version 2.7, use pathlib in version 3  <>
-import sys
-
 import pathlib2
 import plastid
 import pysam
@@ -130,7 +128,7 @@ class AnnotationReader(TopReader):
     valid_extensions = [EXTENSION_GTF, EXTENSION_GFF, EXTENSION_GFF3]
     annotation = None
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, break_after = None):
         """
         Initializes an AnnotationReader with the given file path.
         Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
@@ -151,7 +149,7 @@ class AnnotationReader(TopReader):
         TopReader.__init__(self, file_path)
 
         try:
-            transcript_assembly= self.create_transcript_assembly()
+            transcript_assembly= self.create_transcript_assembly(break_after)
         except Exception as e:
             error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (self.file, e.message)
             fivepseq.config.logger.error(error_message)
@@ -161,11 +159,12 @@ class AnnotationReader(TopReader):
 
 
 
-    def create_transcript_assembly(self):
+    def create_transcript_assembly(self, break_after = None):
         """
         Uses the plastid transcript assembly generator to retrieve transcripts from the annotation file.
         Stores the transcripts in a list, to be accessed repeatedly later.
-        :return:
+        :param break_after: int, for testing purposes only: read in a limited amount of transcripts and break
+        :return: list of transcripts read from the annotation file
         """
         # TODO dill.dump and load
         fivepseq.config.logger.debug("Reading in transcript assembly...")
@@ -177,6 +176,9 @@ class AnnotationReader(TopReader):
         i = 1
         progress_bar = ""
         for transcript in transcript_assembly_generator:
+            if not break_after is None:
+                if i == break_after:
+                    break
             if i % 100 == 0:
                 progress_bar += "#"
                 print "\r>>Transcript count: %d\t%s" % (i, progress_bar),

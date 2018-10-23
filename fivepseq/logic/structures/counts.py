@@ -14,8 +14,8 @@ class FivePSeqCounts:
     alignment = None
     annotation = None
 
-    @preconditions(lambda alignment: isinstance(alignment, Alignment),
-                   lambda annotation: isinstance(annotation, Annotation))
+    # @preconditions(lambda alignment: isinstance(alignment, Alignment),
+    #                lambda annotation: isinstance(annotation, Annotation))
     def __init__(self, alignment, annotation):
         """
         Initializes a FivePSeqCounts object with Alignment and Annotation instances.
@@ -42,9 +42,8 @@ class FivePSeqCounts:
         count_vectors = [None] * count
         progress_bar = ""
         i = 1
-        # BUG does not yield anything when run for the second time
         transcript_generator = self.annotation.yield_transcripts(span_size)
-        print(transcript_generator.next)
+
         for transcript in transcript_generator:
             if i % 100 == 0:
                 progress_bar += "#"

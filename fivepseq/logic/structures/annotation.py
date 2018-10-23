@@ -53,8 +53,9 @@ class Annotation:
                             "zero values" % span_size
             fivepseq.config.logger.error(error_message)
             raise ValueError(error_message)
-        ta = self.transcript_assembly
-        for transcript in ta:
+        fivepseq.config.logger.debug("Transcript span size: %d" % span_size)
+
+        for transcript in self.transcript_assembly:
             span = transcript.spanning_segment
 
             new_start = span.start - span_size
@@ -67,7 +68,7 @@ class Annotation:
             end_span = plastid.GenomicSegment(
                 span.chrom, span.end, span.end + span_size, span.strand)
 
-            spanned_transcript = transcript
+            spanned_transcript = transcript.__deepcopy__(None)
             spanned_transcript.add_segments(start_span, end_span)
             yield spanned_transcript
     # TODO in case gene_set filter is provided also filter with it
