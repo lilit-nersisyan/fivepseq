@@ -3,12 +3,14 @@ They also retrieve and store the file properties (e.g. compression, extension) f
 """
 import os
 # PORT: pathlib2 is for python version 2.7, use pathlib in version 3  <>
+import dill
 import pathlib2
 import plastid
 import pysam
+from fivepseq import config
 from preconditions import preconditions
 
-import fivepseq.config
+
 from fivepseq.logic.structures.alignment import Alignment
 from fivepseq.logic.structures.annotation import Annotation
 
@@ -52,7 +54,7 @@ class TopReader:
 
         # set the file as an instance attribute
         self.file = os.path.abspath(file_path)
-        fivepseq.config.logger.debug("Initialized %s with file path %s" % (self.__class__.__name__, file_path))
+        config.logger.debug("Initialized %s with file path %s" % (self.__class__.__name__, file_path))
 
     def __str__(self):
         reader_string = ""
@@ -152,7 +154,7 @@ class AnnotationReader(TopReader):
             transcript_assembly= self.create_transcript_assembly(break_after)
         except Exception as e:
             error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (self.file, e.message)
-            fivepseq.config.logger.error(error_message)
+            config.logger.error(error_message)
             raise Exception(error_message)
 
         self.annotation = Annotation(transcript_assembly, file_path)
@@ -167,7 +169,18 @@ class AnnotationReader(TopReader):
         :return: list of transcripts read from the annotation file
         """
         # TODO dill.dump and load
-        fivepseq.config.logger.debug("Reading in transcript assembly...")
+        pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + ".sav")
+        if os.path.exists(pickle_path):
+            config.logger.debug("Loading transcript assembly from existing pickle path %s" % pickle_path)
+            try:
+                transcript_assembly = dill.load((open(pickle_path, "rb")))
+                config.logger.debug("Successfully loaded transcript assembly")
+                return transcript_assembly
+            except Exception as e:
+                warning_message = "Problem loading transcript assembly from pickle path %s. Reason: %s" % (pickle_path, e.message)
+                config.logger.warning(warning_message)
+
+        config.logger.debug("Reading in transcript assembly...")
         if self.extension == self.EXTENSION_GTF:
             transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)
         else:
@@ -184,6 +197,11 @@ class AnnotationReader(TopReader):
                 print "\r>>Transcript count: %d\t%s" % (i, progress_bar),
             transcript_assembly.append(transcript)
             i += 1
+        config.logger.debug("Transcript assembly read to memory")
+        # TODO dump dill object
+        with open(pickle_path, "wb") as dill_file:
+            dill.dump(transcript_assembly, dill_file)
+        config.logger.debug("Dumped transcript assembly to file %s" % pickle_path)
         return transcript_assembly
 
 @preconditions(lambda file_path: isinstance(file_path, str))

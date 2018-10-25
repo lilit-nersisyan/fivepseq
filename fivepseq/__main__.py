@@ -8,17 +8,18 @@ The fivepseq entry point.
 import argparse
 import numpy
 import os
-
 import logging
 import shutil
 import time
 
 import preconditions
 
-import config
+from fivepseq import config
 from fivepseq.util.formatting import pad_spaces
 from logic.structures.counts import FivePSeqCounts
-from util.readers import BamReader, AnnotationReader
+from fivepseq.util import reporting
+from fivepseq.util.readers import BamReader, AnnotationReader
+from util.reporting import FivepseqOut
 
 
 class FivepseqArguments:
@@ -76,7 +77,10 @@ class FivepseqArguments:
         config.genome = os.path.abspath(config.args.g)
         config.annot = os.path.abspath(config.args.a)
         config.span_size = config.args.span
+
+
         config.out_dir = os.path.abspath(config.args.o)
+
 
     def print_args(self):
         """
@@ -138,6 +142,13 @@ def setup_output_dir():
         error_message = "\tSETUP:\tCould not create output directory %s. Reason: %s" % (output_dir, e.message)
         raise Exception(error_message)
 
+    # FIXME probably the cache directory should reside somewhere in the fivepseq package folder
+    # TODO add checks to make sure the parent directory exists and has write permissions
+    # TODO (maybe should not be a problem when it is within the fivepseq package, or not?)
+    config.cache_dir = os.path.join(os.path.dirname(config.out_dir), "fivepseq_cache")
+    if not os.path.exists(config.cache_dir):
+        os.makedirs(config.cache_dir)
+
 
 def setup_logger():
     """
@@ -174,6 +185,7 @@ def setup_logger():
     print ""
 
 
+
 def main():
     # argument handling
     fivepseq_arguments = FivepseqArguments()
@@ -187,13 +199,18 @@ def main():
     start_time = time.clock()
 
     # body
-    # TODO call the respective function
+    # TODO move to the pipeline module
     bam_reader = BamReader(config.bam)
     annotation_reader = AnnotationReader(config.annot)
     fivepseq_counts =  FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation)
     term_counts = fivepseq_counts.get_counts(config.span_size,FivePSeqCounts.TERM)
     start_counts = fivepseq_counts.get_counts(config.span_size,FivePSeqCounts.START)
+    full_length_counts = fivepseq_counts.get_counts(config.span_size, FivePSeqCounts.FULL_LENGTH)
 
+    fivepseq_out = FivepseqOut(config.out_dir)
+    fivepseq_out.write_counts(term_counts, "count_TERM.txt")
+    fivepseq_out.write_counts(start_counts, "counts_START.txt")
+    fivepseq_out.write_counts(full_length_counts, "counts_FULL_LENGTH.txt")
 
     # wrap-up
     elapsed_time = time.clock() - start_time
