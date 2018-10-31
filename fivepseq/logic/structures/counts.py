@@ -3,6 +3,7 @@ from math import floor
 import plastid
 from preconditions import preconditions
 import numpy as np
+import pandas as pd
 
 from fivepseq import config
 from logic.structures.alignment import Alignment
@@ -16,6 +17,8 @@ class FivePSeqCounts:
 
     alignment = None
     annotation = None
+    genome = None
+    span_size = None
 
     counts_start = None
     counts_term = None
@@ -23,23 +26,28 @@ class FivePSeqCounts:
     meta_counts_start = None
     meta_counts_term = None
 
-    def __init__(self, alignment, annotation):
+    check_stop_codons = True
+
+    @preconditions(lambda span_size: isinstance(span_size, int))
+    def __init__(self, alignment, annotation, genome, span_size):
         """
         Initializes a FivePSeqCounts object with Alignment and Annotation instances.
-        :param alignment: Alignment type object
-        :param annotation: Annotation type object
+        :param alignment: fivepseq.logic.structures.Alignment type object
+        :param annotation: fivepseq.logic.structures.Annotation type object
+        :param genome: fivepseq.logic.structures.Genome: Genome type object
+        :param span_size: int: Specifies how many nucleotides to span around any specified region of transcripts
         """
         self.alignment = alignment
         self.annotation = annotation
+        self.genome = genome
+        self.span_size = span_size
         config.logger.debug("Initiated a FivePSeqCounts object with alignment from file %s and annotation from file %s."
                             % (alignment.alignment_file.filename, annotation.file_path))
 
-    @preconditions(lambda span_size: isinstance(span_size, int),
-                   lambda region: isinstance(region, str))
-    def get_counts(self, span_size, region):
+    @preconditions(lambda region: isinstance(region, str))
+    def get_counts(self, region):
         """
         Returns arrays of read counts within regions spanning the given region, with the specified span_size.
-        :param span_size: int: Specifies how many nucleotides to span around the specified region
         :param region: str: Specifies the region of the transcript to span for count vector generation
         :return: [[int]]: array of counts arrays of 5' mapping counts per position of the specified region of each transcript
         """
@@ -61,25 +69,27 @@ class FivePSeqCounts:
             raise ValueError(error_message)
 
         config.logger.info("Retrieving counts from transcripts (span size :%d, position: %s)...."
-                           % (span_size, region))
+                           % (self.span_size, region))
 
         count = self.annotation.transcript_count
         count_vectors = [None] * count
         progress_bar = ""
         i = 1
-        transcript_generator = self.annotation.yield_transcripts(span_size)
+        transcript_generator = self.annotation.yield_transcripts(self.span_size)
 
         for transcript in transcript_generator:
             if i % 100 == 0:
                 progress_bar += "#"
                 print "\r>>Transcript count: %d (%d%s)\t%s" % (i, floor(100 * (i - 1) / count), '%', progress_bar),
             try:
-                count_vector = self.get_transcript_counts(transcript, span_size, region)
+                count_vector = self.get_transcript_counts(transcript, self.span_size, region)
             except Exception as e:
                 raise e
             count_vectors[i - 1] = count_vector
             i += 1
         config.logger.info("Finished retrieving counts")
+
+        self.set_counts(count_vectors, region)
         return count_vectors
 
     @preconditions(lambda transcript: isinstance(transcript, plastid.genomics.roitools.Transcript),
@@ -119,14 +129,12 @@ class FivePSeqCounts:
 
         return count_vector
 
-    @preconditions(lambda span_size: isinstance(span_size, int),
-                   lambda region: isinstance(region, str))
-    def get_meta_counts(self, span_size, region):
+    @preconditions(lambda region: isinstance(region, str))
+    def get_meta_counts(self, region):
         """
         Computes counts of 5' mapping positions at all the transcripts on the specified region, within the specified span size,
         and returns the position-wise sum of counts as a single [int] array.
 
-        :param span_size: int: the number of bases to span around the specified region
         :param region: str: the region of transcript (start (START) or terminus (TERM)) to span around
         :return: [int] vector of position-wise sum of transcript-specific counts
         """
@@ -149,14 +157,13 @@ class FivePSeqCounts:
             config.logger.error(error_message)
             raise ValueError(error_message)
         try:
-            counts = self.get_counts(span_size, region)
+            counts = self.get_counts(region)
         except Exception as e:
             raise e
-        meta_counts = np.vstack(counts).sum(axis=0)
-        if region == self.START:
-            self.meta_counts_start = meta_counts
-        elif region == self.TERM:
-            self.meta_counts_term = meta_counts
+        meta_counts = np.vstack(counts).sum(axis=0).tolist()
+
+        self.set_meta_counts(meta_counts, region)
+
         return meta_counts
 
     @staticmethod
@@ -170,7 +177,81 @@ class FivePSeqCounts:
         :return: a tuple of frame count arrays (frame0:[int], frame1:[int], frame2:[int])
         """
 
-        frame0_array = counts[range(0, len(counts), 3)]
-        frame1_array = counts[range(1, len(counts), 3)]
-        frame2_array = counts[range(2, len(counts), 3)]
+        frame0_array = counts[0: len(counts): 3]
+        frame1_array = counts[1: len(counts): 3]
+        frame2_array = counts[2: len(counts): 3]
         return frame0_array, frame1_array, frame2_array
+
+    @preconditions(lambda region: isinstance(region, str))
+    def get_meta_counts_df(self, region):
+        #TODOC
+        try:
+            meta_counts = self.get_meta_counts(region)
+        except Exception as e:
+            raise e
+
+        distance_from_last = np.arange(-self.span_size, self.span_size)
+        distance_from_first = distance_from_last + 3
+
+        df = pd.DataFrame({'D1': distance_from_first,
+                           'D2': distance_from_last,
+                           'Count': meta_counts})
+        return df
+
+    @preconditions(lambda count_vectors: isinstance(count_vectors, list),
+                   lambda count_vectors: isinstance(count_vectors[0], list),
+                   lambda count_vectors: isinstance(count_vectors[0][0], int),
+                   lambda region: isinstance(region, str))
+    def set_counts(self, count_vectors, region):
+        """
+        Sets the retrieved counts as a class property for later use. The property is chosen is based on the region supplied.
+        :param count_vectors: [[int]]: the vector of count vectors per transcript
+        :param region: str: the region for which the counts were computed
+        :return: nothing to return
+        """
+        if region == self.START:
+            self.counts_start = count_vectors
+        elif region == self.TERM:
+            self.counts_term = count_vectors
+        elif region == self.FULL_LENGTH:
+            self.counts_full_length = count_vectors
+        else:
+            error_message = "Cannot set counts: wrong region %s supplied: should be either of (%s, %s, %s)" \
+                            % (region, self.START, self.TERM, self.FULL_LENGTH)
+            config.logger.error(error_message)
+            raise ValueError(error_message)
+
+    # @preconditions(lambda meta_counts: isinstance(meta_counts, list),
+    #               lambda meta_counts: isinstance(meta_counts[0], int),
+    #               lambda region: isinstance(region, str))
+    def set_meta_counts(self, meta_counts, region):
+        """
+        Sets the retrieved meta-counts as a class property for later use. The property is chosen is based on the region supplied.
+        :param meta_counts: [int]: the vector of per-position mapped read sums across transcripts
+        :param region: str: the region for which the counts were computed
+        :return: nothing to return
+        """
+        if region == self.START:
+            self.meta_counts_start = meta_counts
+        elif region == self.TERM:
+            self.meta_counts_term = meta_counts
+
+    def get_unique_sequences(self, region, span_before, span_after):
+        sequences = {}
+        i = 0
+        for transcript in self.annotation.yield_transcripts(max(span_before, span_after)):
+            sequence = transcript.get_sequence(self.genome.genome_dict)
+            if region == self.TERM:
+                endpoint = len(transcript.spanning_segment) - max(span_before, span_after)
+                span_sequence = sequence[endpoint - span_before: endpoint + span_after]
+            elif region == self.START:
+                startpoint = max(span_before, span_after)
+                span_sequence = sequence[startpoint - span_before: startpoint + span_after]
+            else:
+                raise Exception
+            if span_sequence in sequences.keys():
+                sequences[span_sequence] += 1
+            else:
+                sequences[span_sequence] = 1
+            i += 1
+        return sequences

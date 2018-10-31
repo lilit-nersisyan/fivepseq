@@ -6,6 +6,8 @@ The fivepseq entry point.
 # argparse was written for argparse in Python 3.
 # A few details are different in 2.x, especially some exception messages, which were improved in 3.x.
 import argparse
+
+import dill
 import numpy
 import os
 import logging
@@ -15,10 +17,10 @@ import time
 import preconditions
 
 from fivepseq import config
+from fivepseq.logic.structures.counts import FivePSeqCounts
+from fivepseq.util.readers import BamReader, AnnotationReader, FastaReader
+from fivepseq.viz import scatterplots
 from fivepseq.util.formatting import pad_spaces
-from logic.structures.counts import FivePSeqCounts
-from fivepseq.util import reporting
-from fivepseq.util.readers import BamReader, AnnotationReader
 from util.reporting import FivepseqOut
 
 
@@ -56,7 +58,7 @@ class FivepseqArguments:
                             help="the number of bases to span around a genomic position",
                             type = int,
                             required=False,
-                            default=20)
+                            default=100)
         parser.add_argument("-s", "-geneset",
                             help="the file containing gene names of interest",
                             type=str,
@@ -70,6 +72,11 @@ class FivepseqArguments:
                             help="set logging level",
                             choices=["INFO", "DEBUG", "info", "debug"],
                             default="INFO",
+                            required=False)
+        parser.add_argument("--ignore-cache",
+                            help="read in transcript assembly and rewrite existing pickle paths",
+                            action="store_true",
+                            default=False,
                             required=False)
 
         config.args = parser.parse_args()
@@ -201,17 +208,24 @@ def main():
     # body
     # TODO move to the pipeline module
     bam_reader = BamReader(config.bam)
-    annotation_reader = AnnotationReader(config.annot)
-    fivepseq_counts =  FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation)
-    term_counts = fivepseq_counts.get_counts(config.span_size,FivePSeqCounts.TERM)
-    start_counts = fivepseq_counts.get_counts(config.span_size,FivePSeqCounts.START)
-    full_length_counts = fivepseq_counts.get_counts(config.span_size, FivePSeqCounts.FULL_LENGTH)
+    annotation_reader = AnnotationReader(config.annot, 20000)
+    fasta_reader = FastaReader(config.genome)
+    fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome, config.span_size)
+
+    #term_counts = fivepseq_counts.get_counts(FivePSeqCounts.TERM)
+    #start_counts = fivepseq_counts.get_counts(FivePSeqCounts.START)
+    #full_length_counts = fivepseq_counts.get_counts(FivePSeqCounts.FULL_LENGTH)
+
 
     fivepseq_out = FivepseqOut(config.out_dir)
-    fivepseq_out.write_counts(term_counts, "count_TERM.txt")
-    fivepseq_out.write_counts(start_counts, "counts_START.txt")
-    fivepseq_out.write_counts(full_length_counts, "counts_FULL_LENGTH.txt")
+    # fivepseq_out.write_counts(term_counts, "count_TERM.txt")
+    # fivepseq_out.write_counts(start_counts, "counts_START.txt")
+    # fivepseq_out.write_counts(full_length_counts, "counts_FULL_LENGTH.txt")
+    fivepseq_out.write_meta_counts(fivepseq_counts.get_meta_counts_df(FivePSeqCounts.TERM), "meta_counts_TERM.txt")
 
+    scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.TERM, os.path.join(config.out_dir, "meta_count_frames.pdf"))
+
+    unique_sequences = fivepseq_counts.get_unique_sequences(FivePSeqCounts.TERM, 3, 0)
     # wrap-up
     elapsed_time = time.clock() - start_time
     config.logger.info("SUCCESS! Fivepseq finished in\t%s\tseconds. The report files maybe accessed at:\t\t%s "

@@ -1,22 +1,41 @@
+import matplotlib
+
 import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.backends.backend_pdf import PdfPages
 
-def plot_frames(counts, pdf_file):
-    plt.title(("Peak at: " + str(metagene[0].argmax() - (global_args.offset))))
-    plt.grid(True, alpha=0.3)
-    plt.step(np.linspace(-global_args.offset, global_args.offset, num=global_args.offset * 2),
-             metagene[0], linewidth=0.5, label=bamname)
-    plt.xticks(np.linspace(-global_args.offset, global_args.offset, num=global_args.offset * 2),
-               labels, size="xx-small")
-    plt.legend()
-    plt.savefig(global_args.output_dir + "coverage_start/%s%s.pdf" % (bamname, norm))
-    plt.close()
+from fivepseq import config
 
-    plt.title(("Peak at: " + str(metagene[1].argmax() - (global_args.offset))))
-    plt.grid(True, alpha=0.3)
-    plt.step(np.linspace(-global_args.offset, global_args.offset, num=global_args.offset * 2),
-             metagene[1], linewidth=0.5, label=bamname)
-    plt.xticks(np.linspace(-global_args.offset, global_args.offset, num=global_args.offset * 2),
-               labels, size="xx-small")
-    plt.legend()
-    plt.savefig(global_args.output_dir + "coverage_term/%s%s.pdf" % (bamname, norm))
-    plt.close()
+
+def plot_frames_term(fivepseqcounts, region, pdf_file):
+    span_size = fivepseqcounts.span_size
+
+    with PdfPages(pdf_file) as pdf:
+        fig = plt.figure()
+        plt.title(("Peak at: " + str(np.argmax(fivepseqcounts.get_meta_counts(region)) - span_size)))
+        plt.plot(fivepseqcounts.get_meta_counts(region))
+        plt.xlabel("Position at %s" % region)
+        plt.close()
+        pdf.savefig(fig)
+
+        fig = plt.figure()
+        plt.title(("Peak at: " + str(np.argmax(fivepseqcounts.get_meta_counts(region)) - span_size)))
+        plt.xlabel("Position at %s" % region)
+        counts = fivepseqcounts.get_meta_counts(region)
+        frames = fivepseqcounts.get_count_frames(counts)
+        plt.plot(np.arange(1, len(counts) + 1), counts, '0.75',
+                 np.arange(1, len(counts) + 1, 3), frames[0], 'ro',
+                 np.arange(2, len(counts) + 1, 3), frames[1], 'go',
+                 np.arange(3, len(counts) + 1, 3), frames[2], 'bo')
+        plt.close()
+        pdf.savefig(fig)
+
+        fig = plt.figure()
+        frames = fivepseqcounts.get_count_frames(fivepseqcounts.get_meta_counts(region))
+
+        plt.plot(frames[0], 'r', frames[1], 'g', frames[2], 'b')
+        plt.xlabel("Frame position at %s" % region)
+        plt.ylabel("Number of 5' mappings")
+
+        plt.close()
+        pdf.savefig(fig)

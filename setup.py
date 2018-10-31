@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def readme():
@@ -8,7 +8,7 @@ def readme():
 
 setup(name='fivepseq',
       version='0.1',
-      entry_points = {'console_scripts': ['fivepseq = fivepseq.__main__:main']},
+      entry_points={'console_scripts': ['fivepseq = fivepseq.__main__:main']},
       description='A package for analysis of 5pseq datasets',
       url='http://github.com/lilit-nersisyan/fivepseq',
       dependency_links=['http://github.com/lilit-nersisyan/fivepseq/tarball/master#egg=package-1.0'],
@@ -27,7 +27,8 @@ setup(name='fivepseq',
           'Topic :: Scientific/Engineering :: Bio-Informatics',
       ],
       license='BSD 3-Clause',
-      packages=['fivepseq'],
+      packages=find_packages(),
+      include_package_data=True,
       test_suite='nose.collector',
       tests_require=['nose'],
       install_requires=['pathlib2', 'preconditions'],

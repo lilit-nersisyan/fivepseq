@@ -48,8 +48,8 @@ class Annotation:
         :return: iterable of type Transcript
         """
 
-        if span_size <= 0:
-            error_message = "Negative or 0 span_size of %d provided: cannot span the transcripts with negative or " \
+        if span_size < 0:
+            error_message = "Negative span_size of %d provided: cannot span the transcripts with negative or " \
                             "zero values" % span_size
             fivepseq.config.logger.error(error_message)
             raise ValueError(error_message)
