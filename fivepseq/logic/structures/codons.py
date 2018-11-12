@@ -1,4 +1,9 @@
-class Codon:
+"""
+This class keeps codon annotations as public variables to be referenced from other functions.
+"""
+
+
+class Codons:
     def __init__(self):
         pass
 

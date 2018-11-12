@@ -2,7 +2,6 @@
 This module stores singleton objects keeping command line arguments, fivepseq options and loggers.
 """
 import logging
-import os
 import sys
 
 args = None

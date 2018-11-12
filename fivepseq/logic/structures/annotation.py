@@ -1,5 +1,5 @@
 """
-This module is meant to keep properties of annotation files and functions associated with those in one place .
+This module keeps properties of annotation files and functions associated with those.
 """
 from preconditions import preconditions
 
@@ -16,11 +16,14 @@ class Annotation:
     @preconditions(lambda file_path: isinstance(file_path, str),
                    lambda transcript_assembly: isinstance(transcript_assembly, list))
     def __init__(self, transcript_assembly, file_path):
+
         """
         Initiates an Annotation instance with transcript_assembly list.
         Raises a ValueError if transcript assembly is None
+
         :param transcript_assembly:
         """
+
         self.file_path = file_path
         if transcript_assembly is None:
             error_message = "transcript_assembly is None. Cannot instantiate an Annotation object."
@@ -43,8 +46,10 @@ class Annotation:
         """
         Adds spanning regions to the start and the end of the transcript and yields the transcripts one-by-one.
         The original transcript assembly is left intact.
+
         :param gene_set_filter: list of genes to filter for
         :param span_size: int span_size - defines the number of nucleotides to span
+
         :return: iterable of type Transcript
         """
 

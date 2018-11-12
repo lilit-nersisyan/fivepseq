@@ -1,9 +1,7 @@
 import unittest
 
 import numpy
-import plastid
 
-from fivepseq.logic.structures.annotation import Annotation
 from fivepseq.util.readers import AnnotationReader
 
 

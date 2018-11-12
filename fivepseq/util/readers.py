@@ -14,7 +14,6 @@ from preconditions import preconditions
 from fivepseq.logic.structures.alignment import Alignment
 from fivepseq.logic.structures.annotation import Annotation
 from fivepseq.logic.structures.genome import Genome
-from fivepseq.logic.structures import codons
 
 COMPRESSION_GZ = ".gz"
 COMPRESSION_BZ = ".bz"
@@ -161,6 +160,8 @@ class AnnotationReader(TopReader):
         TopReader.__init__(self, file_path)
 
         try:
+            #if break_after is not None:
+            #    print "break after: %d" % break_after
             transcript_assembly = self.create_transcript_assembly(break_after)
         except Exception as e:
             error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (
@@ -174,6 +175,7 @@ class AnnotationReader(TopReader):
         """
         Uses the plastid transcript assembly generator to retrieve transcripts from the annotation file.
         Stores the transcripts in a list, to be accessed repeatedly later.
+        :param biotype:
         :param break_after: int, for testing purposes only: read in a limited amount of transcripts and break
         :return: list of transcripts read from the annotation file
         """
@@ -182,7 +184,8 @@ class AnnotationReader(TopReader):
             if break_after is None:
                 pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + ".sav")
             else:
-                pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_break-" + str(break_after) + ".sav")
+                pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_break-" +
+                                           str(break_after) + ".sav")
             if os.path.exists(pickle_path) and not config.args.ignore_cache:
                 config.logger.debug("Loading transcript assembly from existing pickle path %s" % pickle_path)
                 try:
