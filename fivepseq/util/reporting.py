@@ -92,7 +92,7 @@ class FivePSeqOut:
         try:
             with open(os.path.join(self.output_dir, file_name), 'w') as file:
                 # print the transcript attributes to the file
-                file.write('\t'.join(["ID", "gene", "cds_start", "cds_end", "type"]))
+                file.write('\t'.join(["ID", "gene", "cds_start", "cds_end", "type"]) + "\n")
                 for transcript in transcript_assembly:
                     file.write('\t'.join([transcript.attr["ID"],
                                           transcript.attr["gene_id"],

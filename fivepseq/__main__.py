@@ -202,7 +202,7 @@ def main():
     # body
     # TODO move to the pipeline module
     bam_reader = BamReader(config.bam)
-    annotation_reader = AnnotationReader(config.annot, 100)
+    annotation_reader = AnnotationReader(config.annot, 20000)
     fasta_reader = FastaReader(config.genome)
     fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome,
                                      config.span_size)
@@ -224,10 +224,10 @@ def main():
                                       "meta_counts_START.txt")
 
     fivepseq_out.write_df_to_file(
-        CountManager.extract_count_sums_per_frame_per_transcript(start_counts, config.span_size, FivePSeqCounts.START),
+        CountManager.extract_count_sums_per_frame_per_transcript(full_length_counts, config.span_size, FivePSeqCounts.START),
         "frame_counts_START.txt")
     fivepseq_out.write_df_to_file(
-        CountManager.extract_count_sums_per_frame_per_transcript(term_counts, config.span_size, FivePSeqCounts.TERM),
+        CountManager.extract_count_sums_per_frame_per_transcript(full_length_counts, config.span_size, FivePSeqCounts.TERM),
         "frame_counts_TERM.txt")
 
     fivepseq_out.write_transcript_assembly_to_file(annotation_reader.annotation.transcript_assembly,

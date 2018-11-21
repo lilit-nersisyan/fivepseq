@@ -1,3 +1,4 @@
+import os
 from math import floor
 
 import plastid
@@ -200,7 +201,7 @@ class FivePSeqCounts:
             count_vector_list = self.get_count_vector_list(region)
         except Exception as e:
             raise e
-        meta_count_series = CountManager.meta_count_vector_to_series(
+        meta_count_series = CountManager.count_vector_to_series(
             CountManager.compute_meta_counts(count_vector_list), region, tail=self.span_size)
 
         self.set_meta_count_series(meta_count_series, region)
@@ -321,7 +322,8 @@ class CountManager:
                    lambda include_span: isinstance(include_span, bool))
     def extract_frame_count_vectors(count_vector, span_size, region=FivePSeqCounts.START, include_span=False):
         """
-        Takes a vector of position-wise int counts and returns counts for three different frames from 0 to 2,
+        Takes a vector of position-wise int counts across full length transcripts
+        and returns counts for three different frames from 0 to 2,
         relative to either START (default) or TERM regions.
 
         :param count_vector: [int]: a transcript-specific vector of 5P read counts per transcript position
@@ -363,15 +365,15 @@ class CountManager:
         return frame0_array, frame1_array, frame2_array
 
     @staticmethod
-    @preconditions(lambda meta_count_vector: isinstance(meta_count_vector, list),
-                   lambda meta_count_vector: isinstance(meta_count_vector[0], int),
+    @preconditions(lambda count_vector: isinstance(count_vector, list),
+                   lambda count_vector: isinstance(count_vector[0], int),
                    lambda region: isinstance(region, str),
                    lambda tail: isinstance(tail, int),
                    lambda tail: tail >= 0)
-    def meta_count_vector_to_series(meta_count_vector, region, tail=0):
+    def count_vector_to_series(count_vector, region, tail=0):
         """
-        Takes a vector of meta counts, indexes them with distances from the specified region.
-        Returns a series with indexes as genomic coordinates from start/stop codons, and values as meta counts at each coordinates.
+        Takes a vector of counts, indexes them with distances from the specified region.
+        Returns a series with indexes as genomic coordinates from start/stop codons, and values as counts at each coordinates.
 
         For the following REAL coordinates (R), D0, D1 and D2 will be converted to:
 
@@ -393,7 +395,7 @@ class CountManager:
                 T   Tail
                 L   Vector length
 
-        :param meta_count_vector: [int]: a vector of summed position-wise counts for a meta-transcript
+        :param count_vector: [int]: a vector of summed position-wise counts for a (meta)-transcript
         :param region: str: the region respective to which the distance is calculated
         :param tail: int:
 
@@ -403,10 +405,10 @@ class CountManager:
         """
 
         if region == FivePSeqCounts.START:
-            d = np.arange(-tail, len(meta_count_vector) - tail )
+            d = np.arange(-tail, len(count_vector) - tail)
 
         elif region == FivePSeqCounts.TERM:
-            d = np.arange(-(len(meta_count_vector) - tail - 3), tail + 3)
+            d = np.arange(-(len(count_vector) - tail - 3), tail + 3)
 
         else:
             error_message = "Invalid region %s specified: should be either %s or %s" \
@@ -414,9 +416,9 @@ class CountManager:
             config.logger.error(error_message)
             raise Exception(error_message)
 
-        meta_counts_series = pd.Series(data=meta_count_vector, index=d)
+        counts_series = pd.Series(data=count_vector, index=d)
 
-        return meta_counts_series
+        return counts_series
 
     @staticmethod
     @preconditions(lambda region: isinstance(region, str),
@@ -458,3 +460,17 @@ class CountManager:
                 frame_counts_df.iloc[t_ind, f] = sum(frame_counts[f])
 
         return frame_counts_df
+
+    @staticmethod
+    @preconditions(lambda file_path: isinstance(file_path, str))
+    def read_counts_as_list(file_path):
+        if not os.path.exists(file_path):
+            error_message = "Problem reading counts: the file %s does not exist" % file_path
+            config.logger.error(error_message)
+            raise IOError(error_message)
+        config.logger.debug("Reading count file %s" % file_path)
+        df = pd.read_csv(file_path, sep="|")
+        count_vector_list = [[]] * len(df)
+        for i in range(0, len(df)):
+            count_vector_list[i] = map(int, df.iloc[i, 0].split("\t"))
+        return count_vector_list
