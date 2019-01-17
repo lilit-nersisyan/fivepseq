@@ -7,6 +7,7 @@ import pandas as pd
 
 from preconditions import preconditions
 from fivepseq import config
+from fivepseq.logic.structures.codons import Codons
 
 
 class FivePSeqCounts:
@@ -285,10 +286,64 @@ class FivePSeqCounts:
             i += 1
         return sequences
 
+    @preconditions(lambda span_size: isinstance(span_size, int),
+                   lambda span_size: span_size > 0,
+                   lambda dist: isinstance(dist, int),
+                   lambda dist: dist > 0)
+    def get_amino_acid_pauses(self, span_size, dist):
+        """
+        Counts the meta-number of 5' mapping positions at the given distance from the specified codon
+        Only transcripts with cds of length multiple of 3 are accounted for.
+        The only frame in these transcripts is considered.
+
+        :param codon:
+        :param span_before:
+        :param span_after:
+        :return:
+        """
+
+        config.logger.info("Counting amino acid specific pauses within 0 to %d nt distance from the first nucleotide of each codon" % dist)
+        #amino_acid_count_dict = {}
+        amino_acid_count_df = pd.DataFrame(data = 0, index=Codons.AMINO_ACID_TABLE.keys(),
+                                           columns=range(-1*dist, 0))
+        #for aa in Codons.AMINO_ACID_TABLE.keys():
+            #amino_acid_count_dict.update({aa: np.zeros(dist)})
+
+        progress_bar = ""
+        counter = 1
+
+        for transcript in self.annotation.yield_transcripts(span_size):
+            if counter % 100 == 0:
+                progress_bar += "#"
+                config.logger.info("\r>>Transcript count: %d (%d%s)\t%s" % (
+                    counter, floor(100 * (counter - 1) / self.annotation.transcript_count), '%', progress_bar), )
+            counter += 1
+
+            count_vector = self.get_count_vector(transcript, span_size, FivePSeqCounts.FULL_LENGTH)
+            sequence = transcript.get_sequence(self.genome.genome_dict)
+            cds_sequence = sequence[span_size: len(sequence) - span_size]
+            count_vector = count_vector[span_size:len(count_vector)-span_size]
+            if len(cds_sequence) % 3 == 0:
+                for i in range(0, len(cds_sequence), 3):
+                    codon = cds_sequence[i: i + 3]
+
+                    if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
+                        aa = Codons.CODON_TABLE[codon]
+                        if i > dist:
+                            amino_acid_count_df.loc[aa, -1 * dist : 0] += count_vector[i - dist : i ]
+                        else:
+                            amino_acid_count_df.loc[aa, -1*i : 0] += count_vector[0 : i ]
+                        #for d in range(1,dist+1):
+                        #    if (i > d) & (len(cds_sequence) > d):
+                        #        amino_acid_count_df.loc[aa, -1*d] += count_vector[i - d]
+                                #amino_acid_count_dict[aa][dist-d-1] += count_vector[i - d]
+
+        return amino_acid_count_df
+
 
 class CountManager:
     """
-    This module impelements a set of static functions to handle count vectors retrieved from FivePSeqCounts class.
+    This module implements a set of static functions to handle count vectors retrieved from FivePSeqCounts class.
     """
 
     def __init__(self):
@@ -469,7 +524,7 @@ class CountManager:
             config.logger.error(error_message)
             raise IOError(error_message)
         config.logger.debug("Reading count file %s" % file_path)
-        df = pd.read_csv(file_path, sep="|")
+        df = pd.read_csv(file_path, header=None, sep="|")
         count_vector_list = [[]] * len(df)
         for i in range(0, len(df)):
             count_vector_list[i] = map(int, df.iloc[i, 0].split("\t"))

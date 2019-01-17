@@ -220,19 +220,20 @@ class AnnotationReader(TopReader):
                 config.logger.info("\r>>Transcript count: %d\tValid transcripts: %d\t%s" % (i, index, progress_bar),)
             valid_type = False
             transcript_biotype = transcript.attr.get('biotype')
-            if biotype == self.CODING:
-                for type_token in self.CODING_TYPES:
-                    if type_token in transcript_biotype:
-                        valid_type = True
-                        transcript_assembly[index] = transcript
-                        index += 1
-                        break
-                    else:
-                        continue
+            if transcript_biotype is not None:
+                if biotype == self.CODING:
+                    for type_token in self.CODING_TYPES:
+                        if type_token in transcript_biotype:
+                            valid_type = True
+                            transcript_assembly[index] = transcript
+                            index += 1
+                            break
+                        else:
+                            continue
 
-            if transcript_biotype not in unique_biotypes:
-                unique_biotypes.append(transcript_biotype)
-                print transcript_biotype + "\tValid: %s" % valid_type
+                if transcript_biotype not in unique_biotypes:
+                    unique_biotypes.append(transcript_biotype)
+                    print transcript_biotype + "\tValid: %s" % valid_type
 
             i += 1
         if index == 0:
@@ -242,7 +243,7 @@ class AnnotationReader(TopReader):
             raise Exception(error_message)
         if biotypes_file is not None:
             with open(biotypes_file, 'w') as file:
-                file.write( "\n".join(unique_biotypes))
+                file.write("\n".join(unique_biotypes))
 
         config.logger.debug(
             "Read %d transcripts, of which %d were of type %s" % (i, index, biotype))

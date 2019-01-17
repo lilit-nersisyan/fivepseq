@@ -14,10 +14,9 @@ import time
 from fivepseq import config
 from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts
 from fivepseq.util.readers import BamReader, AnnotationReader, FastaReader
-from fivepseq.viz import scatterplots
 from fivepseq.util.formatting import pad_spaces
 from fivepseq.logic.structures.fivepseq_counts import CountManager
-from fivepseq.util.reporting import FivePSeqOut
+from fivepseq.util.writers import FivePSeqOut
 
 
 class FivepseqArguments:
@@ -187,6 +186,60 @@ def setup_logger():
 print ""
 
 
+def generate_and_store_fivepseq_counts():
+    # read files
+    bam_reader = BamReader(config.bam)
+    annotation_reader = AnnotationReader(config.annot) # set the break for human
+    fasta_reader = FastaReader(config.genome)
+
+    # combine objects into FivePSeqCounts object
+    fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome,
+                                     config.span_size)
+
+    # compute and store the counts in files
+    fivepseq_out = FivePSeqOut(config.out_dir)
+
+    #   terminal counts
+    term_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.TERM)
+    fivepseq_out.write_vector_list(term_counts, "counts_TERM.txt")
+    #   start counts
+    start_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.START)
+    fivepseq_out.write_vector_list(start_counts, "counts_START.txt")
+    #   full length counts
+    full_length_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH)
+    fivepseq_out.write_vector_list(full_length_counts, "counts_FULL_LENGTH.txt")
+    #   meta counts
+    fivepseq_out.write_series_to_file(fivepseq_counts.get_meta_count_series(FivePSeqCounts.TERM),
+                                      "meta_counts_TERM.txt")
+    fivepseq_out.write_series_to_file(fivepseq_counts.get_meta_count_series(FivePSeqCounts.START),
+                                      "meta_counts_START.txt")
+    #   frame counts
+    fivepseq_out.write_df_to_file(
+        CountManager.extract_count_sums_per_frame_per_transcript(full_length_counts, config.span_size,
+                                                                 FivePSeqCounts.START),
+        "frame_counts_START.txt")
+    fivepseq_out.write_df_to_file(
+        CountManager.extract_count_sums_per_frame_per_transcript(full_length_counts, config.span_size,
+                                                                 FivePSeqCounts.TERM),
+        "frame_counts_TERM.txt")
+
+    fivepseq_out.write_df_to_file(fivepseq_counts.get_amino_acid_pauses(config.span_size, 20),
+                                  "amino_acid_pauses.txt")
+    #   transcript assembly
+    fivepseq_out.write_transcript_assembly_to_file(annotation_reader.annotation.transcript_assembly,
+                                                   "transcript_assembly.txt")
+    return fivepseq_counts
+
+
+def visualize(fivepseq_counts):
+    #scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.TERM,
+                                  #os.path.join(config.out_dir, "meta_count_frames.pdf"))
+    #scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.START,
+                                  #os.path.join(config.out_dir, "meta_count_frames_start.pdf"))
+
+    pass
+
+
 def main():
     # argument handling
     fivepseq_arguments = FivepseqArguments()
@@ -200,45 +253,11 @@ def main():
     start_time = time.clock()
 
     # body
-    # TODO move to the pipeline module
-    bam_reader = BamReader(config.bam)
-    annotation_reader = AnnotationReader(config.annot, 20000)
-    fasta_reader = FastaReader(config.genome)
-    fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome,
-                                     config.span_size)
+    fivepseq_counts = generate_and_store_fivepseq_counts()
+    visualize(fivepseq_counts)
 
-    fivepseq_out = FivePSeqOut(config.out_dir)
+    # unique_sequences = fivepseq_counts.get_unique_sequences(FivePSeqCounts.TERM, 3, 0)
 
-    term_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.TERM)
-    fivepseq_out.write_vector_list(term_counts, "counts_TERM.txt")
-
-    start_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.START)
-    fivepseq_out.write_vector_list(start_counts, "counts_START.txt")
-
-    full_length_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH)
-    fivepseq_out.write_vector_list(full_length_counts, "counts_FULL_LENGTH.txt")
-
-    fivepseq_out.write_series_to_file(fivepseq_counts.get_meta_count_series(FivePSeqCounts.TERM),
-                                      "meta_counts_TERM.txt")
-    fivepseq_out.write_series_to_file(fivepseq_counts.get_meta_count_series(FivePSeqCounts.START),
-                                      "meta_counts_START.txt")
-
-    fivepseq_out.write_df_to_file(
-        CountManager.extract_count_sums_per_frame_per_transcript(full_length_counts, config.span_size, FivePSeqCounts.START),
-        "frame_counts_START.txt")
-    fivepseq_out.write_df_to_file(
-        CountManager.extract_count_sums_per_frame_per_transcript(full_length_counts, config.span_size, FivePSeqCounts.TERM),
-        "frame_counts_TERM.txt")
-
-    fivepseq_out.write_transcript_assembly_to_file(annotation_reader.annotation.transcript_assembly,
-                                                   "transcript_assembly.txt")
-
-    #scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.TERM,
-                                  #os.path.join(config.out_dir, "meta_count_frames.pdf"))
-    #scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.START,
-                                  #os.path.join(config.out_dir, "meta_count_frames_start.pdf"))
-
-    unique_sequences = fivepseq_counts.get_unique_sequences(FivePSeqCounts.TERM, 3, 0)
     # wrap-up
     elapsed_time = time.clock() - start_time
     config.logger.info("SUCCESS! Fivepseq finished in\t%s\tseconds. The report files maybe accessed at:\t\t%s "
