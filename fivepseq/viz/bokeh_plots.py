@@ -13,7 +13,7 @@ from bokeh.transform import transform
 
 from fivepseq import config
 from fivepseq.logic.structures.fivepseq_counts import CountManager
-from logic.structures import codons
+from fivepseq.logic.structures import codons
 
 
 def bokeh_composite(title, figure_list, filename, ncols=2):
@@ -169,6 +169,88 @@ def triangle_transform(a, b, c):
     return x, y
 
 
+def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict):
+    print("Plotting amino acid pauses: %s" % title_prefix)
+    # output_file(title_prefix + ".html")
+    mainLayout = row(row(), name=title_prefix + ' amino acid pauses')
+
+    print("here")
+    for key in amino_acid_df_dict.keys():
+        print(key)
+        amino_acid_df = amino_acid_df_dict.get(key)
+
+        colormap = cm.get_cmap("viridis")
+        bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
+        mapper = LinearColorMapper(palette=bokehpalette, low=0, high=amino_acid_df.max().max())
+
+        amino_acid_df.index.name = "aa"
+        amino_acid_df.columns.name = "dist"
+        df = amino_acid_df.stack().rename("value").reset_index()
+        source = ColumnDataSource(df)
+
+        p = figure(title=title_prefix + "_" + key,
+                   x_range=FactorRange(factors=list(amino_acid_df.columns)),
+                   y_range=FactorRange(factors=list(amino_acid_df.index)),
+                   x_axis_label="distance from amino acid", y_axis_label="5'seq read counts")
+
+        rect = p.rect(x='dist', y='aa', width=1, height=1,
+                      source=source, fill_color=transform('value', mapper),
+                      line_color=None)
+        hover = HoverTool(tooltips=[('distance', '@dist'), ('count', '@value')], renderers=[rect])
+        p.add_tools(hover)
+
+        mainLayout.children[0].children.append(p)
+
+    return mainLayout
+
+
+def bokeh_frame_barplots(title_prefix, frame_df_dict, color_dict, transcript_index=None):
+    print("Plotting frame barplots")
+    mainLayout = row(row(), name=title_prefix + ' frame histograms')
+    if transcript_index is not None:
+        print("%d filtered indices specified " % len(transcript_index))
+
+    counts_dict = {}
+    count_max = 0
+    for key in frame_df_dict.keys():
+        f0 = f1 = f2 = 0
+
+        frame_df = frame_df_dict.get(key)
+
+        if transcript_index is None:
+            transcript_index = range(0, len(frame_df))
+        frame_df = frame_df.iloc[transcript_index, :]
+
+        counter = 0
+        for point in range(0, len(frame_df)):
+            [a, b, c] = frame_df.iloc[point, :][['F0', 'F1', 'F2']]
+            f0 += a
+            f1 += b
+            f2 += c
+            counter = counter + 1
+
+        counts = [f0, f1, f2]
+        if count_max < max(counts):
+            count_max = max(counts)
+        counts_dict.update({key: counts})
+
+    for key in frame_df_dict.keys():
+        color = color_dict.get(key)
+        counts = counts_dict.get(key)
+        frames = ["F1", "F2", "F3"]
+        p = figure(x_range=frames, y_range = (0, count_max),
+                   plot_height=500, title=key + "_" + title_prefix)
+        protection_index = np.log(float(counts[1]/np.mean([counts[0], counts[2]])))
+        p.vbar(x=frames, width=0.8, top=counts, bottom=0,
+                      fill_color=color, line_color=None,
+                      legend="Index: %.3f" % protection_index)
+
+
+        mainLayout.children[0].children.append(p)
+
+    return mainLayout
+
+
 def bokeh_aa_scatter_grid(title_prefix, amino_acid_df_dict):
     print("Plotting amino acid pauses: %s" % title_prefix)
     # output_file(title_prefix + ".html")
@@ -195,7 +277,7 @@ def bokeh_aa_scatter_grid(title_prefix, amino_acid_df_dict):
     return mainLayout
 
 
-def bokeh_heatmap(title, amino_acid_df):
+def bokeh_aa_pause_scatterplot(title, amino_acid_df):
     p = figure(title=title,
                x_axis_label="distance from amino acid", y_axis_label="5'seq read counts")
 
@@ -209,40 +291,3 @@ def bokeh_heatmap(title, amino_acid_df):
 
     p.legend.click_policy = "hide"
     return p
-
-
-def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict):
-    print("Plotting amino acid pauses: %s" % title_prefix)
-    # output_file(title_prefix + ".html")
-    mainLayout = row(row(), name=title_prefix + ' amino acid pauses')
-
-    print("here")
-    for key in amino_acid_df_dict.keys():
-        print(key)
-        amino_acid_df = amino_acid_df_dict.get(key)
-
-        colormap = cm.get_cmap("viridis")
-        bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
-        mapper = LinearColorMapper(palette=bokehpalette, low=0, high=amino_acid_df.max().max())
-
-
-        amino_acid_df.index.name = "aa"
-        amino_acid_df.columns.name = "dist"
-        df = amino_acid_df.stack().rename("value").reset_index()
-        source = ColumnDataSource(df)
-
-        p = figure(title=title_prefix + "_" + key,
-                   x_range=FactorRange(factors=list(amino_acid_df.columns)),
-                   y_range=FactorRange(factors=list(amino_acid_df.index)),
-                   x_axis_label="distance from amino acid", y_axis_label="5'seq read counts")
-
-        rect = p.rect(x='dist', y='aa', width=1, height=1,
-               source=source, fill_color=transform('value', mapper),
-               line_color=None)
-        hover = HoverTool(tooltips=[('distance', '@dist'), ('count', '@value')], renderers=[rect])
-        p.add_tools(hover)
-
-
-        mainLayout.children[0].children.append(p)
-
-    return mainLayout
