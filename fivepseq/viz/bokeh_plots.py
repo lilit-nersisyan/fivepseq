@@ -236,9 +236,11 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict):
                    y_range=FactorRange(factors=list(amino_acid_df.index)),
                    x_axis_label="distance from amino acid", y_axis_label="5'seq read counts")
 
-        p.rect(x='dist', y='aa', width=1, height=1,
+        rect = p.rect(x='dist', y='aa', width=1, height=1,
                source=source, fill_color=transform('value', mapper),
                line_color=None)
+        hover = HoverTool(tooltips=[('distance', '@dist'), ('count', '@value')], renderers=[rect])
+        p.add_tools(hover)
 
 
         mainLayout.children[0].children.append(p)

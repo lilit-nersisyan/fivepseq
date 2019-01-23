@@ -14,7 +14,7 @@ from fivepseq.logic.structures.fivepseq_counts import CountManager
 #########################################
 #          zymo
 #########################################
-group = "vs"
+group = "ts"
 dir_5pseq_group = "/proj/sllstore2017018/lilit/vagaga2/" + group + "/" + group + "_best_fivepseq"
 dir_5pseq_plots = "/proj/sllstore2017018/lilit/vagaga2/" + group + "/" + group + "_best_fivepseq_plots"
 
@@ -22,14 +22,18 @@ if not os.path.exists(dir_5pseq_plots):
     os.mkdir(dir_5pseq_plots)
 
 samples = (
-    "VS_106_S25",
-    "VS_153_S26",
-    "VS_156_S27",
-    "VS_162_S28",
-    "VS_189_S29",
-    "VS_35_S22",
-    "VS_64_S23",
-    "VS_88_S24",
+    "TS-1_CAM-1_S34_R1_001",
+    "TS-1_Ctr-1_S32_R1_001",
+    "TS-1_H2O-1_S35_R1_001",
+    "TS-1_MUP-1_S33_R1_001",
+    "TS-2_CAM-1_S38_R1_001",
+    "TS-2_Ctr-1_S36_R1_001",
+    "TS-2_H2O-1_S39_R1_001",
+    "TS-2_MUP-1_S37_R1_001",
+    "TS-3_CAM-1_S42_R1_001",
+    "TS-3_Ctr-1_S40_R1_001",
+    "TS-3_H2O-1_S43_R1_001",
+    "TS-3_MUP-1_S41_R1_001"
 )
 
 
@@ -92,7 +96,8 @@ def plot_samples_for_organism(org):
 
     colors_dict = dict(
         zip(transcript_count_full_dict.keys(),
-            cl.to_numeric(cl.scales['8']['qual']['Set1'])))
+            cl.to_numeric(cl.scales['8']['qual']['Paired']) +
+            cl.to_numeric(cl.scales['4']['qual']['Set1'])))
 
     p_scatter_term = bokeh_scatter_plot(group + "_" + org + "_term", FivePSeqCounts.TERM, meta_count_term_dict,
                                         colors_dict)
@@ -135,23 +140,21 @@ def plot_samples_for_organism(org):
 
 
 organisms = (
-    "Alteromonas_australica",
+    "Acidisphaera_rubrifaciens_HS-AP3",
+    "Bacillus_cereus",
     "Bacillus_subtilis",
+    "Bacillus_thuringiensis",
+    "Bacillus_velezensis",
+    "Candidatus_Solibacter_usitatus",
+    "Clostridium_botulinum",
+    "Conexibacter_woesei",
     "Escherichia_coli",
-    "Gardnerella_vaginalis",
-    "Lactobacillus_amylophilus",
+    "Gemmata",
+    "Klebsiella_pneumoniae",
     "Lactobacillus_crispatus",
-    "Lactobacillus_jensenii",
-    "Mageeibacillus_indolicus",
-    "Prevotella_denticola",
-    "Prevotella_fusca",
-    "Prevotella_sp_oral_taxon_299",
-    "Ruminococcus_champanellensis",
     "Salmonella_enterica",
-    "Serratia_marcescens",
-    "Ureaplasma_parvum",
-    "Xanthomonas_euvesicatoria",
-
+    "Singulisphaera_acidiphila",
+    "Thermodesulfovibrio_yellowstonii"
 )
 for org in organisms:
     plot_samples_for_organism(org)
