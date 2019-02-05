@@ -13,6 +13,7 @@ class Codons:
     STOP_OCHRE = "TAA"
     STOP_UMBER = "TGA"
     stop_codons = [STOP_AMBER, STOP_OCHRE, STOP_UMBER]
+    START_CODON = "ATG"
 
     AMINO_ACID_TABLE = {
         "ALA": ["GCT", "GCC", "GCA", "GCG"],

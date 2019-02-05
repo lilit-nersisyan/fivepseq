@@ -50,6 +50,9 @@ for i in range(0, len(transcript_assembly)):
         chx_non_empty_ind.append(i)
         unt_non_empty_ind.append(i)
 
+
+top_populated_ind = []
+
 diff_count_dict = {
     "HelaCHX-rep1": HelaCHX_diff,
     "Hela-rep1": HelaUnt_diff
@@ -70,5 +73,5 @@ p = figure(title=title, x_axis_label="frequency", y_axis_label="value")
 line = p.line(list(range(100)), abs(x[range(100)]), line_color="red")
 show(p)
 
-bokeh_transcript_scatter_plot("Hela-rep1_diffs", diff_count_dict, transcript_assembly, diff_color_dict,
+bokeh_transcript_scatter_plot("HelaCHX-rep1_diffs", diff_count_dict, transcript_assembly, diff_color_dict,
                               FivePSeqCounts.TERM, 500, index_filter=chx_non_empty_ind[slice(0, 100)], min_count=50)

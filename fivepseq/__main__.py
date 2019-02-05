@@ -32,6 +32,12 @@ class FivepseqArguments:
         parser = argparse.ArgumentParser(
             description="Reports 5'-footprint properties from 5Pseq reads in a given alignment file")
 
+        # TODO parse arguments for fivepseq count and viz programs separately;
+        # TODO implement main accordingly
+        # parser = argparse.ArgumentParser(prog = "fivepseq")
+        # sp = parser.add_subparsers()
+        # sp_count = sp.add_parser('count', help = 'Computes and stores %(prog) counts')
+        # sp_viz = sp.add_parser('viz', help = 'Visualizes %(prog) outputs')
         parser.add_argument("-b", "-bam",
                             help="the full path to the bam/sam file (may be compressed)",
                             type=str,
@@ -63,6 +69,15 @@ class FivepseqArguments:
                             action="store_true",
                             default=False,
                             required=False)
+        # parser.add_argument("--addFiles",
+        #                    help="only add files if not already generated",
+        #                    action="store_true",
+        #                    default=False,
+        #                    required=False)
+        # arg_group_output = parser.add_mutually_exclusive_group()
+        # arg_group_output.add_argument("--force", action="store_true")
+        # arg_group_output.add_argument("--addFiles", action="store_true")
+
         parser.add_argument("--log",
                             help="set logging level",
                             choices=["INFO", "DEBUG", "info", "debug"],
@@ -73,6 +88,11 @@ class FivepseqArguments:
                             action="store_true",
                             default=False,
                             required=False)
+
+        parser.add_argument("--loci-file",
+                            help="file with loci to count mapping positions relative to",
+                            required=False,
+                            type=str)
 
         config.args = parser.parse_args()
         config.bam = os.path.abspath(config.args.b)
@@ -127,6 +147,9 @@ def setup_output_dir():
             except Exception as e:
                 error_message = "ERROR:\tCould not remove directory %s. Reason:%s" % (output_dir, e.message)
                 raise Exception(error_message)
+        # TODO implement this option in writers
+        # elif config.args.addFiles:
+        #    print ("\nWARNING:\tThe output directory %s already exists.\n\tFiles will be added if not already there." % output_dir)
         else:
             while os.path.exists(output_dir):
                 output_dir += "+"
@@ -189,7 +212,7 @@ print ""
 def generate_and_store_fivepseq_counts():
     # read files
     bam_reader = BamReader(config.bam)
-    annotation_reader = AnnotationReader(config.annot) # set the break for human
+    annotation_reader = AnnotationReader(config.annot)  # set the break for human
     fasta_reader = FastaReader(config.genome)
 
     # combine objects into FivePSeqCounts object
@@ -199,43 +222,58 @@ def generate_and_store_fivepseq_counts():
     # compute and store the counts in files
     fivepseq_out = FivePSeqOut(config.out_dir)
 
+
     #   terminal counts
     term_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.TERM)
-    fivepseq_out.write_vector_list(term_counts, "counts_TERM.txt")
+    fivepseq_out.write_vector_list(term_counts, fivepseq_out.COUNT_TERM_FILE)
     #   start counts
     start_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.START)
-    fivepseq_out.write_vector_list(start_counts, "counts_START.txt")
+    fivepseq_out.write_vector_list(start_counts, fivepseq_out.COUNT_START_FILE)
     #   full length counts
     full_length_counts = fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH)
-    fivepseq_out.write_vector_list(full_length_counts, "counts_FULL_LENGTH.txt")
+    fivepseq_out.write_vector_list(full_length_counts, fivepseq_out.COUNT_FULL_FILE)
+    fivepseq_out.write_dict(fivepseq_counts.start_codon_dict, fivepseq_out.START_CODON_DICT_FILE)
+    fivepseq_out.write_dict(fivepseq_counts.stop_codon_dict, fivepseq_out.TERM_CODON_DICT_FILE)
+    fivepseq_out.write_vector(fivepseq_counts.canonical_transcript_index, fivepseq_out.CANONICAL_TRANSCRIPT_INDEX_FILE)
+    fivepseq_out.write_df_to_file(fivepseq_counts.transcript_descriptors, fivepseq_out.TRANSCRIPT_DESCRIPTORS_FILE)
     #   meta counts
     fivepseq_out.write_series_to_file(fivepseq_counts.get_meta_count_series(FivePSeqCounts.TERM),
-                                      "meta_counts_TERM.txt")
+                                      fivepseq_out.META_COUNT_TERM_FILE)
     fivepseq_out.write_series_to_file(fivepseq_counts.get_meta_count_series(FivePSeqCounts.START),
-                                      "meta_counts_START.txt")
+                                      fivepseq_out.META_COUNT_START_FILE)
     #   frame counts
     fivepseq_out.write_df_to_file(
         CountManager.extract_count_sums_per_frame_per_transcript(full_length_counts, config.span_size,
                                                                  FivePSeqCounts.START),
-        "frame_counts_START.txt")
+        fivepseq_out.FRAME_COUNTS_START_FILE)
     fivepseq_out.write_df_to_file(
         CountManager.extract_count_sums_per_frame_per_transcript(full_length_counts, config.span_size,
                                                                  FivePSeqCounts.TERM),
-        "frame_counts_TERM.txt")
+        fivepseq_out.FRAME_COUNTS_TERM_FILE)
+
 
     fivepseq_out.write_df_to_file(fivepseq_counts.get_amino_acid_pauses(config.span_size, 20),
-                                  "amino_acid_pauses.txt")
+                                  fivepseq_out.AMINO_ACID_PAUSES_FILE)
+
     #   transcript assembly
     fivepseq_out.write_transcript_assembly_to_file(annotation_reader.annotation.transcript_assembly,
-                                                   "transcript_assembly.txt")
+                                                   fivepseq_out.TRANSCRIPT_ASSEMBLY_FILE)
+
+    if config.args.loci_file is not None:
+        fivepseq_out.write_df_to_file(
+            fivepseq_counts.get_pauses_from_loci(config.args.loci_file, config.span_size,
+                                                 20),
+            fivepseq_out.LOCI_PAUSES_FILE)
+
+    # TODO save FivePseqCounts object as pickle
     return fivepseq_counts
 
 
 def visualize(fivepseq_counts):
-    #scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.TERM,
-                                  #os.path.join(config.out_dir, "meta_count_frames.pdf"))
-    #scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.START,
-                                  #os.path.join(config.out_dir, "meta_count_frames_start.pdf"))
+    # scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.TERM,
+    # os.path.join(config.out_dir, "meta_count_frames.pdf"))
+    # scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.START,
+    # os.path.join(config.out_dir, "meta_count_frames_start.pdf"))
 
     pass
 

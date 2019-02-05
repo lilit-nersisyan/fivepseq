@@ -178,28 +178,29 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict):
     for key in amino_acid_df_dict.keys():
         print(key)
         amino_acid_df = amino_acid_df_dict.get(key)
+        if amino_acid_df is not None:
 
-        colormap = cm.get_cmap("viridis")
-        bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
-        mapper = LinearColorMapper(palette=bokehpalette, low=0, high=amino_acid_df.max().max())
+            colormap = cm.get_cmap("viridis")
+            bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
+            mapper = LinearColorMapper(palette=bokehpalette, low=0, high=amino_acid_df.max().max())
 
-        amino_acid_df.index.name = "aa"
-        amino_acid_df.columns.name = "dist"
-        df = amino_acid_df.stack().rename("value").reset_index()
-        source = ColumnDataSource(df)
+            amino_acid_df.index.name = "aa"
+            amino_acid_df.columns.name = "dist"
+            df = amino_acid_df.stack().rename("value").reset_index()
+            source = ColumnDataSource(df)
 
-        p = figure(title=title_prefix + "_" + key,
-                   x_range=FactorRange(factors=list(amino_acid_df.columns)),
-                   y_range=FactorRange(factors=list(amino_acid_df.index)),
-                   x_axis_label="distance from amino acid", y_axis_label="5'seq read counts")
+            p = figure(title=title_prefix + "_" + key,
+                       x_range=FactorRange(factors=list(amino_acid_df.columns)),
+                       y_range=FactorRange(factors=list(amino_acid_df.index)),
+                       x_axis_label="distance from amino acid", y_axis_label="5'seq read counts")
 
-        rect = p.rect(x='dist', y='aa', width=1, height=1,
-                      source=source, fill_color=transform('value', mapper),
-                      line_color=None)
-        hover = HoverTool(tooltips=[('distance', '@dist'), ('count', '@value')], renderers=[rect])
-        p.add_tools(hover)
+            rect = p.rect(x='dist', y='aa', width=1, height=1,
+                          source=source, fill_color=transform('value', mapper),
+                          line_color=None)
+            hover = HoverTool(tooltips=[('distance', '@dist'), ('count', '@value')], renderers=[rect])
+            p.add_tools(hover)
 
-        mainLayout.children[0].children.append(p)
+            mainLayout.children[0].children.append(p)
 
     return mainLayout
 

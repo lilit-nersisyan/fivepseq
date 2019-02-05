@@ -77,3 +77,5 @@ class Annotation:
             spanned_transcript.add_segments(start_span, end_span)
             yield spanned_transcript
     # TODO in case gene_set filter is provided also filter with it
+
+

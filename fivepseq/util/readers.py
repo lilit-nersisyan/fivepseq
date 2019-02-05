@@ -7,6 +7,7 @@ import dill
 import pathlib2
 import plastid
 import pysam
+import pandas as pd
 
 from fivepseq import config
 from preconditions import preconditions
@@ -175,6 +176,7 @@ class AnnotationReader(TopReader):
         """
         Uses the plastid transcript assembly generator to retrieve transcripts from the annotation file.
         Stores the transcripts in a list, to be accessed repeatedly later.
+
         :param biotype:
         :param break_after: int, for testing purposes only: read in a limited amount of transcripts and break
         :return: list of transcripts read from the annotation file
@@ -322,3 +324,5 @@ def get_file_compression(file_path):
         return COMPRESSION_BZ
     else:
         return COMPRESSION_None
+
+

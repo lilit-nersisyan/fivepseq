@@ -27,3 +27,10 @@ annotation_reader = AnnotationReader(annot, 20000)
 fasta_reader = FastaReader(genome)
 fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome,
                                  0)
+
+
+##############
+# given the coordinates of riboseq summits, find the distances from these coordinates.
+# Use the count files generated from the whole genome.
+
+
