@@ -9,7 +9,7 @@ from fivepseq.logic.structures import codons
 from preconditions import preconditions
 from fivepseq import config
 from fivepseq.logic.structures.codons import Codons
-from util.writers import FivePSeqOut
+from fivepseq.util.writers import FivePSeqOut
 
 
 class FivePSeqCounts:
