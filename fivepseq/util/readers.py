@@ -109,8 +109,9 @@ class BamReader(TopReader):
 
 class FastaReader(TopReader):
     EXTENSION_FA = "fa"
+    EXTENSION_FNA = "fna"
     EXTENSION_FASTA = "fasta"
-    valid_extensions = [EXTENSION_FA, EXTENSION_FASTA]
+    valid_extensions = [EXTENSION_FA, EXTENSION_FNA, EXTENSION_FASTA]
     genome = None
 
     def __init__(self, file_path):
@@ -137,7 +138,7 @@ class AnnotationReader(TopReader):
     EXTENSION_GFF3 = "gff3"
     valid_extensions = [EXTENSION_GTF, EXTENSION_GFF, EXTENSION_GFF3]
     annotation = None
-    CODING_TYPES = ["mRNA", "protein"]
+    CODING_TYPES = ["mRNA"]
     CODING = "coding"
 
     def __init__(self, file_path, break_after=None):
@@ -204,13 +205,13 @@ class AnnotationReader(TopReader):
             transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)
         else:
             transcript_assembly_generator = plastid.GFF3_TranscriptAssembler(self.file, return_type=plastid.Transcript)
-        transcript_assembly = [None] * 100000
+        transcript_assembly = [None] * 300000
         index = 0
         i = 1
         progress_bar = ""
         biotypes_file = None
         if config.cache_dir is not None:
-            biotypes_file = os.path.join(config.cache_dir, os.path.basename(self.file) + "_unique-biotypes.txt")
+            biotypes_file = os.path.join(config.cache_dir, os.path.basename(self.file) + "_unique-types.txt")
         unique_biotypes = []
         for transcript in transcript_assembly_generator:
             if break_after is not None:
@@ -218,18 +219,18 @@ class AnnotationReader(TopReader):
                     break
 
             if i % 1000 == 0:
-                progress_bar += "#"
                 config.logger.info("\r>>Transcript count: %d\tValid transcripts: %d\t%s" % (i, index, progress_bar),)
             valid_type = False
-            transcript_biotype = transcript.attr.get('biotype')
+            transcript_biotype = transcript.attr.get('type')
             if transcript_biotype is not None:
                 if biotype == self.CODING:
                     for type_token in self.CODING_TYPES:
                         if type_token in transcript_biotype:
-                            valid_type = True
-                            transcript_assembly[index] = transcript
-                            index += 1
-                            break
+                            if transcript.cds_start is not None:
+                                valid_type = True
+                                transcript_assembly[index] = transcript
+                                index += 1
+                                break
                         else:
                             continue
 

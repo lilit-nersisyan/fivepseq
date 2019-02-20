@@ -2,15 +2,15 @@
 Classes and functions in this module will take care of fivepseq output: directory handling, writing of reports, etc.
 """
 import os
-import pandas as pd
-from pandas import DataFrame
+
+from preconditions import preconditions
 
 from fivepseq import config
-from preconditions import preconditions
 
 
 class FivePSeqOut:
     output_dir = None
+    conflict_mode = None
     # file names
     COUNT_TERM_FILE = "counts_TERM.txt"
     COUNT_START_FILE = "counts_START.txt"
@@ -27,7 +27,7 @@ class FivePSeqOut:
     CANONICAL_TRANSCRIPT_INDEX_FILE = "canonical_transcript_index.txt"
     TRANSCRIPT_DESCRIPTORS_FILE = "transcript_descriptors.txt"
 
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, conflict_mode = config.ADD_FILES):
         """
         Initialized a reporter class object with the given directory.
         All further requests to store data will lead to files saved in the output directory defined in self.
@@ -35,6 +35,51 @@ class FivePSeqOut:
         :param output_dir: str: the path to the fivepseq output directory
         """
         self.output_dir = output_dir
+        self.conflict_mode = conflict_mode
+
+    def open_file_for_writing(self, file_name):
+        """
+        Prepares the given file for writing in self output directory.
+        If the specified file already exists, the conflict is handled according to self conflict handling mode.
+        If the conflict handling mode equals:
+            -config.ADD_FILES: the file is not written as it already exists.
+            -config.OVERWRITE: The existing file is removed. If not possible an Error is raised.
+            -config.ALT_DIR: Such cases should not occur, as this a brand new directory. If they occur, an Error should be raised.
+
+        :param file_name: str: the name of the file to be stored in the output directory.
+        :return: the file object opened for writing
+        """
+
+        path = os.path.join(self.output_dir, file_name)
+
+        if os.path.exists(path):
+
+            if self.conflict_mode == config.ADD_FILES:
+                config.logger.info("Skipping existing file %s." % path)
+                return None
+
+            elif self.conflict_mode == config.ALT_DIR:
+                raise Exception("The file %s already exists in the output directory %s.\n "
+                                "Under the %s conflict handling mode this should be a brand new empty directory.\n"
+                                "If you are here then you're writing to the same file twice"
+                                % (file_name, self.output_dir, self.conflict_mode))
+            else:
+                try:
+                    os.remove(path)
+                    config.logger.debug("Removed existing file %s for overwriting" % path)
+                except Exception as e:
+                    config.logger.error("Could not remove existing file %s for overwriting. "
+                                        "Reason: %s" % (path, str(e)))
+
+        try:
+            f = open(path, "w")
+        except Exception as e:
+            error_message = "Problem opening the file %s for writing. Reason: %s" \
+                            % (file_name, e.message)
+            config.logger.error(error_message)
+            raise Exception(error_message)
+
+        return f
 
     @preconditions(lambda vector_list: isinstance(vector_list, list),
                    lambda file_name: isinstance(file_name, str))
@@ -48,19 +93,13 @@ class FivePSeqOut:
 
         :return: nothing to return
         """
-        try:
-            f = open(os.path.join(self.output_dir, file_name), "w")
-        except Exception as e:
-            error_message = "Problem opening the file %s for writing. Reason: %s" \
-                            % (file_name, e.message)
-            config.logger.error(error_message)
-            raise Exception(error_message)
-        config.logger.info("Storing vector list to file %s..." % f)
-        for counts in vector_list:
-            f.write('\t'.join(map(str, counts)) + '\n')
-        f.close()
-        config.logger.info("File %s saved" % f)
-
+        f = self.open_file_for_writing(file_name)
+        if f is not None:
+            config.logger.info("Storing vector list to file %s..." % f)
+            for counts in vector_list:
+                f.write('\t'.join(map(str, counts)) + '\n')
+            f.close()
+            config.logger.info("File %s saved" % f)
 
     @preconditions(lambda vector_dict: isinstance(vector_dict, dict),
                    lambda file_name: isinstance(file_name, str))
@@ -74,20 +113,15 @@ class FivePSeqOut:
 
         :return: nothing to return
         """
-        try:
-            f = open(os.path.join(self.output_dir, file_name), "w")
-        except Exception as e:
-            error_message = "Problem opening the file %s for writing. Reason: %s" \
-                            % (file_name, e.message)
-            config.logger.error(error_message)
-            raise Exception(error_message)
-        config.logger.info("Storing vector list to file %s..." % f)
-        for key  in vector_dict.keys():
-            counts = vector_dict.get(key)
-            f.write(key + "\t")
-            f.write('\t'.join(map(str, counts)) + '\n')
-        f.close()
-        config.logger.info("File %s saved" % f)
+        f = self.open_file_for_writing(file_name)
+        if f is not None:
+            config.logger.info("Storing vector list to file %s..." % f)
+            for key in vector_dict.keys():
+                counts = vector_dict.get(key)
+                f.write(key + "\t")
+                f.write('\t'.join(map(str, counts)) + '\n')
+            f.close()
+            config.logger.info("File %s saved" % f)
 
     @preconditions(lambda my_dict: isinstance(my_dict, dict),
                    lambda file_name: isinstance(file_name, str))
@@ -101,20 +135,15 @@ class FivePSeqOut:
 
         :return: nothing to return
         """
-        try:
-            f = open(os.path.join(self.output_dir, file_name), "w")
-        except Exception as e:
-            error_message = "Problem opening the file %s for writing. Reason: %s" \
-                            % (file_name, e.message)
-            config.logger.error(error_message)
-            raise Exception(error_message)
-        config.logger.info("Storing vector list to file %s..." % f)
-        for key in my_dict.keys():
-            count = my_dict.get(key)
-            f.write(key + "\t")
-            f.write(str(count) + '\n')
-        f.close()
-        config.logger.info("File %s saved" % f)
+        f = self.open_file_for_writing(file_name)
+        if f is not None:
+            config.logger.info("Storing vector list to file %s..." % f)
+            for key in my_dict.keys():
+                count = my_dict.get(key)
+                f.write(key + "\t")
+                f.write(str(count) + '\n')
+            f.close()
+            config.logger.info("File %s saved" % f)
 
     @preconditions(lambda my_vector: isinstance(my_vector, list),
                    lambda file_name: isinstance(file_name, str))
@@ -128,20 +157,15 @@ class FivePSeqOut:
 
         :return: nothing to return
         """
-        try:
-            f = open(os.path.join(self.output_dir, file_name), "w")
-        except Exception as e:
-            error_message = "Problem opening the file %s for writing. Reason: %s" \
-                            % (file_name, e.message)
-            config.logger.error(error_message)
-            raise Exception(error_message)
-        config.logger.info("Storing vector list to file %s..." % f)
-        for i in my_vector:
-            f.write(str(i) + "\n")
-        f.close()
-        config.logger.info("File %s saved" % f)
+        f = self.open_file_for_writing(file_name)
+        if f is not None:
+            config.logger.info("Storing vector list to file %s..." % f)
+            for i in my_vector:
+                f.write(str(i) + "\n")
+            f.close()
+            config.logger.info("File %s saved" % f)
 
-    #@preconditions(lambda df: isinstance(df, pd.core.frame.DataFrame),
+    # @preconditions(lambda df: isinstance(df, pd.core.frame.DataFrame),
     #               lambda file_name: isinstance(file_name, str))
     def write_df_to_file(self, df, file_name):
         """
@@ -153,16 +177,11 @@ class FivePSeqOut:
 
         :return:
         """
-        try:
-            file = os.path.join(self.output_dir, file_name)
-        except Exception as e:
-            error_message = "Problem opening the file %s for writing. Reason: %s" \
-                            % (file_name, e.message)
-            config.logger.error(error_message)
-            raise Exception(error_message)
-        df.to_csv(file, sep="\t", header=True)
+        f = self.open_file_for_writing(file_name)
+        if f is not None:
+            df.to_csv(f, sep="\t", header=True)
 
-        config.logger.info("Dataframe saved to file %s " % file)
+            config.logger.info("Dataframe saved to file %s " % f)
 
     def write_series_to_file(self, data_series, file_name):
         """
@@ -174,33 +193,21 @@ class FivePSeqOut:
 
         :return: nothing to return
         """
-        try:
-            file = os.path.join(self.output_dir, file_name)
-        except Exception as e:
-            error_message = "Problem opening the file %s for writing. Reason: %s" \
-                            % (file_name, e.message)
-            config.logger.error(error_message)
-            raise Exception(error_message)
-        data_series.to_csv(file, sep="\t")
+        f = self.open_file_for_writing(file_name)
+        if f is not None:
+            data_series.to_csv(f, sep="\t")
 
     def write_transcript_assembly_to_file(self, transcript_assembly, file_name):
-
-        try:
-            with open(os.path.join(self.output_dir, file_name), 'w') as file:
-                # print the transcript attributes to the file
-                file.write('\t'.join(["ID", "gene", "chr", "cds_start", "cds_end", "type"]) + "\n")
-                for transcript in transcript_assembly:
-                    file.write('\t'.join([transcript.attr["ID"],
-                                          transcript.attr["gene_id"],
-                                          str(transcript.chrom),
-                                          str(transcript.attr["cds_genome_start"]),
-                                          str(transcript.attr["cds_genome_end"]),
-                                          transcript.attr["type"]]) + '\n')
-        except Exception as e:
-            error_message = "Problem opening the file %s for writing. Reason: %s" \
-                            % (file_name, e.message)
-            config.logger.error(error_message)
-            raise Exception(error_message)
+        f = self.open_file_for_writing(file_name)
+        if f is not None:
+            f.write('\t'.join(["ID", "gene", "chr", "cds_start", "cds_end", "type"]) + "\n")
+            for transcript in transcript_assembly:
+                f.write('\t'.join([transcript.attr["ID"],
+                                      transcript.attr["Name"],
+                                      str(transcript.chrom),
+                                      str(transcript.attr["cds_genome_start"]),
+                                      str(transcript.attr["cds_genome_end"]),
+                                      transcript.attr["type"]]) + '\n')
 
     def get_file_path(self, file_name):
         return os.path.join(self.output_dir, file_name)

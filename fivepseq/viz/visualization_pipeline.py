@@ -2,6 +2,8 @@ import os
 
 import colorlover as cl
 import pandas as pd
+
+import config
 from fivepseq.util.writers import FivePSeqOut
 
 from fivepseq.logic.structures.fivepseq_counts import CountManager
