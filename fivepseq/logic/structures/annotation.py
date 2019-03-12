@@ -1,10 +1,13 @@
 """
 This module keeps properties of annotation files and functions associated with those.
 """
+import logging
+
+import plastid
 from preconditions import preconditions
 
+import config
 import fivepseq.config
-import plastid
 
 
 class Annotation:
@@ -12,6 +15,7 @@ class Annotation:
     transcript_assembly = None
     geneset_filter = None
     transcript_count = None
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     @preconditions(lambda file_path: isinstance(file_path, str),
                    lambda transcript_assembly: isinstance(transcript_assembly, list))
@@ -27,11 +31,11 @@ class Annotation:
         self.file_path = file_path
         if transcript_assembly is None:
             error_message = "transcript_assembly is None. Cannot instantiate an Annotation object."
-            fivepseq.config.logger.error(error_message)
+            self.logger.error(error_message)
             raise ValueError(error_message)
         self.transcript_assembly = transcript_assembly
         self.transcript_count = len(transcript_assembly)
-        fivepseq.config.logger.debug("Annotation object successfully created from file %s" % file_path)
+        self.logger.debug("Annotation object successfully created from file %s" % file_path)
 
     def set_geneset_filter(self, gene_set_file):
         # TODO the gene set file should be converted to a filter and then used to filter the transcript assembly
@@ -56,9 +60,9 @@ class Annotation:
         if span_size < 0:
             error_message = "Negative span_size of %d provided: cannot span the transcripts with negative or " \
                             "zero values" % span_size
-            fivepseq.config.logger.error(error_message)
+            self.logger.error(error_message)
             raise ValueError(error_message)
-        fivepseq.config.logger.debug("Transcript span size: %d" % span_size)
+        self.logger.debug("Transcript span size: %d" % span_size)
 
         for transcript in self.transcript_assembly:
             span = transcript.spanning_segment
@@ -77,5 +81,3 @@ class Annotation:
             spanned_transcript.add_segments(start_span, end_span)
             yield spanned_transcript
     # TODO in case gene_set filter is provided also filter with it
-
-

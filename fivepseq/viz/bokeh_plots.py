@@ -1,41 +1,100 @@
-import numpy as np
-from bokeh.layouts import gridplot, row
-from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearColorMapper, FactorRange
+import logging
 
-from bokeh.plotting import figure
-from bokeh.io import output_file, save
-from bokeh.colors import RGB
-from bokeh.io import show
-from bokeh.palettes import Viridis
-import matplotlib.cm as cm
 import matplotlib as mpl
+import matplotlib.cm as cm
+import numpy as np
+import bokeh
+from bokeh.colors import RGB
+from bokeh.io import output_file, save, export_svgs
+from bokeh.io import show
+from bokeh.layouts import gridplot, row, widgetbox
+from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearColorMapper, FactorRange, TableColumn, \
+    DataTable, PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool
+from bokeh.plotting import figure
 from bokeh.transform import transform
+from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
 
 from fivepseq import config
-from fivepseq.logic.structures.fivepseq_counts import CountManager
 from fivepseq.logic.structures import codons
+from fivepseq.logic.structures.fivepseq_counts import CountManager
 
+tools = [PanTool(), BoxZoomTool(), WheelZoomTool(), SaveTool(), ResetTool()]
 
 def bokeh_composite(title, figure_list, filename, ncols=2):
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making composite plot")
+
     output_file(title + ".html")
+
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Title provided as: %s" % title)
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Number of figures: %d" % len(figure_list))
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Number of columns: %d" % ncols)
 
     p = gridplot(figure_list, ncols=ncols)
+    print filename
     save(p, filename=filename)
+    #p.output_backend = "svg"
+    #export_svgs(p, title + ".svg")
 
+
+def bokeh_table(title, table_df_dict):
+    output_file(title + ".html")
+    mainLayout = row(row(), name=title)
+    for key in table_df_dict.keys():
+        table_df = table_df_dict.get(key)
+        table_dict = {}
+        if table_df is not None:
+            for i in range(table_df.shape[0]):
+                table_dict.update({key + "_" + table_df.index[i]: list(table_df.iloc[i,:])})
+
+            data_table = DataTable(source = ColumnDataSource(table_dict))
+            p = figure(title = title + "_" + key, height = 500)
+
+            mainLayout.children[0].children.append(widgetbox(data_table))
+        else:
+            mainLayout.children[0].children.append(None)
+
+    return mainLayout
 
 def bokeh_scatter_plot(title, region, count_series_dict, color_dict):
-    print "Scatter plot: " + region
-    output_file(title + ".html")
+    if count_series_dict is None:
+        return None
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot: " + region)
+    output_file(title + ".png")
 
     p = figure(title=title,
                x_axis_label="position from %s" % region, y_axis_label="5'seq read counts")
 
     for key in count_series_dict.keys():
         count_series = count_series_dict.get(key)
+        if count_series is None:
+            return None
         c = color_dict.get(key)
-        line = p.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]))
-        print line
+        line = p.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+
         hover = HoverTool(tooltips=[('position', '@x'), ('count', '@y')], renderers=[line])
+        p.add_tools(hover)
+    p.legend.click_policy = "hide"
+
+    return p
+
+
+def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_max=50):
+    if signal_series_dict is None:
+        return None
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making FFT signal scatter plot: " + align_region)
+    output_file(title + ".html")
+
+    p = figure(title=title, x_range=(0, period_max),
+               x_axis_label="Periodicity", y_axis_label="FFT signal")
+
+    for key in signal_series_dict.keys():
+        count_series = signal_series_dict.get(key)
+        if count_series is None:
+            return None
+        c = color_dict.get(key)
+        line = p.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]),
+                      line_width=2)
+        hover = HoverTool(tooltips=[('period', '@x'), ('signal', '@y')], renderers=[line])
         p.add_tools(hover)
     p.legend.click_policy = "hide"
     return p
@@ -43,7 +102,7 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict):
 
 def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_dict,
                                        x_max, span_size, show_plot=False):
-    config.logger.debug("Plotting normalized full-length meta counts. ")
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting normalized full-length meta counts. ")
     output_file(title + ".html", mode="cdn")
 
     p = figure(title=title,
@@ -79,7 +138,7 @@ def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_
 
 def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_assembly, color_dict,
                                   align_to, span_size, index_filter, min_count=0, max_count=1000, save_plot=True):
-    config.logger.debug(
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info(
         "Plotting transcript specific counts. %d filtered transcript indices specified" % len(index_filter))
     output_file(title + "_minCount-" + str(min_count) + "_maxCount-" + str(max_count) + ".html", mode="cdn")
 
@@ -112,7 +171,9 @@ def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_
 
 
 def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_index=None):
-    print("Plotting triangle plots")
+    if color_dict is None:
+        return None
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting triangle plots")
     if transcript_index is not None:
         print("%d filtered indices specified " % len(transcript_index))
 
@@ -155,6 +216,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_index=None)
         x = x[0:(counter - 1)]
         y = y[0:(counter - 1)]
         p.circle(x, y, color=color_dict.get(key), legend=key)
+
     p.legend.click_policy = "hide"
     return p
 
@@ -169,16 +231,20 @@ def triangle_transform(a, b, c):
     return x, y
 
 
-def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict):
-    print("Plotting amino acid pauses: %s" % title_prefix)
-    # output_file(title_prefix + ".html")
+def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False):
+    if amino_acid_df_dict is None:
+        return None
+
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting amino acid pauses: %s" % title_prefix)
     mainLayout = row(row(), name=title_prefix + ' amino acid pauses')
 
-    print("here")
     for key in amino_acid_df_dict.keys():
-        print(key)
+        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info(key)
         amino_acid_df = amino_acid_df_dict.get(key)
         if amino_acid_df is not None:
+            if scale:
+                for i in range(amino_acid_df.shape[0]):
+                    amino_acid_df.iloc[i, :] /= sum(amino_acid_df.iloc[i, :])
 
             colormap = cm.get_cmap("viridis")
             bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
@@ -205,50 +271,57 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict):
     return mainLayout
 
 
-def bokeh_frame_barplots(title_prefix, frame_df_dict, color_dict, transcript_index=None):
-    print("Plotting frame barplots")
+def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color_dict):
+    if frame_df_dict is None:
+        return None
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting frame barplots")
     mainLayout = row(row(), name=title_prefix + ' frame histograms')
-    if transcript_index is not None:
-        print("%d filtered indices specified " % len(transcript_index))
 
     counts_dict = {}
     count_max = 0
     for key in frame_df_dict.keys():
-        f0 = f1 = f2 = 0
 
-        frame_df = frame_df_dict.get(key)
+        frame_stats_df = frame_stats_df_dict.get(key)
+        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).debug("key: %s\n%s" % (key, str(frame_stats_df)))
+        if frame_stats_df is not None:
 
-        if transcript_index is None:
-            transcript_index = range(0, len(frame_df))
-        frame_df = frame_df.iloc[transcript_index, :]
+            counts = [frame_stats_df.loc[CountStats.FRAME_COUNT, CountStats.F0],
+                      frame_stats_df.loc[CountStats.FRAME_COUNT, CountStats.F1],
+                      frame_stats_df.loc[CountStats.FRAME_COUNT, CountStats.F2]]
 
-        counter = 0
-        for point in range(0, len(frame_df)):
-            [a, b, c] = frame_df.iloc[point, :][['F0', 'F1', 'F2']]
-            f0 += a
-            f1 += b
-            f2 += c
-            counter = counter + 1
-
-        counts = [f0, f1, f2]
-        if count_max < max(counts):
-            count_max = max(counts)
-        counts_dict.update({key: counts})
+            if count_max < max(counts):
+                count_max = max(counts)
+            counts_dict.update({key: counts})
+        else:
+            counts_dict.update({key: None})
 
     for key in frame_df_dict.keys():
         color = color_dict.get(key)
         counts = counts_dict.get(key)
-        frames = ["F1", "F2", "F3"]
-        p = figure(x_range=frames, y_range = (0, count_max),
-                   plot_height=500, title=key + "_" + title_prefix)
-        protection_index = np.log(float(counts[1]/np.mean([counts[0], counts[2]])))
-        p.vbar(x=frames, width=0.8, top=counts, bottom=0,
-                      fill_color=color, line_color=None,
-                      legend="Index: %.3f" % protection_index)
+        if counts is None:
+            #mainLayout.children[0].children.append(None)
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warn("Frame counts stats not found for sample %s" % key)
+        else:
+            frames = ["F1", "F2", "F3"]
+            p = figure(x_range=frames, y_range=(0, count_max),
+                       plot_height=500, title=key + "_" + title_prefix)
+            legend = ""
+            frame_stats_df = frame_stats_df_dict.get(key)
+            if frame_stats_df is None:
+                legend = "Index: %.3f" % (np.log(float(counts[1] / np.mean([counts[0], counts[2]]))))
+            else:
+                legend = "p-vals:\tF0: %.2f\tF1: %.2f\tF2: %.2f" % (
+                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F0], 2),
+                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F1], 2),
+                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F2], 2),
+                )
+                p.vbar(x=frames, width=0.8, top=counts, bottom=0,
+                       fill_color=color, line_color=None,
+                       legend=legend)
+                mainLayout.children[0].children.append(p)
 
-
-        mainLayout.children[0].children.append(p)
-
+    if len(mainLayout.children[0].children) == 0:
+        return None
     return mainLayout
 
 
@@ -257,7 +330,6 @@ def bokeh_aa_scatter_grid(title_prefix, amino_acid_df_dict):
     # output_file(title_prefix + ".html")
     mainLayout = row(row(), name=title_prefix + ' amino acid pauses')
 
-    print("here")
     for key in amino_acid_df_dict.keys():
         print(key)
         amino_acid_df = amino_acid_df_dict.get(key)
@@ -286,7 +358,6 @@ def bokeh_aa_pause_scatterplot(title, amino_acid_df):
         c = codons.Codons.AMINO_ACID_COLORS.get(aa)
         line = p.line(amino_acid_df.columns, amino_acid_df.loc(aa, ), legend=aa,
                       line_color=RGB(c[0], c[1], c[2]))
-        print line
         hover = HoverTool(tooltips=[('distance', '@x'), ('count', '@y')], renderers=[line])
         p.add_tools(hover)
 

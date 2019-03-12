@@ -29,7 +29,7 @@ class FivepseqArguments:
     """
     This class is for reading, parsing, storing and printing command line arguments.
     """
-
+    logger = None
 
     def __init__(self):
         """
@@ -74,14 +74,14 @@ class FivepseqArguments:
                                        "overwrite - overwrites all the files in the existing (in case) output directory\n"
                                        "alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory",
                                   type=str,
-                                  choices=['add', 'overwrite', 'another_dir'],
+                                  choices=['add', 'overwrite', 'alt_dir'],
                                   required=False,
                                   default="add")
 
         parser.add_argument("--log",
                                   help="set logging level",
                                   choices=["INFO", "DEBUG", "info", "debug"],
-                                  default="INFO",
+                                  default="DEBUG",
                                   required=False)
 
         ##########################
@@ -120,9 +120,10 @@ class FivepseqArguments:
                                   default=False,
                                   required=False)
 
-        count_parser.add_argument("--fivepseq-pickle",
-                                  help="specify the pickle path to read in existing FivePSeqCounts object",
-                                  required=False)
+        #FIXME not possible to save to pickle path: reason cython reduce not working for pysam Alignment class
+        #count_parser.add_argument("--fivepseq-pickle",
+        #                          help="specify the pickle path to read in existing FivePSeqCounts object",
+        #                          required=False)
 
 
 
@@ -151,6 +152,13 @@ class FivepseqArguments:
         plot_parser.add_argument("-t", "-title",
                                  help="title of the html file",
                                  type=str,
+                                 required=False)
+
+        plot_parser.add_argument("-tf", "-transcript_filter",
+                                 help = "Name of filter to apply on transcripts",
+                                 type = str,
+                                 choices=[VizPipeline.FILTER_TOP_POPULATED,
+                                          VizPipeline.FILTER_CANONICAL_TRANSCRIPTS],
                                  required=False)
 
 
@@ -190,8 +198,8 @@ class FivepseqArguments:
 
             print "%s%s" % (pad_spaces("\tLogging level:"), config.args.log.upper())
 
-            if config.args.fivepseq_pickle is not None:
-                print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
+         #   if config.args.fivepseq_pickle is not None:
+         #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
 
         elif config.args.command == 'plot':
             print "Call to fivepseq plot with arguments:\n"
@@ -286,29 +294,45 @@ def setup_logger():
                         format='%(levelname)s:%(asctime)s\t [%(filename)s:%(lineno)s - %(funcName)s]\t%(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S')
 
-    config.logger = logging.getLogger()
-    log_file = os.path.join(config.out_dir, "fivepseq.log")
+    count_logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    plot_logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
+
+    count_log_file = os.path.join(config.out_dir, "fivepseq_count.log")
+    plot_log_file = os.path.join(config.out_dir, "fivepseq_plot.log")
     log_level = getattr(logging, config.args.log.upper(), None)
     if not isinstance(log_level, int):
         raise ValueError('Invalid log level: %s' % config.args.log)
 
     # INFO level file handler
-    file_handler = logging.FileHandler(log_file)
-    config.logger.addHandler(file_handler)
-    file_handler.setLevel(logging.INFO)
+    count_file_handler = logging.FileHandler(count_log_file)
+    plot_file_handler = logging.FileHandler(plot_log_file)
+    count_logger.addHandler(count_file_handler)
+    plot_logger.addHandler(plot_file_handler)
+    count_file_handler.setLevel(logging.INFO)
+    plot_file_handler.setLevel(logging.INFO)
 
-    if not os.path.exists(log_file):
-        raise Exception("Could not instantiate the logger. Exiting.")
-    print "\tSETUP:\t%s%s" % (pad_spaces("Log file:"), log_file)
+    if not os.path.exists(count_log_file):
+        raise Exception("Could not instantiate the count logger. Exiting.")
+    print "\tSETUP:\t%s%s" % (pad_spaces("Log file:"), count_log_file)
+    if not os.path.exists(plot_log_file):
+        raise Exception("Could not instantiate the plot logger. Exiting.")
+    print "\tSETUP:\t%s%s" % (pad_spaces("Log file:"), plot_log_file)
 
     if log_level == logging.DEBUG:
-        debug_file = os.path.join(config.out_dir, "fivepseq.debug.log")
-        debug_handler = logging.FileHandler(debug_file)
-        debug_handler.setLevel(logging.DEBUG)
-        config.logger.addHandler(debug_handler)
-        if not os.path.exists(debug_file):
-            raise Exception("Could not instantiate debug logger. Exiting")
-        print "\tSETUP:\t%s%s" % (pad_spaces("Debug file:"), debug_file)
+        count_debug_file = os.path.join(config.out_dir, "fivepseq.count_debug.log")
+        plot_debug_file = os.path.join(config.out_dir, "fivepseq.plot_debug.log")
+        count_debug_handler = logging.FileHandler(count_debug_file)
+        plot_debug_handler = logging.FileHandler(plot_debug_file)
+        count_debug_handler.setLevel(logging.DEBUG)
+        plot_debug_handler.setLevel(logging.DEBUG)
+        count_logger.addHandler(count_debug_handler)
+        plot_logger.addHandler(plot_debug_handler)
+        if not os.path.exists(count_debug_file):
+            raise Exception("Could not instantiate count debug logger. Exiting")
+        print "\tSETUP:\t%s%s" % (pad_spaces("Debug file:"), count_debug_file)
+        if not os.path.exists(plot_debug_file):
+            raise Exception("Could not instantiate plot debug logger. Exiting")
+        print "\tSETUP:\t%s%s" % (pad_spaces("Debug file:"), plot_debug_file)
 
 
 print ""
@@ -316,14 +340,14 @@ print ""
 def load_FivePSeq_from_pickle():
     # FIXME it's not possible to write the FivePSeqCounts object to pickle so the below code is for vein
     pickle_path = config.getFivepseqCountsPicklePath()
-
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
     if pickle_path is not None:
-        config.logger.debug("Loading FivePSeqCounts object from existing pickle path %s" % pickle_path)
+        logger.debug("Loading FivePSeqCounts object from existing pickle path %s" % pickle_path)
         try:
             fivepseq_counts = dill.load((open(pickle_path, "rb")))
-            config.logger.debug("Successfully loaded FivePSeqCounts object")
+            logger.debug("Successfully loaded FivePSeqCounts object")
             if fivepseq_counts.span_size != config.span_size:
-                config.logger.warning("The specified span size of %d does not correspond to the size of %d "
+                logger.warning("The specified span size of %d does not correspond to the size of %d "
                                       "used in the FivePSeq object loaded from existing pickle path. \n"
                                       "The span size of %d will be used."
                                       % (config.span_size, fivepseq_counts.span_size,
@@ -334,28 +358,31 @@ def load_FivePSeq_from_pickle():
             warning_message = "Problem loading FivePSeqCounts object from pickle path %s. Reason: %s\n" \
                               "Fivepseq will generate a new FivePSeqCounts object." % (
                                   pickle_path, str(e))
-            config.logger.warning(warning_message)
+            logger.warning(warning_message)
 
 
 def save_fivepseq_counts_to_pickle(fivepseq_counts):
     # TODO save fivepseq_counts in pickle_path
     pickle_path = config.generateFivepseqPicklePath()
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
     if os.path.exists(pickle_path):
         try:
             os.remove(pickle_path)
         except Exception as e:
-            config.logger.error("Could not remove previous fivepseq object from pickle path: %s"
+            logger.error("Could not remove previous fivepseq object from pickle path: %s"
                                 % pickle_path)
     # FIXME cannot write dill object because of error: no default __reduce__ due to non-trivial __cinit__
 
     with open(pickle_path, "wb") as dill_file:
         dill.dump(fivepseq_counts, dill_file)
-    config.logger.debug("Dumped FivePSeqCounts object to file %s" % pickle_path)
+    logger.debug("Dumped FivePSeqCounts object to file %s" % pickle_path)
 
 def generate_and_store_fivepseq_counts():
-    config.logger.info("Fivepseq count started")
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    logger.info("Fivepseq count started")
 
-    fivepseq_counts = load_FivePSeq_from_pickle()
+    #fivepseq_counts = load_FivePSeq_from_pickle()
+    fivepseq_counts = None
 
     if fivepseq_counts is None:
         # read files
@@ -373,21 +400,24 @@ def generate_and_store_fivepseq_counts():
     fivepseq_out = FivePSeqOut(config.out_dir, config.args.conflicts)
 
     fivepseq_pipeline = CountPipeline(fivepseq_counts, fivepseq_out)
-    fivepseq_pipeline.run(config.logger)
+    fivepseq_pipeline.run()
 
 
     return fivepseq_counts
 
 
 def generate_plots():
-    config.logger.info("Fivepseq plot started")
+    logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
+    logger.info("Fivepseq plot started")
+
     viz_pipeline = VizPipeline(config.args)
-    viz_pipeline.run(config.logger)
+    viz_pipeline.run()
 
     if config.args.sd is not None:
         print "Single sample %s provided" % config.args.sd
     else:
         print "Multiple samples in %s provided" % config.args.md
+
 
     # scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.TERM,
     # os.path.join(config.out_dir, "meta_count_frames.pdf"))
@@ -405,19 +435,35 @@ def main():
     # startup
     setup_output_dir()
     setup_logger()
-    config.logger.info("Fivepseq started")
+
     start_time = time.clock()
 
     # body
     if config.args.command == 'count':
+        count_logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+        count_logger.info("Fivepseq count started")
         generate_and_store_fivepseq_counts()
-    elif config.args.command == 'plot':
-        generate_plots()
-
-    # wrap-up
-    elapsed_time = time.clock() - start_time
-    config.logger.info("SUCCESS! Fivepseq finished in\t%s\tseconds. The report files maybe accessed at:\t\t%s "
+        elapsed_time = time.clock() - start_time
+        count_logger.info("SUCCESS! Fivepseq count finished in\t%s\tseconds. The report files maybe accessed at:\t\t%s "
                        % (elapsed_time, config.out_dir))
+
+    elif config.args.command == 'plot':
+        plot_logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
+        plot_logger.info("Fivepseq plot started")
+        generate_plots()
+        elapsed_time = time.clock() - start_time
+        if config.args.t is not None:
+            title = config.args.t
+        else:
+            if config.args.sd is not None:
+                title = os.path.basename(config.args.sd)
+            else:
+                title = os.path.basename(os.path.dirname(config.args.md)) + "_" + os.path.basename(config.args.md)
+
+        plot_logger.info("SUCCESS! Fivepseq plot finished in\t%s\tseconds. "
+                         "The report files maybe accessed at:\t\t%s/%s "
+                       % (elapsed_time, config.out_dir, title))
+
 
     # TODO handle KeyboardInterrupt's (try, wait, except, pass?)
 

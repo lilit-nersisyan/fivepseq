@@ -5,6 +5,9 @@ import logging
 import os
 import sys
 
+FIVEPSEQ_COUNT_LOGGER = "fivepseq_count_logger"
+FIVEPSEQ_PLOT_LOGGER = "fivepseq_plot_logger"
+
 args = None
 bam = None
 genome = None
@@ -12,7 +15,6 @@ annot = None
 out_dir = None
 cache_dir = None
 span_size = None
-logger = None
 
 # output conflict modes
 ADD_FILES = "add"
@@ -22,10 +24,10 @@ ALT_DIR = "alt_dir"
 FIVEPSEQ_COUNTS_PICKLE_NAME = "fivepseq.counts.sav"
 
 # default (pre-startup) logger
-#logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-#                    format='%(levelname)s:%(asctime)s\t [%(filename)s:%(lineno)s - %(funcName)s]\t%(message)s',
-#                    datefmt='%m/%d/%Y %I:%M:%S')
-#logger = logging.getLogger()
+logging.basicConfig(stream=sys.stdout, level=logging.INFO,
+                    format='%(levelname)s:%(asctime)s\t [%(filename)s:%(lineno)s - %(funcName)s]\t%(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S')
+
 
 def getFivepseqCountsPicklePath():
     if args.fivepseq_pickle is not None:

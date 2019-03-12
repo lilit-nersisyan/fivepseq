@@ -1,6 +1,7 @@
 """
 Classes and functions in this module will take care of fivepseq output: directory handling, writing of reports, etc.
 """
+import logging
 import os
 
 from preconditions import preconditions
@@ -26,6 +27,13 @@ class FivePSeqOut:
     TERM_CODON_DICT_FILE = "term_codon_dict.txt"
     CANONICAL_TRANSCRIPT_INDEX_FILE = "canonical_transcript_index.txt"
     TRANSCRIPT_DESCRIPTORS_FILE = "transcript_descriptors.txt"
+    DATA_SUMMARY_FILE = "data_summary.txt"
+    FRAME_STATS_DF_FILE = "frame_stats.txt"
+    FFT_STATS_DF_FILE = "fft_stats.txt"
+    FFT_SIGNALS_START = "fft_signals_start.txt"
+    FFT_SIGNALS_TERM = "fft_signals_term.txt"
+
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     def __init__(self, output_dir, conflict_mode = config.ADD_FILES):
         """
@@ -55,7 +63,7 @@ class FivePSeqOut:
         if os.path.exists(path):
 
             if self.conflict_mode == config.ADD_FILES:
-                config.logger.info("Skipping existing file %s." % path)
+                self.logger.info("Skipping existing file %s." % path)
                 return None
 
             elif self.conflict_mode == config.ALT_DIR:
@@ -66,9 +74,9 @@ class FivePSeqOut:
             else:
                 try:
                     os.remove(path)
-                    config.logger.debug("Removed existing file %s for overwriting" % path)
+                    self.logger.debug("Removed existing file %s for overwriting" % path)
                 except Exception as e:
-                    config.logger.error("Could not remove existing file %s for overwriting. "
+                    self.logger.error("Could not remove existing file %s for overwriting. "
                                         "Reason: %s" % (path, str(e)))
 
         try:
@@ -76,7 +84,7 @@ class FivePSeqOut:
         except Exception as e:
             error_message = "Problem opening the file %s for writing. Reason: %s" \
                             % (file_name, e.message)
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise Exception(error_message)
 
         return f
@@ -95,11 +103,11 @@ class FivePSeqOut:
         """
         f = self.open_file_for_writing(file_name)
         if f is not None:
-            config.logger.info("Storing vector list to file %s..." % f)
+            self.logger.info("Storing vector list to file %s..." % f)
             for counts in vector_list:
                 f.write('\t'.join(map(str, counts)) + '\n')
             f.close()
-            config.logger.info("File %s saved" % f)
+            self.logger.info("File %s saved" % f)
 
     @preconditions(lambda vector_dict: isinstance(vector_dict, dict),
                    lambda file_name: isinstance(file_name, str))
@@ -115,13 +123,13 @@ class FivePSeqOut:
         """
         f = self.open_file_for_writing(file_name)
         if f is not None:
-            config.logger.info("Storing vector list to file %s..." % f)
+            self.logger.info("Storing vector list to file %s..." % f)
             for key in vector_dict.keys():
                 counts = vector_dict.get(key)
                 f.write(key + "\t")
                 f.write('\t'.join(map(str, counts)) + '\n')
             f.close()
-            config.logger.info("File %s saved" % f)
+            self.logger.info("File %s saved" % f)
 
     @preconditions(lambda my_dict: isinstance(my_dict, dict),
                    lambda file_name: isinstance(file_name, str))
@@ -137,13 +145,13 @@ class FivePSeqOut:
         """
         f = self.open_file_for_writing(file_name)
         if f is not None:
-            config.logger.info("Storing vector list to file %s..." % f)
+            self.logger.info("Storing vector list to file %s..." % f)
             for key in my_dict.keys():
                 count = my_dict.get(key)
                 f.write(key + "\t")
                 f.write(str(count) + '\n')
             f.close()
-            config.logger.info("File %s saved" % f)
+            self.logger.info("File %s saved" % f)
 
     @preconditions(lambda my_vector: isinstance(my_vector, list),
                    lambda file_name: isinstance(file_name, str))
@@ -159,11 +167,11 @@ class FivePSeqOut:
         """
         f = self.open_file_for_writing(file_name)
         if f is not None:
-            config.logger.info("Storing vector list to file %s..." % f)
+            self.logger.info("Storing vector list to file %s..." % f)
             for i in my_vector:
                 f.write(str(i) + "\n")
             f.close()
-            config.logger.info("File %s saved" % f)
+            self.logger.info("File %s saved" % f)
 
     # @preconditions(lambda df: isinstance(df, pd.core.frame.DataFrame),
     #               lambda file_name: isinstance(file_name, str))
@@ -181,7 +189,7 @@ class FivePSeqOut:
         if f is not None:
             df.to_csv(f, sep="\t", header=True)
 
-            config.logger.info("Dataframe saved to file %s " % f)
+            self.logger.info("Dataframe saved to file %s " % f)
 
     def write_series_to_file(self, data_series, file_name):
         """
@@ -202,12 +210,20 @@ class FivePSeqOut:
         if f is not None:
             f.write('\t'.join(["ID", "gene", "chr", "cds_start", "cds_end", "type"]) + "\n")
             for transcript in transcript_assembly:
-                f.write('\t'.join([transcript.attr["ID"],
-                                      transcript.attr["Name"],
+                f.write('\t'.join([self.get_transcript_attr(transcript, "ID"),
+                                      self.get_transcript_attr(transcript, "Name"),
                                       str(transcript.chrom),
-                                      str(transcript.attr["cds_genome_start"]),
-                                      str(transcript.attr["cds_genome_end"]),
-                                      transcript.attr["type"]]) + '\n')
+                                      str(self.get_transcript_attr(transcript, "cds_genome_start")),
+                                      str(self.get_transcript_attr(transcript, "cds_genome_end")),
+                                      self.get_transcript_attr(transcript, "type")]) + '\n')
+
+            f.close()
+
+    @staticmethod
+    def get_transcript_attr(transcript, key):
+        if key in transcript.attr.keys():
+            return transcript.attr[key]
+        return ""
 
     def get_file_path(self, file_name):
         return os.path.join(self.output_dir, file_name)

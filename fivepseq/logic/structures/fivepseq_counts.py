@@ -1,13 +1,14 @@
+import logging
 import os
 from math import floor
 
-import plastid
 import numpy as np
 import pandas as pd
-from fivepseq.logic.structures import codons
-
+import plastid
 from preconditions import preconditions
+
 from fivepseq import config
+from fivepseq.logic.structures import codons
 from fivepseq.logic.structures.codons import Codons
 from util.writers import FivePSeqOut
 
@@ -23,6 +24,13 @@ class FivePSeqCounts:
     TERM = "termination"
     FULL_LENGTH = "full_length"
 
+    START_CODON = "start"
+    STOP_CODON = "stop"
+    TRANSCRIPT_LENGTH = "len"
+    TRANSCRIPT_3NT = "3nt"
+    NUMBER_READS = "NumOfReads"
+    NUMBER_POSITIONS = "NumOfMapPositions"
+
     alignment = None
     annotation = None
     genome = None
@@ -33,6 +41,8 @@ class FivePSeqCounts:
     count_vector_list_full_length = None
     meta_count_series_start = None
     meta_count_series_term = None
+    frame_counts_df_start = None
+    frame_counts_df_term = None
 
     check_for_codons = True
     start_codon_dict = {}
@@ -41,6 +51,8 @@ class FivePSeqCounts:
     transcript_descriptors = None
 
     loci_file = None
+    
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     @preconditions(lambda span_size: isinstance(span_size, int))
     def __init__(self, alignment, annotation, genome, span_size):
@@ -59,9 +71,14 @@ class FivePSeqCounts:
         self.span_size = span_size
         self.transcript_descriptors = pd.DataFrame(data=None,
                                                    index=range(len(self.annotation.transcript_assembly)),
-                                                   columns=["START", "STOP", "len", "3nt", "NumOfMappings", "NumOfMapPositions"])
+                                                   columns=[self.START_CODON,
+                                                            self.STOP_CODON,
+                                                            self.TRANSCRIPT_LENGTH,
+                                                            self.TRANSCRIPT_3NT,
+                                                            self.NUMBER_READS,
+                                                            self.NUMBER_POSITIONS])
 
-        config.logger.debug("Initiated a FivePSeqCounts object with"
+        self.logger.debug("Initiated a FivePSeqCounts object with"
                             "\n\talignment from file %s"
                             "\n\tannotation from file %s "
                             "\n\tgenome from file %s"
@@ -91,11 +108,11 @@ class FivePSeqCounts:
             error_message = "Cannot retrieve the counts. " \
                             "Invalid region \"%s\" specified: should be one of (%s, %s, %s)." \
                             % (region, self.FULL_LENGTH, self.START, self.TERM)
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise ValueError(error_message)
 
         # otherwise, retrieve the counts from the alignment file, referencing the transcript assembly
-        config.logger.info("Retrieving counts (span size :%d, position: %s)..."
+        self.logger.info("Retrieving counts (span size :%d, position: %s)..."
                            % (self.span_size, region))
 
         # initialize empty vectors
@@ -110,7 +127,7 @@ class FivePSeqCounts:
 
             # update to console
             if counter % 1000 == 0:
-                config.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
+                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / self.annotation.transcript_count),
                     '%'), )
 
@@ -122,7 +139,7 @@ class FivePSeqCounts:
             except Exception as e:
                 error_message = "Problem retrieving counts for transcript %s. Reason: %s" \
                                 % (transcript.get_name, e.message)
-                config.logger.error(error_message)
+                self.logger.error(error_message)
                 raise Exception(error_message)
 
             counter += 1
@@ -132,7 +149,7 @@ class FivePSeqCounts:
         self.set_count_vector_list(count_vector_list, region)
 
         # report successful retrieval
-        config.logger.info("Finished retrieving count vectors")
+        self.logger.info("Finished retrieving count vectors")
 
         return count_vector_list
 
@@ -165,11 +182,16 @@ class FivePSeqCounts:
                     if (start_codon == codons.Codons.START_CODON) & (stop_codon in codons.Codons.stop_codons):
                         self.canonical_transcript_index.append(transcript_ind)
 
-                    self.transcript_descriptors.loc[transcript_ind, "START"] = start_codon
-                    self.transcript_descriptors.loc[transcript_ind, "STOP"] = stop_codon
-                    self.transcript_descriptors.loc[transcript_ind, "3nt"] = str(len(cds_sequence) % 3 == 0)
-                    self.transcript_descriptors.loc[transcript_ind, "len"] = len(cds_sequence)
-                    self.transcript_descriptors.loc[transcript_ind, "len"] = len(cds_sequence)
+                    self.transcript_descriptors.loc[transcript_ind, self.START_CODON] = start_codon
+                    self.transcript_descriptors.loc[transcript_ind, self.STOP_CODON] = stop_codon
+                    self.transcript_descriptors.loc[transcript_ind, self.TRANSCRIPT_3NT] = str(
+                        len(cds_sequence) % 3 == 0)
+                    self.transcript_descriptors.loc[transcript_ind, self.TRANSCRIPT_LENGTH] = \
+                        len(cds_sequence)
+                    self.transcript_descriptors.loc[transcript_ind, self.NUMBER_READS] = \
+                        int(np.sum(count_vector[span_size:len(count_vector) - span_size]))
+                    self.transcript_descriptors.loc[transcript_ind, self.NUMBER_POSITIONS] = \
+                        np.count_nonzero(count_vector[span_size:len(count_vector) - span_size])
 
                     if start_codon in self.start_codon_dict.keys():
                         self.start_codon_dict[start_codon] += 1
@@ -193,19 +215,41 @@ class FivePSeqCounts:
                 error_message = "Cannot retrieve a count vector for the transcript %s. " \
                                 "Invalid region \"%s\" specified: should be one of (%s, %s, %s)." \
                                 % (transcript.get_name(), region, self.FULL_LENGTH, self.START, self.TERM)
-                config.logger.error(error_message)
+                self.logger.error(error_message)
                 raise ValueError(error_message)
 
         except Exception as e:
             error_message = "Problem retrieving the count vector for the transcript %s. Reason:%s" % (
                 transcript.get_name(), e.message)
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise Exception(error_message)
 
         # convert the count array to an int vector
         count_vector = map(int, count_vector.tolist())
 
         return count_vector
+
+    @preconditions(lambda region: isinstance(region, str))
+    def get_frame_counts_df(self, region):
+        if region == self.START:
+            if self.frame_counts_df_start is None:
+                self.frame_counts_df_start = CountManager.extract_count_sums_per_frame_per_transcript(
+                    self.get_count_vector_list(FivePSeqCounts.FULL_LENGTH),
+                    self.span_size, FivePSeqCounts.START)
+            return self.frame_counts_df_start
+
+        elif region == self.TERM:
+            if self.frame_counts_df_term is None:
+                self.frame_counts_df_term = CountManager.extract_count_sums_per_frame_per_transcript(
+                    self.get_count_vector_list(FivePSeqCounts.FULL_LENGTH),
+                    self.span_size, FivePSeqCounts.TERM)
+            return self.frame_counts_df_term
+
+        else:
+            err_msg = ("Wrong region %s provided: should be either %s or %s"
+                       % (region, self.START, self.TERM))
+            self.logger.error(err_msg)
+            raise Exception(err_msg)
 
     @preconditions(lambda region: isinstance(region, str))
     def get_meta_count_series(self, region):
@@ -223,7 +267,7 @@ class FivePSeqCounts:
             error_message = "Cannot compute meta counts for full length transcript counts: the counts should be of " \
                             "the same length. " \
                             "Regions can be specified from choices (%s, %s)" % (self.START, self.TERM)
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise ValueError(error_message)
         elif region == self.START:
             if self.meta_count_series_start is not None:
@@ -235,7 +279,7 @@ class FivePSeqCounts:
             error_message = "Problem retrieving meta_counts. " \
                             "Invalid region \"%s\" specified: should be one of (%s, %s)." \
                             % (region, self.START, self.TERM)
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise ValueError(error_message)
         try:
             count_vector_list = self.get_count_vector_list(region)
@@ -270,7 +314,7 @@ class FivePSeqCounts:
         else:
             error_message = "Cannot set counts: wrong region %s supplied: should be either of (%s, %s, %s)" \
                             % (region, self.START, self.TERM, self.FULL_LENGTH)
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise ValueError(error_message)
 
     @preconditions(lambda meta_count_series: isinstance(meta_count_series, pd.Series),
@@ -341,7 +385,7 @@ class FivePSeqCounts:
         :return:
         """
 
-        config.logger.info(
+        self.logger.info(
             "Counting amino acid specific pauses within 0 to %d nt distance from the first nucleotide of each codon" % dist)
         # amino_acid_count_dict = {}
         amino_acid_count_df = pd.DataFrame(data=0, index=Codons.AMINO_ACID_TABLE.keys(),
@@ -357,33 +401,31 @@ class FivePSeqCounts:
 
         for transcript in self.annotation.yield_transcripts(span_size):
             if counter % 100 == 0:
-                config.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
+                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / self.annotation.transcript_count), '%',), )
-                config.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
+                self.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
                                     % (float(100 * wrong_cds_count) / counter, "%"))
-                config.logger.debug("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
+                self.logger.debug("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
                                     % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
             counter += 1
 
             count_vector = self.get_count_vector(transcript, span_size, FivePSeqCounts.FULL_LENGTH, counter - 1)
             sequence = transcript.get_sequence(self.genome.genome_dict)
-            cds_sequence = sequence[span_size : len(sequence) - span_size]
-            cds_sequence = cds_sequence[transcript.cds_start : transcript.cds_end]
+            cds_sequence = sequence[span_size: len(sequence) - span_size]
+            cds_sequence = cds_sequence[transcript.cds_start: transcript.cds_end]
             count_vector = count_vector[span_size:len(count_vector) - span_size]
 
             if len(cds_sequence) != len(count_vector):
-                config.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
+                self.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
                                       % (counter, len(cds_sequence), len(count_vector)))
-
-
 
             if len(count_vector) % 3 == 0:
                 num_stops = 0
                 for i in range(0, len(count_vector), 3):
                     codon = cds_sequence[i: i + 3]
 
-                    #NOTE the comparison is case-sensitive and the low-case letters are now not counted
-                    #NOTE however, low-case may indicate repetitive regions and it may be advantagous to skip them
+                    # NOTE the comparison is case-sensitive and the low-case letters are now not counted
+                    # NOTE however, low-case may indicate repetitive regions and it may be advantagous to skip them
                     if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
                         aa = Codons.CODON_TABLE[codon]
                         if codon in Codons.stop_codons:
@@ -401,9 +443,9 @@ class FivePSeqCounts:
             else:
                 wrong_cds_count += 1
 
-        config.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
+        self.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
                             % (float(100 * wrong_cds_count) / counter, "%"))
-        config.logger.debug("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
+        self.logger.debug("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
                             % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
 
         # for d in range(1,dist+1):
@@ -434,7 +476,7 @@ class FivePSeqCounts:
         :return:
         """
 
-        config.logger.info(
+        self.logger.info(
             "Counting pauses from loci given in file %s" % loci_file)
 
         loci = pd.read_csv(loci_file, sep="\t", header=None, names=['chr', 'pos'], index_col=None)
@@ -454,12 +496,12 @@ class FivePSeqCounts:
         transcript = None
         while (True):
             if counter % 1000 == 0:
-                config.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
+                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / self.annotation.transcript_count), '%',), )
 
             if move_locus:
                 if loci.shape[0] == loci_row:
-                    config.logger.debug("Reached the end of loci file (row %d)" % loci_row)
+                    self.logger.debug("Reached the end of loci file (row %d)" % loci_row)
                     break
                 loci_row += 1
                 move_locus = False
@@ -469,7 +511,7 @@ class FivePSeqCounts:
                 try:
                     transcript = tg.next()
                 except:
-                    config.logger.debug("Reached the end of transcript assembly (counter: %d)" % counter)
+                    self.logger.debug("Reached the end of transcript assembly (counter: %d)" % counter)
                     break
                 counter += 1
                 move_transcript = False
@@ -513,14 +555,15 @@ class FivePSeqCounts:
             else:
                 break
         # turn the dictionary into a metacount vector, with indices from -1*maxdistance to 0
-        config.logger.debug("Merging the dictionary into metacounts")
+        self.logger.debug("Merging the dictionary into metacounts")
         maxdist = max(loci_pauses_dict.keys())
         metacount_vector = [0] * maxdist
-        for i in range(-1*maxdist,0):
+        for i in range(-1 * maxdist, 0):
             if i in loci_pauses_dict.keys():
                 metacount_vector[i] = loci_pauses_dict[i]
+        metacount_series = pd.Series(data=metacount_vector, index=np.arange(-1 * maxdist, 0))
 
-        return metacount_vector
+        return metacount_series
 
     @preconditions(lambda num: isinstance(num, int))
     def top_populated_transcript_indices(self, num=1000):
@@ -549,6 +592,7 @@ class CountManager:
 
     def __init__(self):
         pass
+
 
     @staticmethod
     @preconditions(lambda count_vector_list: isinstance(count_vector_list, list),
@@ -615,10 +659,12 @@ class CountManager:
         else:
             error_message = "Invalid region %s specified: should be either %s or %s" \
                             % (region, FivePSeqCounts.START, FivePSeqCounts.TERM)
-            config.logger.error(error_message)
+            logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+            logger.error(error_message)
             raise Exception(error_message)
 
         return frame0_array, frame1_array, frame2_array
+
 
     @staticmethod
     @preconditions(lambda count_vector: isinstance(count_vector, list),
@@ -669,7 +715,8 @@ class CountManager:
         else:
             error_message = "Invalid region %s specified: should be either %s or %s" \
                             % (region, FivePSeqCounts.START, FivePSeqCounts.TERM)
-            config.logger.error(error_message)
+            logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+            logger.error(error_message)
             raise Exception(error_message)
 
         counts_series = pd.Series(data=count_vector, index=d)
@@ -725,7 +772,7 @@ class CountManager:
         else:
             error_message = "Invalid region %s specified: should be either %s or %s" \
                             % (region, FivePSeqCounts.START, FivePSeqCounts.TERM)
-            config.logger.error(error_message)
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
             raise Exception(error_message)
 
         counts_df = pd.DataFrame({'D': d, 'C': count_vector})
@@ -748,7 +795,7 @@ class CountManager:
         :return: a dataframe with frame-based count-sums for each transcript
         """
 
-        config.logger.debug("Retrieving count-sums per frame relative to %s ..." % region)
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Retrieving count-sums per frame relative to %s ..." % region)
 
         # Create an empty dataframe
         n = len(count_vector_list)
@@ -784,9 +831,9 @@ class CountManager:
 
         if not os.path.exists(file_path):
             error_message = "Problem reading counts: the file %s does not exist" % file_path
-            config.logger.error(error_message)
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
             raise IOError(error_message)
-        config.logger.debug("Reading count file %s" % file_path)
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading count file %s" % file_path)
         df = pd.read_csv(file_path, header=None, sep="|")
         count_vector_list = [[]] * len(df)
         for i in range(0, len(df)):
@@ -811,9 +858,9 @@ class CountManager:
         """
         if not os.path.exists(file):
             error_message = "Problem reading meta counts: the file %s does not exist" % file
-            config.logger.error(error_message)
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
             raise IOError(error_message)
-        config.logger.debug("Reading meta count file %s" % file)
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading meta count file %s" % file)
         meta_count = pd.read_csv(file, sep="\t", header=None, names=["D", "C"])
         return meta_count
 
@@ -833,9 +880,9 @@ class CountManager:
         """
         if not os.path.exists(file):
             error_message = "Problem reading frame counts: the file %s does not exist" % file
-            config.logger.error(error_message)
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
             raise IOError(error_message)
-        config.logger.debug("Reading frame counts file %s" % file)
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading frame counts file %s" % file)
 
         frame_counts = pd.read_csv(file, sep="\t")
         return frame_counts
@@ -855,9 +902,9 @@ class CountManager:
         """
         if not os.path.exists(file):
             error_message = "Problem reading amino acid pauses: the file %s does not exist" % file
-            config.logger.error(error_message)
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
             raise IOError(error_message)
-        config.logger.debug("Reading amino acids pauses file %s" % file)
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading amino acids pauses file %s" % file)
 
         amino_acid_df = pd.read_csv(file, sep="\t", header=0, index_col=0)
 
@@ -899,7 +946,6 @@ class CountManager:
             transcript_index = list(pd.read_csv(canonical_index_file, header=None).iloc[:, 0])
             return transcript_index
         else:
-            config.logger.debug("Problem retrieving canonical transcript indices. No file %s exists. "
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Problem retrieving canonical transcript indices. No file %s exists. "
                                 "The filter will return None." % canonical_index_file)
             return None
-

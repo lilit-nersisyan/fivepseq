@@ -1,17 +1,17 @@
 """This module contains classes that are specialized for opening specific types of files.
 They also retrieve and store the file properties (e.g. compression, extension) for further reference.
 """
+import logging
 import os
+
 # PORT: pathlib2 is for python version 2.7, use pathlib in version 3  <>
 import dill
 import pathlib2
 import plastid
 import pysam
-import pandas as pd
-
-from fivepseq import config
 from preconditions import preconditions
 
+from fivepseq import config
 from fivepseq.logic.structures.alignment import Alignment
 from fivepseq.logic.structures.annotation import Annotation
 from fivepseq.logic.structures.genome import Genome
@@ -27,6 +27,7 @@ class TopReader:
     extension = None
     compression = None
     file = None
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     @preconditions(lambda file_path: isinstance(file_path, str))
     def __init__(self, file_path):
@@ -57,7 +58,7 @@ class TopReader:
 
         # set the file as an instance attribute
         self.file = os.path.abspath(file_path)
-        config.logger.debug("Initialized %s with file path %s" % (self.__class__.__name__, file_path))
+        self.logger.debug("Initialized %s with file path %s" % (self.__class__.__name__, file_path))
 
     def __str__(self):
         reader_string = ""
@@ -128,7 +129,7 @@ class FastaReader(TopReader):
         :param file_path:
         """
         TopReader.__init__(self, file_path)
-        config.logger.info("Reading in genome file...")
+        self.logger.info("Reading in genome file...")
         self.genome = Genome(file_path)
 
 
@@ -168,7 +169,7 @@ class AnnotationReader(TopReader):
         except Exception as e:
             error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (
                 self.file, e.message)
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise Exception(error_message)
 
         self.annotation = Annotation(transcript_assembly, file_path)
@@ -190,17 +191,17 @@ class AnnotationReader(TopReader):
                 pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_break-" +
                                            str(break_after) + ".sav")
             if os.path.exists(pickle_path) and not config.args.ignore_cache:
-                config.logger.debug("Loading transcript assembly from existing pickle path %s" % pickle_path)
+                self.logger.debug("Loading transcript assembly from existing pickle path %s" % pickle_path)
                 try:
                     transcript_assembly = dill.load((open(pickle_path, "rb")))
-                    config.logger.debug("Successfully loaded transcript assembly")
+                    self.logger.debug("Successfully loaded transcript assembly")
                     return transcript_assembly
                 except Exception as e:
                     warning_message = "Problem loading transcript assembly from pickle path %s. Reason: %s" % (
                         pickle_path, e.message)
-                    config.logger.warning(warning_message)
+                    self.logger.warning(warning_message)
 
-        config.logger.debug("Reading in transcript assembly...")
+        self.logger.debug("Reading in transcript assembly...")
         if self.extension == self.EXTENSION_GTF:
             transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)
         else:
@@ -219,7 +220,7 @@ class AnnotationReader(TopReader):
                     break
 
             if i % 1000 == 0:
-                config.logger.info("\r>>Transcript count: %d\tValid transcripts: %d\t%s" % (i, index, progress_bar),)
+                self.logger.info("\r>>Transcript count: %d\tValid transcripts: %d\t%s" % (i, index, progress_bar),)
             valid_type = False
             transcript_biotype = transcript.attr.get('type')
             if transcript_biotype is not None:
@@ -242,22 +243,22 @@ class AnnotationReader(TopReader):
         if index == 0:
             error_message = "No transcripts with biotype with tokens %s were present" \
                             % (','.join(self.CODING_TYPES))
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise Exception(error_message)
         if biotypes_file is not None:
             with open(biotypes_file, 'w') as file:
                 file.write("\n".join(unique_biotypes))
 
-        config.logger.debug(
+        self.logger.debug(
             "Read %d transcripts, of which %d were of type %s" % (i, index, biotype))
-        config.logger.debug("Transcript assembly read to memory, with %d valid transcripts" % index)
+        self.logger.debug("Transcript assembly read to memory, with %d valid transcripts" % index)
         transcript_assembly = transcript_assembly[:index]
 
         # TODO dump dill object
         if config.cache_dir is not None:
             with open(pickle_path, "wb") as dill_file:
                 dill.dump(transcript_assembly, dill_file)
-            config.logger.debug("Dumped transcript assembly to file %s" % pickle_path)
+            self.logger.debug("Dumped transcript assembly to file %s" % pickle_path)
         return transcript_assembly
 
 
