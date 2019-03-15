@@ -23,6 +23,7 @@ class FivePSeqCounts:
     START = "start"
     TERM = "termination"
     FULL_LENGTH = "full_length"
+    ALL = "all"
 
     START_CODON = "start"
     STOP_CODON = "stop"
@@ -83,6 +84,64 @@ class FivePSeqCounts:
                             "\n\tannotation from file %s "
                             "\n\tgenome from file %s"
                             % (alignment.alignment_file.filename, annotation.file_path, genome.fasta_file))
+
+    def generate_count_vector_lists(self):
+        """
+        Generates read count vectors for full length transcripts, terminus- and start- aligned sections,
+        spanning respective regions of each transcript in the transcript assembly.
+        The region is spanned according to the span_size set in self.
+
+        :return: [[int]]: array of counts arrays of 5' mapping counts per position of the specified region of each transcript
+        """
+
+        # if counts are already computed, return the existing ones
+
+        if self.count_vector_list_full_length is not None:
+            if self.count_vector_list_term is not None:
+                if self.count_vector_list_start is not None:
+                    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).warning("All count vectors are already generated")
+
+        # otherwise, retrieve the counts from the alignment file, referencing the transcript assembly
+        self.logger.info("Retrieving counts (span size :%d)..."
+                         % (self.span_size))
+
+        # initialize empty vectors
+        self.count_vector_list_full_length = [None] * self.annotation.transcript_count
+        self.count_vector_list_term = [None] * self.annotation.transcript_count
+        self.count_vector_list_start = [None] * self.annotation.transcript_count
+
+        # setup the the counter
+        counter = 1
+
+        # loop through the transcripts yielded by the annotation object
+        transcript_generator = self.annotation.yield_transcripts(self.span_size)
+        for transcript in transcript_generator:
+
+            # update to console
+            if counter % 1000 == 0:
+                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
+                    counter, floor(100 * (counter - 1) / self.annotation.transcript_count),
+                    '%'), )
+
+            # retrieve actual counts for current transcript
+            try:
+                count_vector = self.get_count_vector(transcript, self.span_size, self.FULL_LENGTH, counter - 1)
+                self.count_vector_list_full_length[counter - 1] = count_vector
+                self.count_vector_list_start[counter-1] = count_vector[:2 * self.span_size]
+                self.count_vector_list_term[counter-1] = count_vector[-(2 * self.span_size):]
+
+            except Exception as e:
+                error_message = "Problem retrieving counts for transcript %s. Reason: %s" \
+                                % (transcript.get_name, e.message)
+                self.logger.error(error_message)
+                raise Exception(error_message)
+
+            counter += 1
+        self.check_for_codons = False
+
+        # report successful retrieval
+        self.logger.info("Finished retrieving count vectors")
+
 
     @preconditions(lambda region: isinstance(region, str))
     def get_count_vector_list(self, region):

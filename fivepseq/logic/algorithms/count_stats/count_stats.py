@@ -62,9 +62,12 @@ class CountStats:
         """
         self.summarize_transcript_stats()
 
-        self.compute_frame_preference_stats()
+        if self.data_summary_series[self.TOTAL_NUM_READS] == 0:
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).warning("Zero reads in coding regions: frame and fft stats will not be calculated")
+        else:
+            self.compute_frame_preference_stats()
 
-        self.compute_fft_stats()
+            self.compute_fft_stats()
 
     def summarize_transcript_stats(self):
         self.logger.info("Summarizing transcript counts")
@@ -75,7 +78,8 @@ class CountStats:
                                 % transcript_descriptors_f)
         else:
             if os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE)):
-                self.logger.info("Skipping existing file %s" % FivePSeqOut.DATA_SUMMARY_FILE)
+                self.logger.info("Using existing file %s" % FivePSeqOut.DATA_SUMMARY_FILE)
+                self.data_summary_series = pd.read_csv(self.fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE), sep = "\t",  header = None, index_col = 0).iloc[:,0]
             else:
                 self.data_summary_series = pd.Series(name=(self.TOTAL_NUM_READS,
                                                            self.TOTAL_NUM_POSITIONS,
@@ -198,30 +202,37 @@ class CountStats:
                                                  self.PVAL_PAIR_MAX],
                                           columns=frame_names)
 
-            for i in range(3):
-                frame_stats_df.loc[self.FRAME_COUNT, frame_names[i]] = int(sum(frame_counts_df.iloc[:, i]))
+            if total_counts == 0:
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).warning("Total counts on frames equal to 0")
+            else:
 
-                frame_stats_df.loc[self.FRAME_PERC, frame_names[i]] = 100 * float(
-                    sum(frame_counts_df.iloc[:, i])) / total_counts
+                for i in range(3):
+                    frame_stats_df.loc[self.FRAME_COUNT, frame_names[i]] = int(sum(frame_counts_df.iloc[:, i]))
 
-                frame_stats_df.loc[self.FPI, frame_names[i]] = np.log2(
-                    float(sum(frame_counts_df.iloc[:, i])) /
-                    ((total_counts - sum(frame_counts_df.iloc[:, i])) / 2))
+                    frame_stats_df.loc[self.FRAME_PERC, frame_names[i]] = 100 * float(
+                        sum(frame_counts_df.iloc[:, i])) / total_counts
 
-                frame_stats_df.loc[self.PVAL_PAIR, frame_names[i]] = stats.ttest_ind \
-                    (frame_counts_df.iloc[:, i],
-                     frame_counts_df.iloc[:, (i + 1) % 3]
-                     ).pvalue
+                    if (total_counts - sum(frame_counts_df.iloc[:, i])) == 0:
+                        frame_stats_df.loc[self.FPI, frame_names[i]] = -1
+                    else:
+                        frame_stats_df.loc[self.FPI, frame_names[i]] = np.log2(
+                            float(sum(frame_counts_df.iloc[:, i])) /
+                            ((total_counts - sum(frame_counts_df.iloc[:, i])) / 2))
 
-                frame_stats_df.loc[self.PVAL_FPI, frame_names[i]] = stats.ttest_ind \
-                    (frame_counts_df.iloc[:, i],
-                     list(frame_counts_df.iloc[:, (i + 1) % 3]) + list(frame_counts_df.iloc[:, (i + 2) % 3])
-                     ).pvalue
+                    frame_stats_df.loc[self.PVAL_PAIR, frame_names[i]] = stats.ttest_ind \
+                        (frame_counts_df.iloc[:, i],
+                         frame_counts_df.iloc[:, (i + 1) % 3]
+                         ).pvalue
 
-            for i in range(3):
-                frame_stats_df.loc[self.PVAL_PAIR_MAX, frame_names[i]] = np.max(
-                    [frame_stats_df.loc[self.PVAL_PAIR, :][(i - 1) % 3],
-                     frame_stats_df.loc[self.PVAL_PAIR, :][i]])
+                    frame_stats_df.loc[self.PVAL_FPI, frame_names[i]] = stats.ttest_ind \
+                        (frame_counts_df.iloc[:, i],
+                         list(frame_counts_df.iloc[:, (i + 1) % 3]) + list(frame_counts_df.iloc[:, (i + 2) % 3])
+                         ).pvalue
+
+                for i in range(3):
+                    frame_stats_df.loc[self.PVAL_PAIR_MAX, frame_names[i]] = np.max(
+                        [frame_stats_df.loc[self.PVAL_PAIR, :][(i - 1) % 3],
+                         frame_stats_df.loc[self.PVAL_PAIR, :][i]])
 
             self.frame_stats_df = frame_stats_df
 

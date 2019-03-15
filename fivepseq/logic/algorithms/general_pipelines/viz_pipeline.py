@@ -1,20 +1,38 @@
-import glob
-import os
-
-import logging
-import pandas as pd
 import colorlover as cl
-from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
-    bokeh_composite, bokeh_fft_plot, bokeh_table
+import glob
+import logging
+import os
+import pandas as pd
+from bokeh.io import export_svgs, export_png
+from bokeh.plotting import figure
 
 import config
 from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts
 from fivepseq.util.writers import FivePSeqOut
+from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
+    bokeh_composite, bokeh_fft_plot
 
 
 class VizPipeline:
     FILTER_TOP_POPULATED = "populated"
     FILTER_CANONICAL_TRANSCRIPTS = "canonical"
+
+    METACOUNTS_TERM = "metacounts_term"
+    METACOUNTS_START = "metacounts_start"
+    TRIANGLE_TERM = "triangle_term"
+    TRIANGLE_START = "triangle_start"
+    FRAME_TERM = "frames_term"
+    FRAME_START = "frames_start"
+    AMINO_ACID_PAUSES = "amino_acid_pauses"
+    AMINO_ACID_PAUSES_SCALED = "amino_acid_pauses_scaled"
+    FFT_TERM = "fft_term"
+    FFT_START = "fft_start"
+
+
+
+
+    png_dir = "png"
+    svg_dir = "svg"
 
     logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
 
@@ -50,10 +68,37 @@ class VizPipeline:
     colors_dict = None
     combined_color_dict = {COMBINED: cl.to_numeric(cl.scales['9']['qual']['Set3'])[3]}
 
+    phantomjs_installed = None
+
+    scatter_term = None
+    p_scatter_start = None
+    p_triangle_term = None
+    p_triangle_start = None
+    p_aa_heatmap = None
+    p_aa_heatmap_scaled = None
+    p_frame_barplots_term = None
+    p_frame_barplots_start = None
+    p_loci_meta_counts = None
+    p_fft_plot_start = None
+    p_fft_plot_term = None
+
+    p_scatter_term_combined = None
+    p_scatter_start_combined = None
+    p_triangle_term_combined = None
+    p_triangle_start_combined = None
+    p_aa_heatmaps_combined = None
+
     def __init__(self, args):
         self.args = args
 
     def run(self):
+        try:
+            self.prepare_output_folders()
+        except Exception as e:
+            err_msg = "Problem with plotting: could not create folders for exporting images: %s" % str(e)
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(err_msg)
+            raise Exception(err_msg)
+
         if self.args.sd is not None:
             self.logger.info("Plotting single sample: %s" % self.args.sd)
 
@@ -65,7 +110,7 @@ class VizPipeline:
             else:
                 title = self.args.t
 
-            self.plot_single_sample(title, title, self.args.o)
+            self.plot_single_sample(title, self.args.o)
 
         else:
             self.logger.info("Plotting multiple samples:")
@@ -81,6 +126,28 @@ class VizPipeline:
                 combined = False
             self.plot_multiple_samples(combined)
 
+    def prepare_output_folders(self):
+        if not os.path.exists(self.args.o):
+            try:
+                os.mkdir(self.args.o)
+            except Exception as e:
+                raise Exception("Output directory %s could not be created: %s" % (self.args.o, str(e)))
+
+        if self.is_phantomjs_installed():
+            self.png_dir = os.path.join(self.args.o, "png")
+            if not os.path.exists(self.png_dir):
+                try:
+                    os.mkdir(self.png_dir)
+                except Exception as e:
+                    raise Exception("Output directory %s could not be created: %s" % (self.png_dir, str(e)))
+
+            self.svg_dir = os.path.join(self.args.o, "svg")
+            if not os.path.exists(self.svg_dir):
+                try:
+                    os.mkdir(self.svg_dir)
+                except Exception as e:
+                    raise Exception("Output directory %s could not be created: %s" % (self.svg_dir, str(e)))
+
     def initialize_data(self):
         if self.args.sd is not None:
             if self.args.t is None:
@@ -92,7 +159,7 @@ class VizPipeline:
         else:
             for d in glob.glob(self.args.md):
                 if d[-1] == "/":
-                    d = d[0:len(d)-1]
+                    d = d[0:len(d) - 1]
                 sample = os.path.basename(d)
                 logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).debug("Sample: %s" % sample)
                 self.samples.append(sample)
@@ -174,164 +241,83 @@ class VizPipeline:
                 if amino_acid_df is not None:
                     self.amino_acid_df_combined += amino_acid_df
 
-    def plot_single_sample(self, sample_name, title, plot_dir):
-
-        #    p_data_summary_table = bokeh_table(sample_name + "_data_summary",
-        #                                       self.data_summary_dict)
-        #    p_frame_stats_table = bokeh_table(sample_name + "frame_stats",
-        #                                      self.frame_stats_df_dict)
-
-        p_scatter_term = bokeh_scatter_plot(sample_name + "_term", FivePSeqCounts.TERM,
-                                            self.meta_count_term_dict,
-                                            self.colors_dict)
-        p_scatter_start = bokeh_scatter_plot(sample_name + "_start", FivePSeqCounts.START,
-                                             self.meta_count_start_dict,
-                                             self.colors_dict)
-        p_triangle = bokeh_triangle_plot(sample_name + "_triangle",
-                                         self.frame_count_term_dict,
-                                         self.colors_dict)
-
-        p_triangle_START = bokeh_triangle_plot(sample_name + "_triangle_START",
-                                               self.frame_count_start_dict,
-                                               self.colors_dict)
-
-        p_aa_heatmap = bokeh_heatmap_grid(sample_name + "_amino_acid_pauses",
-                                          self.amino_acid_df_dict)
-
-        p_aa_heatmap_scaled = bokeh_heatmap_grid(sample_name + "_amino_acid_pauses_scaled",
-                                                 self.amino_acid_df_dict, scale=True)
-
-        p_frame_barplots_term = bokeh_frame_barplots(sample_name + "_frame_histograms",
-                                                     self.frame_count_term_dict,
-                                                     self.frame_stats_df_dict,
-                                                     self.colors_dict)
-        p_frame_barplots_start = bokeh_frame_barplots(sample_name + "_frame_START_histograms",
-                                                      self.frame_count_start_dict,
-                                                      self.frame_stats_df_dict,
-                                                      self.colors_dict)
-
-        p_loci_meta_counts = bokeh_scatter_plot(sample_name + "_loci_meta_counts",
-                                                "loci",
-                                                self.loci_meta_counts_dict,
-                                                self.colors_dict)
-
-        # fft plots
-        p_fft_plot_start = bokeh_fft_plot(sample_name + "_fft_start", "start",
-                                          self.fft_signal_start_dict,
-                                          self.colors_dict)
-
-        p_fft_plot_term = bokeh_fft_plot(sample_name + "_fft_term", "term",
-                                         self.fft_signal_term_dict,
-                                         self.colors_dict)
+    def plot_single_sample(self, title, plot_dir):
+        self.make_single_sample_plots(title)
 
         # TODO skip tables for now as those are not properly drawn
-        bokeh_composite(title, [p_scatter_start, p_scatter_term,
-                                p_triangle, p_triangle_START,
-                                p_aa_heatmap, None,
-                                p_aa_heatmap_scaled, None,
-                                p_frame_barplots_term, p_frame_barplots_start,
-                                p_loci_meta_counts, None,
-                                p_fft_plot_start, p_fft_plot_term],
+        bokeh_composite(title, [self.p_scatter_start, self.p_scatter_term,
+                                self.p_triangle_term, self.p_triangle_start,
+                                self.p_aa_heatmap, None,
+                                self.p_aa_heatmap_scaled, None,
+                                self.p_frame_barplots_term, self.p_frame_barplots_start,
+                                self.p_loci_meta_counts, None,
+                                self.p_fft_plot_start, self.p_fft_plot_term],
                         os.path.join(plot_dir, title + ".html"), 2)
 
-    def plot_multiple_samples(self, combined = True):
+    def plot_multiple_samples(self, combined=True):
         self.logger.info("Generating plots for single samples")
         if self.args.t is None:
             self.args.t = os.path.basename(os.path.dirname(self.args.md)) + "_" + os.path.basename(self.args.md)
 
-        #    p_data_summary_table = bokeh_table("data_summary",
-        #                                       self.data_summary_dict)
-        #    p_frame_stats_table = bokeh_table("frame_stats",
-        #                                      self.frame_stats_df_dict)
-        p_scatter_term = bokeh_scatter_plot("meta-counts_TERM", FivePSeqCounts.TERM,
-                                            self.meta_count_term_dict, self.colors_dict)
-
-        p_scatter_start = bokeh_scatter_plot("meta-counts_START", FivePSeqCounts.START,
-                                             self.meta_count_start_dict, self.colors_dict)
-
-        p_triangle = bokeh_triangle_plot("frame_preferences_TERM",
-                                         self.frame_count_term_dict, self.colors_dict)
-
-        p_triangle_START = bokeh_triangle_plot("frame_preferences_START",
-                                               self.frame_count_start_dict, self.colors_dict)
-
-        p_aa_heatmaps = bokeh_heatmap_grid("amino_acid_pauses", self.amino_acid_df_dict)
-
-        p_aa_heatmap_scaled = bokeh_heatmap_grid("amino_acid_pauses_scaled",
-                                                 self.amino_acid_df_dict, scale=True)
-
-        p_frame_barplots = bokeh_frame_barplots("frame_histograms_TERM",
-                                                self.frame_count_term_dict,
-                                                self.frame_stats_df_dict,
-                                                self.colors_dict)
-
-        p_frame_barplots_start = bokeh_frame_barplots("frame_histograms_START",
-                                                      self.frame_count_start_dict,
-                                                      self.frame_stats_df_dict,
-                                                      self.colors_dict)
-
-        p_fft_plot_start = bokeh_fft_plot("FFT_start", "start",
-                                          self.fft_signal_start_dict,
-                                          self.colors_dict)
-
-        p_fft_plot_term = bokeh_fft_plot("FFT_term", "term",
-                                         self.fft_signal_term_dict,
-                                         self.colors_dict)
+        self.make_single_sample_plots(self.args.t)
+        if combined:
+            self.make_combined_plots(self.args.t)
 
         if combined:
-            # Combined plots
-            p_scatter_term_combined = bokeh_scatter_plot("meta-counts_TERM_combined", FivePSeqCounts.TERM,
-                                                         {"combined": self.meta_count_term_combined},
-                                                         self.combined_color_dict)
-
-            p_scatter_start_combined = bokeh_scatter_plot("meta-counts_START_combined", FivePSeqCounts.START,
-                                                          {self.COMBINED: self.meta_count_start_combined},
-                                                          self.combined_color_dict)
-
-            p_triangle_combined = bokeh_triangle_plot("frame_preferences_TERM_combined",
-                                                      {self.COMBINED: self.frame_count_TERM_combined},
-                                                      self.combined_color_dict)
-
-            p_triangle_START_combined = bokeh_triangle_plot("frame_preferences_START_combined",
-                                                            {self.COMBINED: self.frame_count_START_combined},
-                                                            self.combined_color_dict)
-
-            p_aa_heatmaps_combined = bokeh_heatmap_grid("amino_acid_pauses_combined",
-                                                        {self.COMBINED: self.amino_acid_df_combined})
-
-            # p_frame_barplots_combined = bokeh_frame_barplots("frame_histograms_TERM_combined",
-            #                                                 {self.COMBINED: self.frame_count_TERM_combined},
-            #                                                 {self.COMBINED: None},
-            #                                                 self.combined_color_dict)
-            # p_frame_barplots_start_combined = bokeh_frame_barplots("frame_histograms_START",
-            #                                                       {self.COMBINED: self.frame_count_START_combined},
-            #                                                       {self.COMBINED: None},
-            #                                                       self.combined_color_dict)
-
 
             # TODO skip tables for now as those are not properly drawn
             bokeh_composite(self.args.t,
-                            [p_scatter_start, p_scatter_term,
-                             p_triangle, p_triangle_START,
-                             p_aa_heatmaps, None, None, None,
-                             p_aa_heatmap_scaled, None, None, None,
-                             p_frame_barplots, None, None, None,
-                             p_frame_barplots_start, None, None, None,
-                             p_fft_plot_start, p_fft_plot_term, None, None,
-                             p_scatter_start_combined, p_scatter_term_combined,
-                             p_triangle_combined, p_triangle_START_combined,
-                             p_aa_heatmaps_combined, None, None, None],
+                            [self.p_scatter_start, self.p_scatter_term,
+                             self.p_triangle_term, self.p_triangle_start,
+                             self.p_aa_heatmap, None, None, None,
+                             self.p_aa_heatmap_scaled, None, None, None,
+                             self.p_frame_barplots_term, None, None, None,
+                             self.p_frame_barplots_start, None, None, None,
+                             self.p_fft_plot_start, self.p_fft_plot_term, None, None,
+                             self.p_scatter_start_combined, self.p_scatter_term_combined,
+                             self.p_triangle_term_combined, self.p_triangle_start_combined,
+                             self.p_aa_heatmaps_combined, None, None, None],
                             os.path.join(self.args.o, self.args.t + ".html"), 4)
         else:
             bokeh_composite(self.args.t,
-                            [p_scatter_start, p_scatter_term,
-                             p_triangle, p_triangle_START,
-                             p_aa_heatmaps, None, None, None,
-                             p_aa_heatmap_scaled, None, None, None,
-                             p_frame_barplots, None, None, None,
-                             p_frame_barplots_start, None, None, None,
-                             p_fft_plot_start, p_fft_plot_term, None, None],
+                            [self.p_scatter_start, self.p_scatter_term,
+                             self.p_triangle_term, self.p_triangle_start,
+                             self.p_aa_heatmap, None, None, None,
+                             self.p_aa_heatmap_scaled, None, None, None,
+                             self.p_frame_barplots_term, None, None, None,
+                             self.p_frame_barplots_start, None, None, None,
+                             self.p_fft_plot_start, self.p_fft_plot_term, None, None],
                             os.path.join(self.args.o, self.args.t + ".html"), 4)
+
+    def is_phantomjs_installed(self):
+        if self.phantomjs_installed is not None:
+            return self.phantomjs_installed
+
+        # prepare some data
+        x = [1, 2, 3, 4, 5]
+        y = [6, 7, 2, 4, 5]
+
+        # output to static HTML file
+        # output_file("lines.html")
+
+        # create a new plot with a title and axis labels
+        p = figure(title="simple line example", x_axis_label='x', y_axis_label='y')
+
+        # add a line renderer with legend and line thickness
+        p.line(x, y, legend="Temp.", line_width=2)
+
+        p.output_backend = "svg"
+        try:
+            export_svgs(p, filename="fivepseq.phantom.test.svg")
+            self.phantomjs_installed = True
+        except:
+            self.phantomjs_installed = False
+            # TODO in the future fivepseq should attempt to install phantomjs from the very beginning
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning(
+                "It seems like phantomjs is not installed no your system. "
+                "Files may not be exported in svg and png formats, while html will still be available for viewing."
+                "To install phantomjs, run 'conda install phantomjs selenium pillow'")
+        return self.phantomjs_installed
 
     def read_meta_count_term(self, fivepseq_out):
         file = fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_TERM_FILE)
@@ -438,3 +424,87 @@ class VizPipeline:
             self.logger.warn("The file %s was not found, table will not be generated" % str(file))
             data_summary = None
         return data_summary
+
+    def make_single_sample_plots(self, title):
+        self.p_scatter_term = bokeh_scatter_plot(title + self.METACOUNTS_TERM, FivePSeqCounts.TERM,
+                                                 self.meta_count_term_dict,
+                                                 self.colors_dict,
+                                                 png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_scatter_start = bokeh_scatter_plot(title + self.METACOUNTS_START, FivePSeqCounts.START,
+                                                  self.meta_count_start_dict,
+                                                  self.colors_dict,
+                                                  png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_triangle_term = bokeh_triangle_plot(title + self.TRIANGLE_TERM,
+                                                   self.frame_count_term_dict,
+                                                   self.colors_dict,
+                                                   png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_triangle_start = bokeh_triangle_plot(title + self.TRIANGLE_START,
+                                                    self.frame_count_start_dict,
+                                                    self.colors_dict,
+                                                    png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_aa_heatmap = bokeh_heatmap_grid(title + self.AMINO_ACID_PAUSES,
+                                               self.amino_acid_df_dict,
+                                               png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_aa_heatmap_scaled = bokeh_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED,
+                                                      self.amino_acid_df_dict, scale=True,
+                                                      png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_frame_barplots_term = bokeh_frame_barplots(title + self.FRAME_TERM,
+                                                          self.frame_count_term_dict,
+                                                          self.frame_stats_df_dict,
+                                                          self.colors_dict,
+                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_frame_barplots_start = bokeh_frame_barplots(title + self.FRAME_START,
+                                                           self.frame_count_start_dict,
+                                                           self.frame_stats_df_dict,
+                                                           self.colors_dict,
+                                                           png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_loci_meta_counts = bokeh_scatter_plot(title + "_loci_meta_counts",
+                                                     "loci",
+                                                     self.loci_meta_counts_dict,
+                                                     self.colors_dict,
+                                                     png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        # fft plots
+        self.p_fft_plot_start = bokeh_fft_plot(title + self.FFT_START, "start",
+                                               self.fft_signal_start_dict,
+                                               self.colors_dict,
+                                               png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_fft_plot_term = bokeh_fft_plot(title + self.FFT_TERM, "term",
+                                              self.fft_signal_term_dict,
+                                              self.colors_dict,
+                                              png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+    def make_combined_plots(self, title):
+        # Combined plots
+        self.p_scatter_term_combined = bokeh_scatter_plot(title + self.METACOUNTS_TERM + "_combined", FivePSeqCounts.TERM,
+                                                          {"combined": self.meta_count_term_combined},
+                                                          self.combined_color_dict,
+                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_scatter_start_combined = bokeh_scatter_plot(title + self.METACOUNTS_START + "_combined", FivePSeqCounts.START,
+                                                           {self.COMBINED: self.meta_count_start_combined},
+                                                           self.combined_color_dict,
+                                                           png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_triangle_term_combined = bokeh_triangle_plot(title + self.TRIANGLE_TERM + "_combined",
+                                                            {self.COMBINED: self.frame_count_TERM_combined},
+                                                            self.combined_color_dict,
+                                                            png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_triangle_start_combined = bokeh_triangle_plot(title + self.TRIANGLE_START + "_combined",
+                                                             {self.COMBINED: self.frame_count_START_combined},
+                                                             self.combined_color_dict,
+                                                             png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_aa_heatmaps_combined = bokeh_heatmap_grid(title + self.AMINO_ACID_PAUSES + "_combined",
+                                                         {self.COMBINED: self.amino_acid_df_combined},
+                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
