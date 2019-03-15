@@ -43,6 +43,7 @@ python path_to_your_fivepseq (/proj/sllstore2017018/lilit/fivepseq_v0.1.1/fiveps
 -a path_to_your_annotation_gff (sorry no gtf for now) \
 
 count \
+-b path_to_one_or_many_bam_files (many files should be provided with pattern (e.g. parent_dir/*.bam) within brackets)
 
 -o path_to_output_directory
 
