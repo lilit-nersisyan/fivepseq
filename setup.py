@@ -31,5 +31,5 @@ setup(name='fivepseq',
       include_package_data=True,
       test_suite='nose.collector',
       tests_require=['nose'],
-      install_requires=['pathlib2', 'preconditions', 'plastid', 'numpy', 'pandas', 'pysam', 'dill', 'colorlover', 'bokeh', 'logging', 'glob'],
+      install_requires=['pathlib2', 'preconditions', 'plastid', 'numpy', 'pandas', 'pysam', 'dill', 'colorlover', 'bokeh', 'logging'],
       zip_safe=False)

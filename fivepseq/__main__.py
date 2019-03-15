@@ -91,7 +91,7 @@ class FivepseqArguments:
         count_parser = subparsers.add_parser('count', help="fivepseq count help")
 
         count_parser.add_argument("-b", "-bam",
-                                  help="the full path to the bam/sam file (may be compressed)",
+                                  help="the full path one or many bam/sam files (many files should be provided with a pattern, within brackets)",
                                   type=str,
                                   required=True)
 
@@ -162,13 +162,14 @@ class FivepseqArguments:
                                  required=False)
 
 
+
         ##########################
         #       config setup
         ##########################
 
         config.args = parser.parse_args()
-        if config.args.command == 'count':
-            config.bam = os.path.abspath(config.args.b)
+#        if config.args.command == 'count':
+#            config.bam = os.path.abspath(config.args.b)
 
 
         #FIXME this imposes necessity to know the span size with which fivepseq was run for further visualization
@@ -386,21 +387,45 @@ def generate_and_store_fivepseq_counts():
 
     if fivepseq_counts is None:
         # read files
-        bam_reader = BamReader(config.bam)
         annotation_reader = AnnotationReader(config.annot)  # set the break for human
         fasta_reader = FastaReader(config.genome)
 
-        # combine objects into FivePSeqCounts object
-        fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome,
-                                         config.span_size)
         if config.args.loci_file is not None:
             fivepseq_counts.loci_file = config.args.loci_file
 
-    # compute and store the counts in files
-    fivepseq_out = FivePSeqOut(config.out_dir, config.args.conflicts)
+        print "%s" % (pad_spaces("\tInput bam files:"))
+        bam_files = []
+        for bam in glob.glob(config.args.b):
+            if bam.endswith(".bam"):
+                bam_files.append(bam)
+                print "%s" % pad_spaces("\t%s" % bam)
 
-    fivepseq_pipeline = CountPipeline(fivepseq_counts, fivepseq_out)
-    fivepseq_pipeline.run()
+        success_values = {}
+        for bam in bam_files:
+            bam_reader = BamReader(bam)
+            # combine objects into FivePSeqCounts object
+            fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome,
+                                             config.span_size)
+
+            bam_name = os.path.basename(bam)
+            if bam_name.endswith(".bam"):
+                bam_name = bam_name[0:len(bam_name)-4]
+            bam_out_dir = os.path.join(config.out_dir, bam_name)
+            if not os.path.exists(bam_out_dir):
+                os.mkdir(bam_out_dir)
+
+            fivepseq_out = FivePSeqOut(bam_out_dir, config.args.conflicts)
+            fivepseq_pipeline = CountPipeline(fivepseq_counts, fivepseq_out)
+            fivepseq_pipeline.run()
+            success = fivepseq_out.sanity_check_for_counts()
+            if success:
+                success_values.update({bam_name: "SUCCESS"})
+            else:
+                success_values.update({bam_name: "FAILURE"})
+
+        # check if all the files in all directories are in place and store a summary of all runs
+        fivepseq_out = FivePSeqOut(config.out_dir, config.OVERWRITE) # overwrite is for always removing existing summary file
+        fivepseq_out.write_dict(success_values, FivePSeqOut.BAM_SUCCESS_SUMMARY)
 
 
     return fivepseq_counts

@@ -33,9 +33,13 @@ class FivePSeqOut:
     FFT_SIGNALS_START = "fft_signals_start.txt"
     FFT_SIGNALS_TERM = "fft_signals_term.txt"
 
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    FAILED_FILES_LIST = "failed_files_list.txt"
+    BAM_SUCCESS_SUMMARY = "count_run_summary.txt"
 
-    def __init__(self, output_dir, conflict_mode = config.ADD_FILES):
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    success = None
+
+    def __init__(self, output_dir, conflict_mode=config.ADD_FILES):
         """
         Initialized a reporter class object with the given directory.
         All further requests to store data will lead to files saved in the output directory defined in self.
@@ -77,7 +81,7 @@ class FivePSeqOut:
                     self.logger.debug("Removed existing file %s for overwriting" % path)
                 except Exception as e:
                     self.logger.error("Could not remove existing file %s for overwriting. "
-                                        "Reason: %s" % (path, str(e)))
+                                      "Reason: %s" % (path, str(e)))
 
         try:
             f = open(path, "w")
@@ -107,7 +111,7 @@ class FivePSeqOut:
             for counts in vector_list:
                 f.write('\t'.join(map(str, counts)) + '\n')
             f.close()
-            self.logger.info("File %s saved" % f)
+            self.logger.debug("File %s saved" % f)
 
     @preconditions(lambda vector_dict: isinstance(vector_dict, dict),
                    lambda file_name: isinstance(file_name, str))
@@ -129,7 +133,7 @@ class FivePSeqOut:
                 f.write(key + "\t")
                 f.write('\t'.join(map(str, counts)) + '\n')
             f.close()
-            self.logger.info("File %s saved" % f)
+            self.logger.debug("File %s saved" % f)
 
     @preconditions(lambda my_dict: isinstance(my_dict, dict),
                    lambda file_name: isinstance(file_name, str))
@@ -151,7 +155,7 @@ class FivePSeqOut:
                 f.write(key + "\t")
                 f.write(str(count) + '\n')
             f.close()
-            self.logger.info("File %s saved" % f)
+            self.logger.debug("File %s saved" % f)
 
     @preconditions(lambda my_vector: isinstance(my_vector, list),
                    lambda file_name: isinstance(file_name, str))
@@ -171,7 +175,7 @@ class FivePSeqOut:
             for i in my_vector:
                 f.write(str(i) + "\n")
             f.close()
-            self.logger.info("File %s saved" % f)
+            self.logger.debug("File %s saved" % f)
 
     # @preconditions(lambda df: isinstance(df, pd.core.frame.DataFrame),
     #               lambda file_name: isinstance(file_name, str))
@@ -189,7 +193,7 @@ class FivePSeqOut:
         if f is not None:
             df.to_csv(f, sep="\t", header=True)
 
-            self.logger.info("Dataframe saved to file %s " % f)
+            self.logger.debug("Dataframe saved to file %s " % f)
 
     def write_series_to_file(self, data_series, file_name):
         """
@@ -211,11 +215,11 @@ class FivePSeqOut:
             f.write('\t'.join(["ID", "gene", "chr", "cds_start", "cds_end", "type"]) + "\n")
             for transcript in transcript_assembly:
                 f.write('\t'.join([self.get_transcript_attr(transcript, "ID"),
-                                      self.get_transcript_attr(transcript, "Name"),
-                                      str(transcript.chrom),
-                                      str(self.get_transcript_attr(transcript, "cds_genome_start")),
-                                      str(self.get_transcript_attr(transcript, "cds_genome_end")),
-                                      self.get_transcript_attr(transcript, "type")]) + '\n')
+                                   self.get_transcript_attr(transcript, "Name"),
+                                   str(transcript.chrom),
+                                   str(self.get_transcript_attr(transcript, "cds_genome_start")),
+                                   str(self.get_transcript_attr(transcript, "cds_genome_end")),
+                                   self.get_transcript_attr(transcript, "type")]) + '\n')
 
             f.close()
 
@@ -227,3 +231,49 @@ class FivePSeqOut:
 
     def get_file_path(self, file_name):
         return os.path.join(self.output_dir, file_name)
+
+    def sanity_check_for_counts(self):
+        """"
+        Checks if all the count files are present in the output directory.
+        Stores absent files in a text file.
+
+        :return: returns True if all the files are in place and False otherwise
+        """
+        if self.success is not None:
+            return self.success
+
+        if os.path.exists(self.get_file_path(self.FAILED_FILES_LIST)):
+            try:
+                os.remove(self.get_file_path(self.FAILED_FILES_LIST))
+            except Exception as e:
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error\
+                    ("Problem removing existing failed files report: %s" % str(e))
+
+        failed_files = []
+
+        necessary_files = [self.COUNT_TERM_FILE,
+                           self.COUNT_START_FILE,
+                           self.COUNT_FULL_FILE,
+                           self.META_COUNT_TERM_FILE,
+                           self.META_COUNT_START_FILE,
+                           self.AMINO_ACID_PAUSES_FILE,
+                           self.TRANSCRIPT_ASSEMBLY_FILE,
+                           self.FRAME_COUNTS_TERM_FILE,
+                           self.FRAME_COUNTS_START_FILE,
+                           self.CANONICAL_TRANSCRIPT_INDEX_FILE,
+                           self.TRANSCRIPT_DESCRIPTORS_FILE,
+                           self.DATA_SUMMARY_FILE,
+                           self.FRAME_STATS_DF_FILE,
+                           self.FFT_STATS_DF_FILE,
+                           self.FFT_SIGNALS_START,
+                           self.FFT_SIGNALS_TERM]
+
+        for f in necessary_files:
+            if not os.path.exists(self.get_file_path(f)):
+                failed_files.append(f)
+
+        if len(failed_files) > 0:
+            self.write_vector(failed_files, self.FAILED_FILES_LIST)
+            return False
+
+        return True

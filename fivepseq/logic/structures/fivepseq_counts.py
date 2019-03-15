@@ -79,7 +79,7 @@ class FivePSeqCounts:
                                                             self.NUMBER_READS,
                                                             self.NUMBER_POSITIONS])
 
-        self.logger.debug("Initiated a FivePSeqCounts object with"
+        self.logger.info("Initiated a FivePSeqCounts object with"
                             "\n\talignment from file %s"
                             "\n\tannotation from file %s "
                             "\n\tgenome from file %s"
@@ -95,6 +95,8 @@ class FivePSeqCounts:
         """
 
         # if counts are already computed, return the existing ones
+
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("Generating count vectors")
 
         if self.count_vector_list_full_length is not None:
             if self.count_vector_list_term is not None:
@@ -118,7 +120,7 @@ class FivePSeqCounts:
         for transcript in transcript_generator:
 
             # update to console
-            if counter % 1000 == 0:
+            if counter % 10000 == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / self.annotation.transcript_count),
                     '%'), )
@@ -475,6 +477,8 @@ class FivePSeqCounts:
             count_vector = count_vector[span_size:len(count_vector) - span_size]
 
             if len(cds_sequence) != len(count_vector):
+                #TODO in the future report the number of problematic transcripts
+                #TODO filter these transcripts during plotting
                 self.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
                                       % (counter, len(cds_sequence), len(count_vector)))
 

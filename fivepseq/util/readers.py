@@ -103,7 +103,7 @@ class BamReader(TopReader):
         """
         # REQ this will work only if the index file is in the same directory as the bam file, and is named in a standard manner : https://pysam.readthedocs.io/en/latest/api.html
         alignment_file = pysam.AlignmentFile(self.file)
-        self.alignment = Alignment(alignment_file)
+        self.alignment = Alignment(alignment_file, self.file)
         # TODO the gene set file should be converted to a filter and then used to filter the transcript assembly
         # TODO (or should it be added to the mapping function?)
 
