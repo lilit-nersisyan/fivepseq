@@ -17,16 +17,16 @@ class VizPipeline:
     FILTER_TOP_POPULATED = "populated"
     FILTER_CANONICAL_TRANSCRIPTS = "canonical"
 
-    METACOUNTS_TERM = "metacounts_term"
-    METACOUNTS_START = "metacounts_start"
-    TRIANGLE_TERM = "triangle_term"
-    TRIANGLE_START = "triangle_start"
-    FRAME_TERM = "frames_term"
-    FRAME_START = "frames_start"
-    AMINO_ACID_PAUSES = "amino_acid_pauses"
-    AMINO_ACID_PAUSES_SCALED = "amino_acid_pauses_scaled"
-    FFT_TERM = "fft_term"
-    FFT_START = "fft_start"
+    METACOUNTS_TERM = "_metacounts_term"
+    METACOUNTS_START = "_metacounts_start"
+    TRIANGLE_TERM = "_triangle_term"
+    TRIANGLE_START = "_triangle_start"
+    FRAME_TERM = "_frames_term"
+    FRAME_START = "_frames_start"
+    AMINO_ACID_PAUSES = "_amino_acid_pauses"
+    AMINO_ACID_PAUSES_SCALED = "_amino_acid_pauses_scaled"
+    FFT_TERM = "_fft_term"
+    FFT_START = "_fft_start"
 
 
 
@@ -99,7 +99,7 @@ class VizPipeline:
             logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(err_msg)
             raise Exception(err_msg)
 
-        if self.args.sd is not None:
+        if hasattr(self.args, 'sd') and  self.args.sd is not None:
             self.logger.info("Plotting single sample: %s" % self.args.sd)
 
             self.initialize_data()
@@ -115,7 +115,8 @@ class VizPipeline:
         else:
             self.logger.info("Plotting multiple samples:")
             for d in glob.glob(self.args.md):
-                self.logger.info("\t%s" % d)
+                if os.path.isdir(d):
+                    self.logger.info("\t%s" % d)
 
             self.initialize_data()
             self.logger.info("Finished reading data counts.")
@@ -149,7 +150,7 @@ class VizPipeline:
                     raise Exception("Output directory %s could not be created: %s" % (self.svg_dir, str(e)))
 
     def initialize_data(self):
-        if self.args.sd is not None:
+        if hasattr(self.args, 'sd') and self.args.sd is not None:
             if self.args.t is None:
                 sample = os.path.basename(self.args.sd)
             else:
@@ -158,12 +159,13 @@ class VizPipeline:
             self.update_dicts(sample, self.args.sd)
         else:
             for d in glob.glob(self.args.md):
-                if d[-1] == "/":
-                    d = d[0:len(d) - 1]
-                sample = os.path.basename(d)
-                logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).debug("Sample: %s" % sample)
-                self.samples.append(sample)
-                self.update_dicts(sample, d)
+                if os.path.isdir(d):
+                    if d[-1] == "/":
+                        d = d[0:len(d) - 1]
+                    sample = os.path.basename(d)
+                    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).debug("Sample: %s" % sample)
+                    self.samples.append(sample)
+                    self.update_dicts(sample, d)
 
         self.colors_dict = dict(
             zip(self.meta_count_start_dict.keys(),
@@ -308,8 +310,10 @@ class VizPipeline:
 
         p.output_backend = "svg"
         try:
-            export_svgs(p, filename="fivepseq.phantom.test.svg")
+            test_file_name = "fivepseq.phantom.test.svg"
+            export_svgs(p, filename=test_file_name)
             self.phantomjs_installed = True
+            os.remove(test_file_name)
         except:
             self.phantomjs_installed = False
             # TODO in the future fivepseq should attempt to install phantomjs from the very beginning

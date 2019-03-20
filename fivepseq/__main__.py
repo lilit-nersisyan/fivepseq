@@ -24,6 +24,9 @@ from fivepseq.util.writers import FivePSeqOut
 from fivepseq.logic.algorithms.general_pipelines.count_pipeline import CountPipeline
 from logic.algorithms.general_pipelines.viz_pipeline import VizPipeline
 
+FIVEPSEQ_COUNTS_DIR = "fivepseq_counts"
+FIVEPSEQ_PLOTS_DIR = "fivepseq_plots"
+FIVEPSEQ_LOG_DIR = "log"
 
 class FivepseqArguments:
     """
@@ -55,34 +58,34 @@ class FivepseqArguments:
         ##########################
 
         parser.add_argument("-g", "-genome",
-                                  help="the full path to the fa/fasta file (may be compressed)",
-                                  type=str,
-                                  required=True)
+                            help="the full path to the fa/fasta file (may be compressed)",
+                            type=str,
+                            required=True)
         parser.add_argument("-a", "-annotation",
-                                  help="the full path to the gtf/gff/gff3 file (may be compressed)",
-                                  type=str,
-                                  required=True)
+                            help="the full path to the gtf/gff/gff3 file (may be compressed)",
+                            type=str,
+                            required=True)
         parser.add_argument("--span",
-                                  help="the number of bases to span around a genomic position",
-                                  type=int,
-                                  required=False,
-                                  default=100)
+                            help="the number of bases to span around a genomic position",
+                            type=int,
+                            required=False,
+                            default=100)
 
         parser.add_argument('--conflicts',
-                                  help="The file conflict mode:\n"
-                                       "add (default) - only adds missing files to existing directory\n"
-                                       "overwrite - overwrites all the files in the existing (in case) output directory\n"
-                                       "alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory",
-                                  type=str,
-                                  choices=['add', 'overwrite', 'alt_dir'],
-                                  required=False,
-                                  default="add")
+                            help="The file conflict mode:\n"
+                                 "add (default) - only adds missing files to existing directory\n"
+                                 "overwrite - overwrites all the files in the existing (in case) output directory\n"
+                                 "alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory",
+                            type=str,
+                            choices=['add', 'overwrite', 'alt_dir'],
+                            required=False,
+                            default="add")
 
         parser.add_argument("--log",
-                                  help="set logging level",
-                                  choices=["INFO", "DEBUG", "info", "debug"],
-                                  default="DEBUG",
-                                  required=False)
+                            help="set logging level",
+                            choices=["INFO", "DEBUG", "info", "debug"],
+                            default="DEBUG",
+                            required=False)
 
         ##########################
         #       fivepseq count
@@ -95,13 +98,11 @@ class FivepseqArguments:
                                   type=str,
                                   required=True)
 
-
         count_parser.add_argument("-o", "-outdir",
                                   help="the output directory",
                                   type=str,
                                   required=False,
                                   default="fivepseq_out")
-
 
         count_parser.add_argument("-s", "-geneset",
                                   help="the file containing gene names of interest",
@@ -113,19 +114,16 @@ class FivepseqArguments:
                                   required=False,
                                   type=str)
 
-
         count_parser.add_argument("--ignore-cache",
                                   help="read in transcript assembly and rewrite existing pickle paths",
                                   action="store_true",
                                   default=False,
                                   required=False)
 
-        #FIXME not possible to save to pickle path: reason cython reduce not working for pysam Alignment class
-        #count_parser.add_argument("--fivepseq-pickle",
+        # FIXME not possible to save to pickle path: reason cython reduce not working for pysam Alignment class
+        # count_parser.add_argument("--fivepseq-pickle",
         #                          help="specify the pickle path to read in existing FivePSeqCounts object",
         #                          required=False)
-
-
 
         ##########################
         #       fivepseq plot
@@ -155,24 +153,66 @@ class FivepseqArguments:
                                  required=False)
 
         plot_parser.add_argument("-tf", "-transcript_filter",
-                                 help = "Name of filter to apply on transcripts",
-                                 type = str,
+                                 help="Name of filter to apply on transcripts",
+                                 type=str,
                                  choices=[VizPipeline.FILTER_TOP_POPULATED,
                                           VizPipeline.FILTER_CANONICAL_TRANSCRIPTS],
                                  required=False)
 
+        #################################
+        #       fivepseq count_and_plot
+        #################################
 
+        count_and_plot_parser = subparsers.add_parser('count_and_plot', help="fivepseq count_and_plot help")
+
+        count_and_plot_parser.add_argument("-b", "-bam",
+                                           help="the full path one or many bam/sam files (many files should be provided with a pattern, within brackets)",
+                                           type=str,
+                                           required=True)
+
+        count_and_plot_parser.add_argument("-o", "-outdir",
+                                           help="the output directory",
+                                           type=str,
+                                           required=False,
+                                           default="fivepseq_out")
+
+        count_and_plot_parser.add_argument("-s", "-geneset",
+                                           help="the file containing gene names of interest",
+                                           type=str,
+                                           required=False)
+
+        count_and_plot_parser.add_argument("--loci-file",
+                                           help="file with loci to count mapping positions relative to",
+                                           required=False,
+                                           type=str)
+
+        count_and_plot_parser.add_argument("--ignore-cache",
+                                           help="read in transcript assembly and rewrite existing pickle paths",
+                                           action="store_true",
+                                           default=False,
+                                           required=False)
+
+        count_and_plot_parser.add_argument("-t", "-title",
+                                           help="title of the plots file(s)",
+                                           type=str,
+                                           required=False)
+
+        count_and_plot_parser.add_argument("-tf", "-transcript_filter",
+                                           help="Name of filter to apply on transcripts",
+                                           type=str,
+                                           choices=[VizPipeline.FILTER_TOP_POPULATED,
+                                                    VizPipeline.FILTER_CANONICAL_TRANSCRIPTS],
+                                           required=False)
 
         ##########################
         #       config setup
         ##########################
 
         config.args = parser.parse_args()
-#        if config.args.command == 'count':
-#            config.bam = os.path.abspath(config.args.b)
+        #        if config.args.command == 'count':
+        #            config.bam = os.path.abspath(config.args.b)
 
-
-        #FIXME this imposes necessity to know the span size with which fivepseq was run for further visualization
+        # FIXME this imposes necessity to know the span size with which fivepseq was run for further visualization
         config.span_size = config.args.span
         config.genome = os.path.abspath(config.args.g)
         config.annot = os.path.abspath(config.args.a)
@@ -199,8 +239,8 @@ class FivepseqArguments:
 
             print "%s%s" % (pad_spaces("\tLogging level:"), config.args.log.upper())
 
-         #   if config.args.fivepseq_pickle is not None:
-         #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
+        #   if config.args.fivepseq_pickle is not None:
+        #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
 
         elif config.args.command == 'plot':
             print "Call to fivepseq plot with arguments:\n"
@@ -211,7 +251,7 @@ class FivepseqArguments:
                     err_msg = "Provided input %s does not contain proper fivepseq directories" % config.args.md
                     raise Exception(err_msg)
                 print "%s" % (pad_spaces("\tInput directories:"))
-                #TODO check for proper patterned input
+                # TODO check for proper patterned input
                 for f in glob.glob(config.args.md):
                     print "%s" % pad_spaces("\t%s" % f)
             print "%s%s" % (pad_spaces("\tGenome file:"), os.path.abspath(config.args.g))
@@ -221,6 +261,29 @@ class FivepseqArguments:
 
             if config.args.t is not None:
                 print "%s%s" % (pad_spaces("\tOutput file title:"), config.args.t + ".html")
+
+                # NOTE The files are not checked for existence at this stage.
+                # NOTE The absolute_path function simply merges the relative paths with the working directory.
+
+        elif config.args.command == 'count_and_plot':
+            print "Call to fivepseq count_and_plot with arguments:\n"
+            print "%s%s" % (pad_spaces("\tAlignment file:"), os.path.abspath(config.args.b))
+            print "%s%s" % (pad_spaces("\tGenome file:"), os.path.abspath(config.args.g))
+            print "%s%s" % (pad_spaces("\tAnnotation file:"), os.path.abspath(config.args.a))
+
+            print "%s%s" % (pad_spaces("\tSpan size:"), config.span_size)
+            if config.args.s is not None:
+                print "%s%s" % (pad_spaces("\tGene set file:"), os.path.abspath(config.args.s))
+            print "%s%s" % (pad_spaces("\tOutput directory:"), os.path.abspath(config.args.o))
+            print "%s%s" % (pad_spaces("\tConflict handling:"), config.args.conflicts)
+
+            print "%s%s" % (pad_spaces("\tLogging level:"), config.args.log.upper())
+
+            if config.args.t is not None:
+                print "%s%s" % (pad_spaces("\tOutput file title:"), config.args.t + ".html")
+
+        #   if config.args.fivepseq_pickle is not None:
+        #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
 
 
 def setup_output_dir():
@@ -249,14 +312,14 @@ def setup_output_dir():
             print ("\nWARNING:\tThe output directory %s already exists.\n"
                    "\tOnly missing files will be added." % output_dir)
 
-            #NOTE the output directory is not removed as previously.
-            #NOTE Only individual files will be overwritten
-            #try:
+            # NOTE the output directory is not removed as previously.
+            # NOTE Only individual files will be overwritten
+            # try:
             #    shutil.rmtree(output_dir)
-            #except Exception as e:
+            # except Exception as e:
             #    error_message = "ERROR:\tCould not remove directory %s. Reason:%s" % (output_dir, e.message)
             #    raise Exception(error_message)
-            #make_out_dir(output_dir)
+            # make_out_dir(output_dir)
 
         elif config.args.conflicts == config.ALT_DIR:
             while os.path.exists(output_dir):
@@ -275,6 +338,33 @@ def setup_output_dir():
     if not os.path.exists(config.cache_dir):
         os.makedirs(config.cache_dir)
 
+    # create log directory
+    if not os.path.exists(os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR)):
+        try:
+            os.mkdir(os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR))
+        except Exception as e:
+            err_msg = "Problem creating log directory: %s" % str(e)
+            raise Exception(err_msg)
+
+    # create fivepseq_counts and fivepseq_plots directories for count_and_plot case
+    if config.args.command == 'count_and_plot':
+        if not os.path.exists(os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR)):
+            try:
+                os.mkdir(os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR))
+            except Exception as e:
+                err_msg = "Problem making directory for counts: %s" % str(e)
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(err_msg)
+                raise Exception(err_msg)
+
+        if not os.path.exists(os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR)):
+            try:
+                os.mkdir(os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR))
+            except Exception as e:
+                err_msg = "Problem making directory for counts: %s" % str(e)
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(err_msg)
+                raise Exception(err_msg)
+
+
 def make_out_dir(output_dir):
     try:
         os.makedirs(output_dir)
@@ -283,6 +373,7 @@ def make_out_dir(output_dir):
     except Exception as e:
         error_message = "\tSETUP:\tCould not create output directory %s. Reason: %s" % (output_dir, str(e))
         raise Exception(error_message)
+
 
 def setup_logger():
     """
@@ -298,8 +389,8 @@ def setup_logger():
     count_logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
     plot_logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
 
-    count_log_file = os.path.join(config.out_dir, "fivepseq_count.log")
-    plot_log_file = os.path.join(config.out_dir, "fivepseq_plot.log")
+    count_log_file = os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR, "fivepseq_count.log")
+    plot_log_file = os.path.join(config.out_dir,  FIVEPSEQ_LOG_DIR, "fivepseq_plot.log")
     log_level = getattr(logging, config.args.log.upper(), None)
     if not isinstance(log_level, int):
         raise ValueError('Invalid log level: %s' % config.args.log)
@@ -320,8 +411,8 @@ def setup_logger():
     print "\tSETUP:\t%s%s" % (pad_spaces("Log file:"), plot_log_file)
 
     if log_level == logging.DEBUG:
-        count_debug_file = os.path.join(config.out_dir, "fivepseq.count_debug.log")
-        plot_debug_file = os.path.join(config.out_dir, "fivepseq.plot_debug.log")
+        count_debug_file = os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR, "fivepseq_count_debug.log")
+        plot_debug_file = os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR, "fivepseq_plot_debug.log")
         count_debug_handler = logging.FileHandler(count_debug_file)
         plot_debug_handler = logging.FileHandler(plot_debug_file)
         count_debug_handler.setLevel(logging.DEBUG)
@@ -338,6 +429,7 @@ def setup_logger():
 
 print ""
 
+
 def load_FivePSeq_from_pickle():
     # FIXME it's not possible to write the FivePSeqCounts object to pickle so the below code is for vein
     pickle_path = config.getFivepseqCountsPicklePath()
@@ -349,10 +441,10 @@ def load_FivePSeq_from_pickle():
             logger.debug("Successfully loaded FivePSeqCounts object")
             if fivepseq_counts.span_size != config.span_size:
                 logger.warning("The specified span size of %d does not correspond to the size of %d "
-                                      "used in the FivePSeq object loaded from existing pickle path. \n"
-                                      "The span size of %d will be used."
-                                      % (config.span_size, fivepseq_counts.span_size,
-                                         fivepseq_counts.span_size))
+                               "used in the FivePSeq object loaded from existing pickle path. \n"
+                               "The span size of %d will be used."
+                               % (config.span_size, fivepseq_counts.span_size,
+                                  fivepseq_counts.span_size))
 
             return fivepseq_counts
         except Exception as e:
@@ -371,23 +463,27 @@ def save_fivepseq_counts_to_pickle(fivepseq_counts):
             os.remove(pickle_path)
         except Exception as e:
             logger.error("Could not remove previous fivepseq object from pickle path: %s"
-                                % pickle_path)
+                         % pickle_path)
     # FIXME cannot write dill object because of error: no default __reduce__ due to non-trivial __cinit__
 
     with open(pickle_path, "wb") as dill_file:
         dill.dump(fivepseq_counts, dill_file)
     logger.debug("Dumped FivePSeqCounts object to file %s" % pickle_path)
 
-def generate_and_store_fivepseq_counts():
+
+def generate_and_store_fivepseq_counts(plot=False):
     logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
     logger.info("Fivepseq count started")
 
-    #fivepseq_counts = load_FivePSeq_from_pickle()
+    # fivepseq_counts = load_FivePSeq_from_pickle()
     fivepseq_counts = None
 
     if fivepseq_counts is None:
         # read files
-        annotation_reader = AnnotationReader(config.annot)  # set the break for human
+        if hasattr(config.args, 's') and config.args.s is not None:
+            annotation_reader = AnnotationReader(config.annot, transcript_filter_file=config.args.s)  # set the break for human
+        else:
+            annotation_reader = AnnotationReader(config.annot)  # set the break for human
         fasta_reader = FastaReader(config.genome)
 
         if config.args.loci_file is not None:
@@ -400,17 +496,28 @@ def generate_and_store_fivepseq_counts():
                 bam_files.append(bam)
                 print "%s" % pad_spaces("\t%s" % bam)
 
+        if len(bam_files) == 0:
+            err_msg = "No bam files found at %s" % config.args.b
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(err_msg)
+            return None
+
         success_values = {}
+        fivepseq_counts_dict = {}
         for bam in bam_files:
             bam_reader = BamReader(bam)
             # combine objects into FivePSeqCounts object
             fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome,
                                              config.span_size)
 
+            fivepseq_counts_dict.update({bam: fivepseq_counts})
+
             bam_name = os.path.basename(bam)
             if bam_name.endswith(".bam"):
-                bam_name = bam_name[0:len(bam_name)-4]
-            bam_out_dir = os.path.join(config.out_dir, bam_name)
+                bam_name = bam_name[0:len(bam_name) - 4]
+            if not plot:
+                bam_out_dir = os.path.join(config.out_dir, bam_name)
+            else:
+                bam_out_dir = os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR, bam_name)
             if not os.path.exists(bam_out_dir):
                 os.mkdir(bam_out_dir)
 
@@ -424,30 +531,36 @@ def generate_and_store_fivepseq_counts():
                 success_values.update({bam_name: "FAILURE"})
 
         # check if all the files in all directories are in place and store a summary of all runs
-        fivepseq_out = FivePSeqOut(config.out_dir, config.OVERWRITE) # overwrite is for always removing existing summary file
+        fivepseq_out = FivePSeqOut(config.out_dir,
+                                   config.OVERWRITE)  # overwrite is for always removing existing summary file
         fivepseq_out.write_dict(success_values, FivePSeqOut.BAM_SUCCESS_SUMMARY)
 
+
+
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n# Finished counting successfully! Proceeding to plotting")
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
+
+        if plot:
+            config.args.md = str(os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR)) + "/*"
+            config.args.o = config.out_dir = os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR)
+            generate_plots()
 
     return fivepseq_counts
 
 
 def generate_plots():
-    logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
-    logger.info("Fivepseq plot started")
+    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#########################")
+    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#  Fivepseq plot called #")
+    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#########################")
 
     viz_pipeline = VizPipeline(config.args)
     viz_pipeline.run()
 
-    if config.args.sd is not None:
+    if hasattr(config.args, 'sd') and config.args.sd is not None:
         print "Single sample %s provided" % config.args.sd
     else:
         print "Multiple samples in %s provided" % config.args.md
-
-
-    # scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.TERM,
-    # os.path.join(config.out_dir, "meta_count_frames.pdf"))
-    # scatterplots.plot_frames_term(fivepseq_counts, FivePSeqCounts.START,
-    # os.path.join(config.out_dir, "meta_count_frames_start.pdf"))
 
     pass
 
@@ -464,13 +577,16 @@ def main():
     start_time = time.clock()
 
     # body
-    if config.args.command == 'count':
+    if (config.args.command == 'count') | (config.args.command == 'count_and_plot'):
         count_logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
         count_logger.info("Fivepseq count started")
-        generate_and_store_fivepseq_counts()
+        if config.args.command  == 'count_and_plot':
+            generate_and_store_fivepseq_counts(plot = True)
+        else:
+            generate_and_store_fivepseq_counts(plot=False)
         elapsed_time = time.clock() - start_time
         count_logger.info("SUCCESS! Fivepseq count finished in\t%s\tseconds. The report files maybe accessed at:\t\t%s "
-                       % (elapsed_time, config.out_dir))
+                          % (elapsed_time, config.out_dir))
 
     elif config.args.command == 'plot':
         plot_logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
@@ -487,8 +603,7 @@ def main():
 
         plot_logger.info("SUCCESS! Fivepseq plot finished in\t%s\tseconds. "
                          "The report files maybe accessed at:\t\t%s/%s "
-                       % (elapsed_time, config.out_dir, title))
-
+                         % (elapsed_time, config.out_dir, title))
 
     # TODO handle KeyboardInterrupt's (try, wait, except, pass?)
 

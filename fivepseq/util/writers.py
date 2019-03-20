@@ -33,11 +33,11 @@ class FivePSeqOut:
     FFT_SIGNALS_START = "fft_signals_start.txt"
     FFT_SIGNALS_TERM = "fft_signals_term.txt"
 
-    FAILED_FILES_LIST = "failed_files_list.txt"
+    FAILED_COUNT_FILES_LIST = "failed_count_files_list.txt"
     BAM_SUCCESS_SUMMARY = "count_run_summary.txt"
 
     logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
-    success = None
+    count_success = None
 
     def __init__(self, output_dir, conflict_mode=config.ADD_FILES):
         """
@@ -239,12 +239,12 @@ class FivePSeqOut:
 
         :return: returns True if all the files are in place and False otherwise
         """
-        if self.success is not None:
-            return self.success
+        if self.count_success is not None:
+            return self.count_success
 
-        if os.path.exists(self.get_file_path(self.FAILED_FILES_LIST)):
+        if os.path.exists(self.get_file_path(self.FAILED_COUNT_FILES_LIST)):
             try:
-                os.remove(self.get_file_path(self.FAILED_FILES_LIST))
+                os.remove(self.get_file_path(self.FAILED_COUNT_FILES_LIST))
             except Exception as e:
                 logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error\
                     ("Problem removing existing failed files report: %s" % str(e))
@@ -273,7 +273,7 @@ class FivePSeqOut:
                 failed_files.append(f)
 
         if len(failed_files) > 0:
-            self.write_vector(failed_files, self.FAILED_FILES_LIST)
+            self.write_vector(failed_files, self.FAILED_COUNT_FILES_LIST)
             return False
 
         return True

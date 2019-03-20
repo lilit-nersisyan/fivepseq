@@ -6,6 +6,7 @@ import os
 
 # PORT: pathlib2 is for python version 2.7, use pathlib in version 3  <>
 import dill
+import pandas as pd
 import pathlib2
 import plastid
 import pysam
@@ -15,6 +16,7 @@ from fivepseq import config
 from fivepseq.logic.structures.alignment import Alignment
 from fivepseq.logic.structures.annotation import Annotation
 from fivepseq.logic.structures.genome import Genome
+from fivepseq.util.writers import FivePSeqOut
 
 COMPRESSION_GZ = ".gz"
 COMPRESSION_BZ = ".bz"
@@ -141,8 +143,10 @@ class AnnotationReader(TopReader):
     annotation = None
     CODING_TYPES = ["mRNA"]
     CODING = "coding"
+    transcript_filter = None
+    transcript_filter_file = None
 
-    def __init__(self, file_path, break_after=None):
+    def __init__(self, file_path, transcript_filter_file=None, break_after=None):
         """
         Initializes an AnnotationReader with the given file path.
         Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
@@ -163,9 +167,18 @@ class AnnotationReader(TopReader):
         TopReader.__init__(self, file_path)
 
         try:
-            #if break_after is not None:
+            # if break_after is not None:
             #    print "break after: %d" % break_after
-            transcript_assembly = self.create_transcript_assembly(break_after)
+            if transcript_filter_file is not None:
+                #TODO check filter file validity
+                self.transcript_filter_file = transcript_filter_file
+                self.transcript_filter = list(pd.read_csv(transcript_filter_file).iloc[:, 0])
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                    info("%d transcripts provided with the transcript filter file %s"
+                         % (len(self.transcript_filter), str(transcript_filter_file)))
+
+            transcript_assembly = self.create_transcript_assembly(break_after=break_after)
+            #TODO output filtering stats and valid transcript count
         except Exception as e:
             error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (
                 self.file, e.message)
@@ -185,11 +198,19 @@ class AnnotationReader(TopReader):
         """
         # TODO dill.dump and load
         if config.cache_dir is not None:
-            if break_after is None:
+            if break_after is None and self.transcript_filter_file is None:
                 pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + ".sav")
-            else:
+            elif self.transcript_filter_file is None:
                 pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_break-" +
                                            str(break_after) + ".sav")
+            elif break_after is None:
+                pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_filter-" +
+                                           os.path.basename(str(self.transcript_filter_file)) + ".sav")
+            else:
+                pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_filter-" +
+                                           os.path.basename(str(self.transcript_filter_file)) + "_break-" +
+                                           str(break_after) + ".sav")
+
             if os.path.exists(pickle_path) and not config.args.ignore_cache:
                 self.logger.debug("Loading transcript assembly from existing pickle path %s" % pickle_path)
                 try:
@@ -214,13 +235,20 @@ class AnnotationReader(TopReader):
         if config.cache_dir is not None:
             biotypes_file = os.path.join(config.cache_dir, os.path.basename(self.file) + "_unique-types.txt")
         unique_biotypes = []
+
         for transcript in transcript_assembly_generator:
             if break_after is not None:
                 if i == break_after:
                     break
 
             if i % 1000 == 0:
-                self.logger.info("\r>>Transcript count: %d\tValid transcripts: %d\t%s" % (i, index, progress_bar),)
+                self.logger.info("\r>>Transcript count: %d\tValid transcripts: %d\t%s" % (i, index, progress_bar), )
+
+            if self.transcript_filter is not None:
+                if str(FivePSeqOut.get_transcript_attr(transcript, "Name")) not in self.transcript_filter:
+                    #print "transcrit " + str(FivePSeqOut.get_transcript_attr(transcript, "Name")) + " not present in geneset file"
+                    continue
+
             valid_type = False
             transcript_biotype = transcript.attr.get('type')
             if transcript_biotype is not None:
@@ -326,5 +354,3 @@ def get_file_compression(file_path):
         return COMPRESSION_BZ
     else:
         return COMPRESSION_None
-
-

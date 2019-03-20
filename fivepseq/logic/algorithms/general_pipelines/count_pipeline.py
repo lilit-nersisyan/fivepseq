@@ -168,4 +168,4 @@ class CountPipeline:
             logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info(
                 "\n\nFivepseq finished for bam file %s.\n Some files failed to be generated. Check those in %s.\n\n"
                 % (os.path.basename(self.fivepseq_counts.alignment.bam_file)),
-                self.fivepseq_out.get_file_path(FivePSeqOut.FAILED_FILES_LIST))
+                self.fivepseq_out.get_file_path(FivePSeqOut.FAILED_COUNT_FILES_LIST))

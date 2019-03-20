@@ -461,8 +461,8 @@ class FivePSeqCounts:
         no_stop_cds_count = 0
 
         for transcript in self.annotation.yield_transcripts(span_size):
-            if counter % 100 == 0:
-                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
+            if counter % 1000 == 0:
+                self.logger.debug("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / self.annotation.transcript_count), '%',), )
                 self.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
                                     % (float(100 * wrong_cds_count) / counter, "%"))
