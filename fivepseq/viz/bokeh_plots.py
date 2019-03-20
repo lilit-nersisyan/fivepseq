@@ -568,4 +568,4 @@ def get_key_title(title, key):
 
 
 def get_random_color():
-    return cl.to_numeric(cl.scales['9']['qual']['Set3'])[random.randint(0,9)]
+    return cl.to_numeric(cl.scales['9']['qual']['Set3'])[random.randint(0,8)]
