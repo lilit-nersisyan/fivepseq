@@ -463,7 +463,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
             p_svg = None
             if png_dir is not None:
                 p_png = figure(x_range=frames, y_range=(0, count_max),
-                               plot_height=500, title=title_prefix)
+                               plot_height=1000, plot_width = 1000, title=title_prefix)
             if svg_dir is not None:
                 p_svg = figure(x_range=frames, y_range=(0, count_max),
                                plot_height=500, title=title_prefix)
@@ -484,8 +484,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
 
                 if p_png is not None:
                     p_png.vbar(x=frames, width=0.8, top=counts, bottom=0,
-                               fill_color=color, line_color=None,
-                               legend=legend)
+                               fill_color=color, line_color=None)
 
                 if p_svg is not None:
                     p_png.vbar(x=frames, width=0.8, top=counts, bottom=0,
