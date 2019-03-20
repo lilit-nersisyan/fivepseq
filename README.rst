@@ -23,7 +23,7 @@ python path_to_your_fivepseq (currently: /proj/sllstore2017018/lilit/fivepseq_v0
 
 count_and_plot \\
 
--b path_to_one_or_many_bam_files (many files should be provided with pattern (e.g. parent_dir/*.bam) within brackets) \\
+-b path_to_one_or_many_bam_files (many files should be provided with pattern (e.g. "parent_dir/*.bam") within brackets) \\
 
 -o output_directory \\
 
