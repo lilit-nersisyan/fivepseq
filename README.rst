@@ -14,12 +14,19 @@ Usage - count_and_plot
 This the most common call you'd like to make. These are the arguments to be provided:
 
 python path_to_your_fivepseq (currently: /proj/sllstore2017018/lilit/fivepseq_v0.1.3/fivepseq) \\
+
 -g path_to_your_genome_fasta \\
+
 -a path_to_your_annotation_gff (sorry no gtf for now) \\
+
 [--conflicts conflict_mode] \\
+
 count_and_plot \\
+
 -b path_to_one_or_many_bam_files (many files should be provided with pattern (e.g. parent_dir/*.bam) within brackets) \\
+
 -o output_directory \\
+
 -t title_of_the_run
 
 
