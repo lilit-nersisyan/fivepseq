@@ -52,7 +52,7 @@ class FivePSeqCounts:
     transcript_descriptors = None
 
     loci_file = None
-    
+
     logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     @preconditions(lambda span_size: isinstance(span_size, int))
@@ -80,10 +80,10 @@ class FivePSeqCounts:
                                                             self.NUMBER_POSITIONS])
 
         self.logger.info("Initiated a FivePSeqCounts object with"
-                            "\n\talignment from file %s"
-                            "\n\tannotation from file %s "
-                            "\n\tgenome from file %s"
-                            % (alignment.alignment_file.filename, annotation.file_path, genome.fasta_file))
+                         "\n\talignment from file %s"
+                         "\n\tannotation from file %s "
+                         "\n\tgenome from file %s"
+                         % (alignment.alignment_file.filename, annotation.file_path, genome.fasta_file))
 
     def generate_count_vector_lists(self):
         """
@@ -117,7 +117,7 @@ class FivePSeqCounts:
 
         # loop through the transcripts yielded by the annotation object
         transcript_generator = self.annotation.yield_transcripts(self.span_size)
-        for transcript in transcript_generator:
+        for transcript in self.annotation.get_transcript_assembly(self.span_size):
 
             # update to console
             if counter % 10000 == 0:
@@ -129,8 +129,8 @@ class FivePSeqCounts:
             try:
                 count_vector = self.get_count_vector(transcript, self.span_size, self.FULL_LENGTH, counter - 1)
                 self.count_vector_list_full_length[counter - 1] = count_vector
-                self.count_vector_list_start[counter-1] = count_vector[:2 * self.span_size]
-                self.count_vector_list_term[counter-1] = count_vector[-(2 * self.span_size):]
+                self.count_vector_list_start[counter - 1] = count_vector[:2 * self.span_size]
+                self.count_vector_list_term[counter - 1] = count_vector[-(2 * self.span_size):]
 
             except Exception as e:
                 error_message = "Problem retrieving counts for transcript %s. Reason: %s" \
@@ -143,7 +143,6 @@ class FivePSeqCounts:
 
         # report successful retrieval
         self.logger.info("Finished retrieving count vectors")
-
 
     @preconditions(lambda region: isinstance(region, str))
     def get_count_vector_list(self, region):
@@ -174,7 +173,7 @@ class FivePSeqCounts:
 
         # otherwise, retrieve the counts from the alignment file, referencing the transcript assembly
         self.logger.info("Retrieving counts (span size :%d, position: %s)..."
-                           % (self.span_size, region))
+                         % (self.span_size, region))
 
         # initialize empty vectors
         count_vector_list = [None] * self.annotation.transcript_count
@@ -183,7 +182,7 @@ class FivePSeqCounts:
         counter = 1
 
         # loop through the transcripts yielded by the annotation object
-        transcript_generator = self.annotation.yield_transcripts(self.span_size)
+        transcript_generator = self.annotation.get_transcript_assembly(self.span_size)
         for transcript in transcript_generator:
 
             # update to console
@@ -231,12 +230,13 @@ class FivePSeqCounts:
 
         try:
             # retrieve the count vector using plastid function "get_counts" called from the given Transcript object
-            count_vector = transcript.get_counts(self.alignment.bam_array)
+            count_vector = self.get_count_vector_safe(transcript, span_size)
             count_vector = count_vector[transcript.cds_start: transcript.cds_end + 2 * span_size]
+
             if region == self.FULL_LENGTH:
                 if self.check_for_codons:
-                    sequence = transcript.get_sequence(self.genome.genome_dict)
-                    cds_sequence = sequence[transcript.cds_start + span_size: transcript.cds_end + span_size]
+                    cds_sequence = self.get_cds_sequence_safe(transcript, span_size)
+
                     start_codon = cds_sequence[0:3]
                     stop_codon = cds_sequence[len(cds_sequence) - 3:len(cds_sequence)]
 
@@ -286,9 +286,85 @@ class FivePSeqCounts:
             raise Exception(error_message)
 
         # convert the count array to an int vector
-        count_vector = map(int, count_vector.tolist())
+        if not (isinstance(count_vector, list) and isinstance(count_vector[0], int)):
+            count_vector = map(int, count_vector.tolist())
 
         return count_vector
+
+    def get_count_vector_safe(self, transcript, span_size):
+        """
+        A safe method to return count vector accounting for transcripts that span before or after genome start and end.
+
+        :param transcript:
+        :param span_size:
+        :return:
+        """
+
+        if transcript.spanning_segment.start < 0:
+            t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
+            diff = -1 * transcript.spanning_segment.start
+            t_subchain = transcript.get_subchain(diff, t_len)
+            count_vector = [0] * (0 - transcript.spanning_segment.start) \
+                           + list(t_subchain.get_counts(self.alignment.bam_array))
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                debug("Transcript %s at the beginning of the genome padded with %d zeros"
+                      % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
+
+        elif transcript.spanning_segment.end > len(self.genome.genome_dict[transcript.chrom].seq):
+            t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
+            diff = transcript.spanning_segment.end - len(self.genome.genome_dict[transcript.chrom].seq)
+
+            if diff > span_size:
+                # NOTE wrongly annotated transcripts go outside genome boundaries,
+                # NOTE return an empty vector spanned by span size as a safe way of discarding such transcripts
+                count_vector = [0] * t_len
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                    debug("Transcript %s exceeds genome dimensions by %d bases"
+                          % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
+
+            else:
+                t_subchain = transcript.get_subchain(0, t_len - diff)
+                count_vector = list(t_subchain.get_counts(self.alignment.bam_array)) \
+                               + [0] * diff
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                    debug("Transcript %s at the end of the genome padded with %d zeros"
+                          % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
+
+        else:
+            count_vector = transcript.get_counts(self.alignment.bam_array)
+
+        return count_vector
+
+    def get_cds_sequence_safe(self, transcript, span_size):
+        if transcript.spanning_segment.start < 0:
+            t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
+            diff = -1 * transcript.spanning_segment.start
+            t_subchain = transcript.get_subchain(diff, t_len)
+            sequence = t_subchain.get_sequence(self.genome.genome_dict)
+            cds_sequence = sequence[
+                           transcript.cds_start + span_size - diff: transcript.cds_end + span_size]
+
+
+        elif transcript.spanning_segment.end > len(self.genome.genome_dict[transcript.chrom].seq):
+            t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
+            diff = transcript.spanning_segment.end - len(self.genome.genome_dict[transcript.chrom].seq)
+
+            if diff > span_size:
+                # NOTE wrongly annotated transcripts go outside genome boundaries,
+                # NOTE return an empty sequence spanned by span size as a safe way of discarding such transcripts
+                cds_sequence = ''.join(['N'] * t_len)
+
+            else:
+                t_subchain = transcript.get_subchain(0, t_len - diff)
+
+                sequence = t_subchain.get_sequence(self.genome.genome_dict)
+                cds_sequence = sequence[transcript.cds_start + span_size:
+                                        transcript.cds_end + span_size - diff]
+        else:
+            sequence = transcript.get_sequence(self.genome.genome_dict)
+            cds_sequence = sequence[transcript.cds_start + span_size: transcript.cds_end + span_size]
+
+        return cds_sequence
 
     @preconditions(lambda region: isinstance(region, str))
     def get_frame_counts_df(self, region):
@@ -413,7 +489,7 @@ class FivePSeqCounts:
         """
         sequences = {}
         i = 0
-        for transcript in self.annotation.yield_transcripts(max(span_before, span_after)):
+        for transcript in self.annotation.get_transcript_assembly(max(span_before, span_after)):
             sequence = transcript.get_sequence(self.genome.genome_dict)
             if region == self.TERM:
                 endpoint = len(transcript.spanning_segment) - max(span_before, span_after)
@@ -431,10 +507,10 @@ class FivePSeqCounts:
         return sequences
 
     @preconditions(lambda span_size: isinstance(span_size, int),
-                   lambda span_size: span_size > 0,
+                   lambda span_size: span_size >= 0,
                    lambda dist: isinstance(dist, int),
                    lambda dist: dist > 0)
-    def get_amino_acid_pauses(self, span_size, dist):
+    def get_amino_acid_pauses(self, span_size, dist, filter=None):
         """
         Counts the meta-number of 5' mapping positions at the given distance from the specified codon
         Only transcripts with cds of length multiple of 3 are accounted for.
@@ -460,28 +536,84 @@ class FivePSeqCounts:
         single_stop_cds_count = 0
         no_stop_cds_count = 0
 
-        for transcript in self.annotation.yield_transcripts(span_size):
-            if counter % 1000 == 0:
-                self.logger.debug("\r>>Transcript count: %d (%d%s)\t" % (
-                    counter, floor(100 * (counter - 1) / self.annotation.transcript_count), '%',), )
-                self.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
-                                    % (float(100 * wrong_cds_count) / counter, "%"))
-                self.logger.debug("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
-                                    % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
+        # FIXME why on earth am I setting a span_size and then suffering to remove them from the ends?
+        # FIXME have set all span_sizes to 0. Hope it won't crush
+        transcript_assembly = self.annotation.get_transcript_assembly(0, filter)
+        transcript_count = len(transcript_assembly)
+        for transcript in transcript_assembly:
+            if counter % np.floor(transcript_count / 10) == 0:
+                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
+                    counter, floor(100 * (counter - 1) / transcript_count), '%',), )
+                self.logger.info("Amount of cds not multiple of 3 is %.2f %s"
+                                 % (float(100 * wrong_cds_count) / counter, "%"))
+                self.logger.info("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
+                                 % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
             counter += 1
 
-            count_vector = self.get_count_vector(transcript, span_size, FivePSeqCounts.FULL_LENGTH, counter - 1)
-            sequence = transcript.get_sequence(self.genome.genome_dict)
-            cds_sequence = sequence[span_size: len(sequence) - span_size]
-            cds_sequence = cds_sequence[transcript.cds_start: transcript.cds_end]
-            count_vector = count_vector[span_size:len(count_vector) - span_size]
+            count_vector = self.get_count_vector(transcript, 0, FivePSeqCounts.FULL_LENGTH, counter - 1)
+            # sequence = transcript.get_sequence(self.genome.genome_dict)
+            # cds_sequence = sequence[0: len(sequence) - 0]
+            # cds_sequence = cds_sequence[transcript.cds_start: transcript.cds_end]
+            # count_vector = count_vector[0:len(count_vector) - 0]
+            cds_sequence = self.get_cds_sequence_safe(transcript, 0)
+
+            if sum(count_vector) == 0:
+                continue
 
             if len(cds_sequence) != len(count_vector):
-                #TODO in the future report the number of problematic transcripts
-                #TODO filter these transcripts during plotting
+                # TODO in the future report the number of problematic transcripts
+                # TODO filter these transcripts during plotting
                 self.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
-                                      % (counter, len(cds_sequence), len(count_vector)))
+                                    % (counter, len(cds_sequence), len(count_vector)))
+                continue
 
+            if len(count_vector) % 3 != 0:
+                wrong_cds_count += 1
+                continue
+
+
+            # NOTE below is the faster implementation based only on non-empty triplets of the vectors
+            # NOTE as we don't scroll through the full transcripts, the number of stops will only be counted for non-empty triplets
+            # identify 3nt bins with non-zero counts
+            ind = np.array(range(0, len(count_vector), 3))
+            hits = [sum(count_vector[i:i+3]) > 0 for i in ind]
+            non_empty_ind = ind[hits]
+
+            stop_pos = []
+            num_stops = 0
+            # loop through non-empty triplets only
+            for i in non_empty_ind:
+                # loop through all amino acids 20 nucleotides downstream (seven amino-acids)
+                for j in range(i+3,i+3+dist,3):
+                    if j + 3 > len(cds_sequence):
+                        break
+                    codon = cds_sequence[j: j + 3]
+
+                    # NOTE the comparison is case-sensitive and the low-case letters are now not counted
+                    # NOTE however, low-case may indicate repetitive regions and it may be advantagous to skip them
+                    if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
+                        aa = Codons.CODON_TABLE[codon]
+                        if codon in Codons.stop_codons:
+                            num_stops += 1
+                            if j not in stop_pos:
+                                stop_pos.append(j)
+                        for p in range(0,3):
+                            d = i - j + p
+                            if -1*d <= dist:
+                                amino_acid_count_df.at[aa, d] += count_vector[i+p]
+
+            num_stops = len(stop_pos)
+            if num_stops > 1:
+                multi_stop_cds_count += 1
+            elif num_stops == 1:
+                single_stop_cds_count += 1
+            else:
+                no_stop_cds_count += 1
+
+            
+            # TODO test for problems with the fast implementation and remove the code below if successful
+            # comment out the previous implentation
+            """
             if len(count_vector) % 3 == 0:
                 num_stops = 0
                 for i in range(0, len(count_vector), 3):
@@ -506,10 +638,11 @@ class FivePSeqCounts:
             else:
                 wrong_cds_count += 1
 
+        """
         self.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
-                            % (float(100 * wrong_cds_count) / counter, "%"))
+                          % (float(100 * wrong_cds_count) / counter, "%"))
         self.logger.debug("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
-                            % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
+                          % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
 
         # for d in range(1,dist+1):
         #    if (i > d) & (len(cds_sequence) > d):
@@ -555,7 +688,7 @@ class FivePSeqCounts:
         done = False
         move_transcript = True
         move_locus = False
-        tg = self.annotation.yield_transcripts(0)
+        tg = self.annotation.get_transcript_assembly(0)
         transcript = None
         while (True):
             if counter % 1000 == 0:
@@ -656,7 +789,6 @@ class CountManager:
     def __init__(self):
         pass
 
-
     @staticmethod
     @preconditions(lambda count_vector_list: isinstance(count_vector_list, list),
                    lambda count_vector_list: isinstance(count_vector_list[0], list),
@@ -727,7 +859,6 @@ class CountManager:
             raise Exception(error_message)
 
         return frame0_array, frame1_array, frame2_array
-
 
     @staticmethod
     @preconditions(lambda count_vector: isinstance(count_vector, list),
@@ -858,7 +989,8 @@ class CountManager:
         :return: a dataframe with frame-based count-sums for each transcript
         """
 
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Retrieving count-sums per frame relative to %s ..." % region)
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug(
+            "Retrieving count-sums per frame relative to %s ..." % region)
 
         # Create an empty dataframe
         n = len(count_vector_list)
@@ -1009,6 +1141,7 @@ class CountManager:
             transcript_index = list(pd.read_csv(canonical_index_file, header=None).iloc[:, 0])
             return transcript_index
         else:
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Problem retrieving canonical transcript indices. No file %s exists. "
-                                "The filter will return None." % canonical_index_file)
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug(
+                "Problem retrieving canonical transcript indices. No file %s exists. "
+                "The filter will return None." % canonical_index_file)
             return None

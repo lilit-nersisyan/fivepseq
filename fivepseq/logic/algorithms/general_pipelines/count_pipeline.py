@@ -134,7 +134,7 @@ class CountPipeline:
                     "Skipping existing file %s" % self.fivepseq_out.AMINO_ACID_PAUSES_FILE)
             else:
                 self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_pauses(
-                    self.fivepseq_counts.span_size, 20),
+                    0, 20),
                     self.fivepseq_out.AMINO_ACID_PAUSES_FILE)
 
             #   transcript assembly
