@@ -1,4 +1,4 @@
-Welcome to fivepseq 0.1.3 readme!
+Welcome to fivepseq 0.1.4 readme!
 --------
 This program reports 5'-footprint properties from 5Pseq reads in a given alignment file. 
  
@@ -7,6 +7,11 @@ count - generates count vectors and meta-vectors from the given alignment file a
 plot - generates plots based on input count data folder and stores those to an html file
 count_and_plot - performs counts and generates plots afterwards
 
+Before you start
+--------
+- Make sure you're using python version 2.7
+- navigate to fivepseq directory and run the following command (to get rid of fivepseq version conflicts):
+python setup.py install
 
 Usage - count_and_plot
 --------
@@ -41,7 +46,9 @@ The conflict mode specifies how to deal with files/folders that alraedy exist. T
 
 - alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory
 
-
+Note!
+-------
+bai index files should be in the same directory as the bam files
 
 
 Usage for separate commands count and plot
