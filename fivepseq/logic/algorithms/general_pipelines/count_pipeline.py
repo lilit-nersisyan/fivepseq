@@ -3,9 +3,9 @@ import os
 
 from fivepseq.util.writers import FivePSeqOut
 
-import config
+from fivepseq import config
 from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts, CountManager
-from logic.algorithms.count_stats.count_stats import CountStats
+from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
 
 
 class CountPipeline:

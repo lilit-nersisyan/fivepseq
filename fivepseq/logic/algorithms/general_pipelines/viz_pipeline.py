@@ -6,7 +6,7 @@ import pandas as pd
 from bokeh.io import export_svgs, export_png
 from bokeh.plotting import figure
 
-import config
+from fivepseq import config
 from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \

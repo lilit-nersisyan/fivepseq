@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import stats
 
-import config
+from fivepseq import config
 from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts, CountManager
 from fivepseq.util.writers import FivePSeqOut
 

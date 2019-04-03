@@ -286,8 +286,10 @@ class FivePSeqCounts:
             raise Exception(error_message)
 
         # convert the count array to an int vector
-        if not (isinstance(count_vector, list) and isinstance(count_vector[0], int)):
-            count_vector = map(int, count_vector.tolist())
+        if not isinstance(count_vector, list):
+            count_vector = count_vector.tolist()
+        #if not isinstance(count_vector[0], int):
+        count_vector = map(int, count_vector)
 
         return count_vector
 
@@ -304,8 +306,10 @@ class FivePSeqCounts:
             t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
             diff = -1 * transcript.spanning_segment.start
             t_subchain = transcript.get_subchain(diff, t_len)
+            subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
             count_vector = [0] * (0 - transcript.spanning_segment.start) \
-                           + list(t_subchain.get_counts(self.alignment.bam_array))
+                           + subchain_counts
+
             logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
                 debug("Transcript %s at the beginning of the genome padded with %d zeros"
                       % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
@@ -324,8 +328,9 @@ class FivePSeqCounts:
 
             else:
                 t_subchain = transcript.get_subchain(0, t_len - diff)
-                count_vector = list(t_subchain.get_counts(self.alignment.bam_array)) \
-                               + [0] * diff
+                subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
+                count_vector = subchain_counts + [0] * diff
+
                 logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
                     debug("Transcript %s at the end of the genome padded with %d zeros"
                           % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))

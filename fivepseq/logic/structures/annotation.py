@@ -6,8 +6,7 @@ import logging
 import plastid
 from preconditions import preconditions
 
-import config
-import fivepseq.config
+from fivepseq import config
 
 
 class Annotation:
