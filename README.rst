@@ -1,4 +1,4 @@
-Welcome to fivepseq 0.1.4 readme!
+Welcome to fivepseq readme!
 --------
 This program reports 5'-footprint properties from 5Pseq reads in a given alignment file. 
  
@@ -18,7 +18,7 @@ Usage - count_and_plot
 
 This the most common call you'd like to make. These are the arguments to be provided:
 
-python path_to_your_fivepseq (currently: /proj/sllstore2017018/lilit/fivepseq_v0.1.3/fivepseq) \\
+fivepseq \\
 
 -g path_to_your_genome_fasta \\
 
