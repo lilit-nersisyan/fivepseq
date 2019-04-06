@@ -22,6 +22,7 @@ COMPRESSION_GZ = ".gz"
 COMPRESSION_BZ = ".bz"
 COMPRESSION_None = ""
 
+logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
 class TopReader:
     valid_extensions = None
@@ -143,10 +144,8 @@ class AnnotationReader(TopReader):
     annotation = None
     CODING_TYPES = ["mRNA"]
     CODING = "coding"
-    transcript_filter = None
-    transcript_filter_file = None
 
-    def __init__(self, file_path, transcript_filter_file=None, break_after=None):
+    def __init__(self, file_path,                                                                                                                                                                                                                                                                                                                                                                                                                                                       break_after=None):
         """
         Initializes an AnnotationReader with the given file path.
         Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
@@ -167,18 +166,8 @@ class AnnotationReader(TopReader):
         TopReader.__init__(self, file_path)
 
         try:
-            # if break_after is not None:
-            #    print "break after: %d" % break_after
-            if transcript_filter_file is not None:
-                #TODO check filter file validity
-                self.transcript_filter_file = transcript_filter_file
-                self.transcript_filter = list(pd.read_csv(transcript_filter_file).iloc[:, 0])
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
-                    info("%d transcripts provided with the transcript filter file %s"
-                         % (len(self.transcript_filter), str(transcript_filter_file)))
-
             transcript_assembly = self.create_transcript_assembly(break_after=break_after)
-            #TODO output filtering stats and valid transcript count
+
         except Exception as e:
             error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (
                 self.file, e.message)
@@ -196,41 +185,27 @@ class AnnotationReader(TopReader):
         :param break_after: int, for testing purposes only: read in a limited amount of transcripts and break
         :return: list of transcripts read from the annotation file
         """
-        # TODO dill.dump and load
-        if config.cache_dir is not None:
-            if break_after is None and self.transcript_filter_file is None:
-                pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + ".sav")
-            elif self.transcript_filter_file is None:
-                pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_break-" +
-                                           str(break_after) + ".sav")
-            elif break_after is None:
-                pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_filter-" +
-                                           os.path.basename(str(self.transcript_filter_file)) + ".sav")
-            else:
-                pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_filter-" +
-                                           os.path.basename(str(self.transcript_filter_file)) + "_break-" +
-                                           str(break_after) + ".sav")
 
-            if os.path.exists(pickle_path) and not config.args.ignore_cache:
-                self.logger.debug("Loading transcript assembly from existing pickle path %s" % pickle_path)
-                try:
-                    transcript_assembly = dill.load((open(pickle_path, "rb")))
-                    self.logger.debug("Successfully loaded transcript assembly")
-                    return transcript_assembly
-                except Exception as e:
-                    warning_message = "Problem loading transcript assembly from pickle path %s. Reason: %s" % (
-                        pickle_path, e.message)
-                    self.logger.warning(warning_message)
+        # attempt to load assembly from pickle path if it exists
+        if not config.args.ignore_cache:
+            transcript_assembly = self.load_assembly_from_pickle(biotype, break_after)
+            if transcript_assembly is not None:
+                return transcript_assembly
+
+        # if transcript assembly not loaded proceed to reading it
 
         self.logger.debug("Reading in transcript assembly...")
+
         if self.extension == self.EXTENSION_GTF:
             transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)
         else:
             transcript_assembly_generator = plastid.GFF3_TranscriptAssembler(self.file, return_type=plastid.Transcript)
+
         transcript_assembly = [None] * 300000
         index = 0
         i = 1
         progress_bar = ""
+
         biotypes_file = None
         if config.cache_dir is not None:
             biotypes_file = os.path.join(config.cache_dir, os.path.basename(self.file) + "_unique-types.txt")
@@ -244,11 +219,7 @@ class AnnotationReader(TopReader):
             if i % 1000 == 0:
                 self.logger.info("\r>>Transcript count: %d\tValid transcripts: %d\t%s" % (i, index, progress_bar), )
 
-            if self.transcript_filter is not None:
-                if str(FivePSeqOut.get_transcript_attr(transcript, "Name")) not in self.transcript_filter:
-                    #print "transcrit " + str(FivePSeqOut.get_transcript_attr(transcript, "Name")) + " not present in geneset file"
-                    continue
-
+            # filter for biotype
             valid_type = False
             transcript_biotype = transcript.attr.get('type')
             if transcript_biotype is not None:
@@ -268,26 +239,86 @@ class AnnotationReader(TopReader):
                     print transcript_biotype + "\tValid: %s" % valid_type
 
             i += 1
+
         if index == 0:
             error_message = "No transcripts with biotype with tokens %s were present" \
                             % (','.join(self.CODING_TYPES))
             self.logger.error(error_message)
             raise Exception(error_message)
+
         if biotypes_file is not None:
             with open(biotypes_file, 'w') as file:
                 file.write("\n".join(unique_biotypes))
 
-        self.logger.debug(
-            "Read %d transcripts, of which %d were of type %s" % (i, index, biotype))
-        self.logger.debug("Transcript assembly read to memory, with %d valid transcripts" % index)
         transcript_assembly = transcript_assembly[:index]
 
-        # TODO dump dill object
+        self.logger.debug(
+            "Read %d transcripts, of which %d were of type %s" % (i, index, biotype))
+
+        self.logger.debug("Transcript assembly read to memory, with %d valid transcripts" % index)
+
+        self.save_assembly_to_pickle(transcript_assembly)
+
+        return transcript_assembly
+
+    def load_assembly_from_pickle(self, biotype = CODING, break_after = None):
+        """
+        Loads the transcript assembly from a pickle path if it exists
+
+        :param biotype:
+        :param break_after:
+        :return: transcript assembly or None if no pickle path exists
+        """
+
+        transcript_assembly = None
+
+        if config.cache_dir is not None:
+            pickle_path = self.get_assembly_pickle_path(biotype, break_after)
+
+            if pickle_path is not None and os.path.exists(pickle_path):
+                self.logger.debug("Loading transcript assembly from existing pickle path %s" % pickle_path)
+
+                try:
+                    transcript_assembly = dill.load((open(pickle_path, "rb")))
+                    self.logger.debug("Successfully loaded transcript assembly")
+
+                except Exception as e:
+                    warning_message = "Problem loading transcript assembly from pickle path %s. Reason: %s" % (
+                        pickle_path, e.message)
+                    self.logger.warning(warning_message)
+
+        return transcript_assembly
+
+    def get_assembly_pickle_path(self, biotype = CODING, break_after = None):
+        """
+        Returns the pickle path to an assembly with specified paramaters if such a path exists.
+
+        :param biotype:
+        :param break_after:
+        :return: the path to existing or non-existing pickle path
+        """
+
+        if break_after is None:
+            pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + ".sav")
+        else:
+            pickle_path = os.path.join(config.cache_dir, os.path.basename(self.file) + "_" + biotype + "_break-" +
+                                       str(break_after) + ".sav")
+
+        return pickle_path
+
+    def save_assembly_to_pickle(self, transcript_assembly, biotype = CODING, break_after = None):
+        """
+        Saves the generated transcript assembly to a pickle path with specified parameters.
+
+        :param transcript_assembly:
+        :return:
+        """
+        pickle_path = self.get_assembly_pickle_path(biotype, break_after)
+
         if config.cache_dir is not None:
             with open(pickle_path, "wb") as dill_file:
                 dill.dump(transcript_assembly, dill_file)
             self.logger.debug("Dumped transcript assembly to file %s" % pickle_path)
-        return transcript_assembly
 
 
 @preconditions(lambda file_path: isinstance(file_path, str))

@@ -116,7 +116,8 @@ class CountStats:
         else:
             self.logger.info("Computing FFT statistics")
             count_vector_list = self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH)
-            span_size = 100
+
+            span_size = self.fivepseq_counts.annotation.span_size
 
             lengths = [0] * len(count_vector_list)
             for i in range(len(count_vector_list)):
@@ -239,9 +240,9 @@ class CountStats:
             self.fivepseq_out.write_df_to_file(self.frame_stats_df, FivePSeqOut.FRAME_STATS_DF_FILE)
 
 
-    def get_frame_of_preference(self, region):
+    def get_frame_of_preference(self):
         if self.frame_stats_df is None:
-            self.compute_frame_preference_stats(self.fivepseq_counts.get_frame_counts_df(region))
+            self.compute_frame_preference_stats()
 
         frame = np.argmax(list(self.frame_stats_df.loc[self.FPI, :]))
         fpi = self.frame_stats_df.iloc[self.FPI, frame]
@@ -249,9 +250,9 @@ class CountStats:
 
         return frame, fpi, pval_fpi
 
-    def get_significant_frame(self, region):
+    def get_significant_frame(self):
         if self.frame_stats_df is None:
-            self.compute_frame_preference_stats(self.fivepseq_counts.get_frame_counts_df(region))
+            self.compute_frame_preference_stats()
 
         frame = np.argmin(list(self.frame_stats_df.loc[self.PVAL_PAIR_MAX, :]))
         fpi = self.frame_stats_df.iloc[self.FPI, frame]

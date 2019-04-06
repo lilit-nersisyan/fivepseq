@@ -28,9 +28,7 @@ class VizPipeline:
     FFT_TERM = "_fft_term"
     FFT_START = "_fft_start"
 
-
-
-
+    count_folders = None
     png_dir = "png"
     svg_dir = "svg"
 
@@ -88,8 +86,16 @@ class VizPipeline:
     p_triangle_start_combined = None
     p_aa_heatmaps_combined = None
 
-    def __init__(self, args):
+    def __init__(self, args, count_folders = None):
+        """
+        Initialize vizualization pipeline with arguments contained in args.
+        If count_folders are provided explicitely, those will be used instead of sd and md arguments.
+
+        :param args:
+        :param count_folders:
+        """
         self.args = args
+        self.count_folders = count_folders
 
     def run(self):
         try:
@@ -114,9 +120,17 @@ class VizPipeline:
 
         else:
             self.logger.info("Plotting multiple samples:")
-            for d in glob.glob(self.args.md):
-                if os.path.isdir(d):
-                    self.logger.info("\t%s" % d)
+
+            if self.count_folders is None:
+                self.count_folders = []
+                for d in glob.glob(self.args.md):
+                    if os.path.isdir(d):
+                        self.logger.info("\t%s" % d)
+                        self.count_folders.append(d)
+            else:
+                for d in self.count_folders:
+                    if os.path.isdir(d):
+                        self.logger.info("\t%s" % d)
 
             self.initialize_data()
             self.logger.info("Finished reading data counts.")
@@ -158,7 +172,8 @@ class VizPipeline:
             self.samples.append(sample)
             self.update_dicts(sample, self.args.sd)
         else:
-            for d in glob.glob(self.args.md):
+            # count_folders is either supplied directly or populated from md
+            for d in self.count_folders:
                 if os.path.isdir(d):
                     if d[-1] == "/":
                         d = d[0:len(d) - 1]

@@ -22,7 +22,8 @@ from fivepseq.util.formatting import pad_spaces
 from fivepseq.logic.structures.fivepseq_counts import CountManager
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.logic.algorithms.general_pipelines.count_pipeline import CountPipeline
-from logic.algorithms.general_pipelines.viz_pipeline import VizPipeline
+from fivepseq.logic.algorithms.general_pipelines.viz_pipeline import VizPipeline
+from fivepseq.logic.structures.annotation import Annotation
 
 FIVEPSEQ_COUNTS_DIR = "fivepseq_counts"
 FIVEPSEQ_PLOTS_DIR = "fivepseq_plots"
@@ -201,7 +202,9 @@ class FivepseqArguments:
                                            help="Name of filter to apply on transcripts",
                                            type=str,
                                            choices=[VizPipeline.FILTER_TOP_POPULATED,
-                                                    VizPipeline.FILTER_CANONICAL_TRANSCRIPTS],
+                                                    VizPipeline.FILTER_CANONICAL_TRANSCRIPTS,
+                                                    Annotation.FORWARD_STRAND_FILTER,
+                                                    Annotation.REVERSE_STRAND_FILTER],
                                            required=False)
 
         ##########################
@@ -281,6 +284,9 @@ class FivepseqArguments:
 
             if config.args.t is not None:
                 print "%s%s" % (pad_spaces("\tOutput file title:"), config.args.t + ".html")
+
+            if config.args.tf is not None:
+                print "%s%s" % (pad_spaces("\tTranscript filter:"), config.args.tf )
 
         #   if config.args.fivepseq_pickle is not None:
         #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
@@ -427,140 +433,113 @@ def setup_logger():
         print "\tSETUP:\t%s%s" % (pad_spaces("Debug file:"), plot_debug_file)
 
 
-print ""
-
-
-def load_FivePSeq_from_pickle():
-    # FIXME it's not possible to write the FivePSeqCounts object to pickle so the below code is for vein
-    pickle_path = config.getFivepseqCountsPicklePath()
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
-    if pickle_path is not None:
-        logger.debug("Loading FivePSeqCounts object from existing pickle path %s" % pickle_path)
-        try:
-            fivepseq_counts = dill.load((open(pickle_path, "rb")))
-            logger.debug("Successfully loaded FivePSeqCounts object")
-            if fivepseq_counts.span_size != config.span_size:
-                logger.warning("The specified span size of %d does not correspond to the size of %d "
-                               "used in the FivePSeq object loaded from existing pickle path. \n"
-                               "The span size of %d will be used."
-                               % (config.span_size, fivepseq_counts.span_size,
-                                  fivepseq_counts.span_size))
-
-            return fivepseq_counts
-        except Exception as e:
-            warning_message = "Problem loading FivePSeqCounts object from pickle path %s. Reason: %s\n" \
-                              "Fivepseq will generate a new FivePSeqCounts object." % (
-                                  pickle_path, str(e))
-            logger.warning(warning_message)
-
-
-def save_fivepseq_counts_to_pickle(fivepseq_counts):
-    # TODO save fivepseq_counts in pickle_path
-    pickle_path = config.generateFivepseqPicklePath()
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
-    if os.path.exists(pickle_path):
-        try:
-            os.remove(pickle_path)
-        except Exception as e:
-            logger.error("Could not remove previous fivepseq object from pickle path: %s"
-                         % pickle_path)
-    # FIXME cannot write dill object because of error: no default __reduce__ due to non-trivial __cinit__
-
-    with open(pickle_path, "wb") as dill_file:
-        dill.dump(fivepseq_counts, dill_file)
-    logger.debug("Dumped FivePSeqCounts object to file %s" % pickle_path)
-
 
 def generate_and_store_fivepseq_counts(plot=False):
     logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
     logger.info("Fivepseq count started")
 
-    # fivepseq_counts = load_FivePSeq_from_pickle()
-    fivepseq_counts = None
+    # process bam input
 
-    if fivepseq_counts is None:
-        # read files
-        if hasattr(config.args, 's') and config.args.s is not None:
-            annotation_reader = AnnotationReader(config.annot, transcript_filter_file=config.args.s)  # set the break for human
+    print "%s" % (pad_spaces("\tInput bam files:"))
+    bam_files = []
+    for bam in glob.glob(config.args.b):
+        if bam.endswith(".bam"):
+            bam_files.append(bam)
+            print "%s" % pad_spaces("\t%s" % bam)
+
+    if len(bam_files) == 0:
+        err_msg = "No bam files found at %s" % config.args.b
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(err_msg)
+        return None
+
+    # set up annotation
+
+    annotation_reader = AnnotationReader(config.annot) # set the break for human
+    annotation = annotation_reader.annotation
+
+    annotation.set_default_span_size(config.span_size)
+
+    if hasattr(config.args, 'tf') and config.args.tf is not None:
+        annotation.set_default_transcript_filter(config.args.tf)
+
+    if hasattr(config.args, 's') and config.args.s is not None:
+        annotation.set_gene_set_filter(config.args.s)
+
+    # set up genome
+
+    fasta_reader = FastaReader(config.genome)
+
+
+    success_values = {}
+    fivepseq_counts_dict = {}
+    count_folders = []
+
+    for bam in bam_files:
+        # set up bam input and output
+        bam_reader = BamReader(bam)
+        bam_name = os.path.basename(bam)
+        if bam_name.endswith(".bam"):
+            bam_name = bam_name[0:len(bam_name) - 4]
+
+        bam_out_dir = os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR, bam_name)
+
+        if not os.path.exists(bam_out_dir):
+            os.mkdir(bam_out_dir)
+
+        # combine objects into FivePSeqCounts object
+        fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation, fasta_reader.genome)
+        fivepseq_counts_dict.update({bam: fivepseq_counts})
+
+        # set up fivepseq out object for this bam
+        fivepseq_out = FivePSeqOut(bam_out_dir, config.args.conflicts)
+        count_folders.append(bam_out_dir)
+
+        # run
+        fivepseq_pipeline = CountPipeline(fivepseq_counts, fivepseq_out)
+        fivepseq_pipeline.run()
+
+        success = fivepseq_out.sanity_check_for_counts()
+        if success:
+            success_values.update({bam_name: "SUCCESS"})
         else:
-            annotation_reader = AnnotationReader(config.annot)  # set the break for human
-        fasta_reader = FastaReader(config.genome)
+            success_values.update({bam_name: "FAILURE"})
 
-        if config.args.loci_file is not None:
-            fivepseq_counts.loci_file = config.args.loci_file
+    # check if all the files in all directories are in place and store a summary of all runs
+    fivepseq_out = FivePSeqOut(config.out_dir, config.OVERWRITE)  # overwrite is for always removing existing summary file
 
-        print "%s" % (pad_spaces("\tInput bam files:"))
-        bam_files = []
-        for bam in glob.glob(config.args.b):
-            if bam.endswith(".bam"):
-                bam_files.append(bam)
-                print "%s" % pad_spaces("\t%s" % bam)
+    fivepseq_out.write_dict(success_values, FivePSeqOut.BAM_SUCCESS_SUMMARY)
 
-        if len(bam_files) == 0:
-            err_msg = "No bam files found at %s" % config.args.b
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(err_msg)
-            return None
+    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
+    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n# Finished counting successfully! Proceeding to plotting")
+    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
 
-        success_values = {}
-        fivepseq_counts_dict = {}
-        for bam in bam_files:
-            bam_reader = BamReader(bam)
-            # combine objects into FivePSeqCounts object
-            fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation_reader.annotation, fasta_reader.genome,
-                                             config.span_size)
+    if plot:
+        # set up job title if none is provided
+        if not hasattr(config.args, 't') or config.args.t is None:
+            config.args.t = os.path.basename(os.path.dirname(config.args.b)) + "_" + os.path.basename(config.args.b)
+            config.args.t.replace("_*", "")
+            config.args.t.replace("*", "")
 
-            fivepseq_counts_dict.update({bam: fivepseq_counts})
-
-            bam_name = os.path.basename(bam)
-            if bam_name.endswith(".bam"):
-                bam_name = bam_name[0:len(bam_name) - 4]
-            if not plot:
-                bam_out_dir = os.path.join(config.out_dir, bam_name)
-            else:
-                bam_out_dir = os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR, bam_name)
-            if not os.path.exists(bam_out_dir):
-                os.mkdir(bam_out_dir)
-
-            fivepseq_out = FivePSeqOut(bam_out_dir, config.args.conflicts)
-            fivepseq_pipeline = CountPipeline(fivepseq_counts, fivepseq_out)
-            fivepseq_pipeline.run()
-            success = fivepseq_out.sanity_check_for_counts()
-            if success:
-                success_values.update({bam_name: "SUCCESS"})
-            else:
-                success_values.update({bam_name: "FAILURE"})
-
-        # check if all the files in all directories are in place and store a summary of all runs
-        fivepseq_out = FivePSeqOut(config.out_dir,
-                                   config.OVERWRITE)  # overwrite is for always removing existing summary file
-        fivepseq_out.write_dict(success_values, FivePSeqOut.BAM_SUCCESS_SUMMARY)
+        #FIXME currently all count folders in the output directory are used for plotting.
+        #FIXME this introduces conflicts with pre-existing count files in the folder
+        #FIXME the adding of count_folders list shouuld fix for this: need testing
+        #config.args.md = str(os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR)) + "/*"
+        config.args.o = config.out_dir = os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR)
+        generate_plots(count_folders)
 
 
-
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n# Finished counting successfully! Proceeding to plotting")
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
-
-        if plot:
-            config.args.md = str(os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR)) + "/*"
-            config.args.o = config.out_dir = os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR)
-            generate_plots()
-
-    return fivepseq_counts
-
-
-def generate_plots():
+def generate_plots(count_folders):
     logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#########################")
     logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#  Fivepseq plot called #")
     logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#########################")
 
-    viz_pipeline = VizPipeline(config.args)
+    viz_pipeline = VizPipeline(config.args, count_folders = count_folders)
     viz_pipeline.run()
 
     if hasattr(config.args, 'sd') and config.args.sd is not None:
         print "Single sample %s provided" % config.args.sd
     else:
-        print "Multiple samples in %s provided" % config.args.md
+        print "Multiple samples in provided"
 
     pass
 
@@ -578,14 +557,15 @@ def main():
 
     # body
     if (config.args.command == 'count') | (config.args.command == 'count_and_plot'):
-        count_logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
-        count_logger.info("Fivepseq count started")
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("Fivepseq count started")
+
         if config.args.command  == 'count_and_plot':
             generate_and_store_fivepseq_counts(plot = True)
         else:
             generate_and_store_fivepseq_counts(plot=False)
         elapsed_time = time.clock() - start_time
-        count_logger.info("SUCCESS! Fivepseq count finished in\t%s\tseconds. The report files maybe accessed at:\t\t%s "
+
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("SUCCESS! Fivepseq count finished in\t%s\tseconds. The report files maybe accessed at:\t\t%s "
                           % (elapsed_time, config.out_dir))
 
     elif config.args.command == 'plot':

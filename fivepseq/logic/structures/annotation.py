@@ -11,16 +11,18 @@ from fivepseq import config
 
 class Annotation:
     file_path = None
-    transcript_assembly = None
     geneset_filter = None
-    transcript_count = None
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     transcript_assembly_dict = {}
 
     FORWARD_STRAND_FILTER = "fwd"
     REVERSE_STRAND_FILTER = "rev"
     NO_FILTER = "none"
+
+    transcript_filter = NO_FILTER
+    span_size = 0
+    
+    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     @preconditions(lambda file_path: isinstance(file_path, str),
                    lambda transcript_assembly: isinstance(transcript_assembly, list))
@@ -46,83 +48,89 @@ class Annotation:
 
         self.logger.debug("Annotation object successfully created from file %s" % file_path)
 
-    def set_geneset_filter(self, gene_set_file):
-        # TODO the gene set file should be converted to a filter and then used to filter the transcript assembly
-        # TODO (or should it be added to the mapping function?)
-        # TODO (the time-efficient way of doing this is to generate a filtered list of transcripts and store them in memory: this list will be accessed many times afterwards)
-        # TODO actually one can do that in the readers.py, when creating the annotation - only the transcripts from the given set will be retrieved from the transcript assembly and
-        # TODO and stored in a list
-        pass
-
-    @preconditions(lambda span_size: isinstance(span_size, int))
-    def yield_transcripts(self, span_size, filter=None):
+    def set_default_transcript_filter(self, transcript_filter):
         """
-        Adds spanning regions to the start and the end of the transcript and yields the transcripts one-by-one.
-        The original transcript assembly is left intact.
-
-        :param filter: option to filter the transcripts
-        :param span_size: int span_size - defines the number of nucleotides to span
-
-        :return: iterable of type Transcript
+        Sets the default transcript filter to be used with transcript assembly retrieval with no filter specifications.
         """
 
-        if span_size < 0:
-            error_message = "Negative span_size of %d provided: cannot span the transcripts with negative or " \
-                            "zero values" % span_size
-            self.logger.error(error_message)
-            raise ValueError(error_message)
-        self.logger.debug("Transcript span size: %d" % span_size)
+        self.transcript_filter = transcript_filter
 
-        for transcript in self.transcript_assembly:
-            span = transcript.spanning_segment
+    def set_default_geneset_filter(self, geneset_filter):
+        """
+        Sets the default gen set filter to be filter the transcript assembly.
+        """
 
-            new_start = span.start - span_size
-            if new_start < 0:
-                new_start = 0
-            start_span = plastid.GenomicSegment(
-                span.chrom, new_start, span.start, span.strand)
+        self.geneset_filter= geneset_filter
 
-            # FIXME how do we check if we've reached the end?
-            end_span = plastid.GenomicSegment(
-                span.chrom, span.end, span.end + span_size, span.strand)
 
-            spanned_transcript = transcript.__deepcopy__(None)
-            spanned_transcript.add_segments(start_span, end_span)
-            yield spanned_transcript
+    def set_default_span_size(self, span_size):
+        """
+        Sets the default span size to be used with transcript assembly retrieval with no span size specifications.
+        """
 
-    # TODO in case gene_set filter is provided also filter with it
+        self.span_size = span_size
+
+    def get_default_transcript_assembly(self):
+        """
+        Returns the transcript assembly with default span size and transcript filter.
+
+        :return: list[Transcript] list of transcripts spanned and filtered according to default settings
+        """
+
+        return self.get_transcript_assembly(self.span_size, self.transcript_filter)
+
+    def get_transcript_assembly_default_filter(self, span_size = 0):
+        """
+        Returns the transcript assembly with default filters and specified span size.
+
+        :return: list[Transcript] list of transcripts spanned and filtered according to default settings
+        """
+
+        return self.get_transcript_assembly(span_size=0, transcript_filter=self.transcript_filter)
+
+    def get_clean_transcript_assembly(self):
+        """
+        Returns the transcript assembly as found in the gff file - with no spanning and no transcript filter.
+
+        :return: list[Transcript] list of transcripts spanned and filtered according to default settings
+        """
+
+        return self.get_transcript_assembly(span_size=0, transcript_filter=self.NO_FILTER)
 
     @preconditions(lambda span_size: isinstance(span_size, int))
-    def get_transcript_assembly(self, span_size, filter=None):
+    def get_transcript_assembly(self, span_size, transcript_filter=None):
         """
         Returns transcripts if a transcript assembly already exists with provided span_size and filter.
         Creates and returns a new transcript assembly otherwise.
 
         :param span_size:  int span_size - defines the number of nucleotides to span
-        :param gene_set_filter: list of genes to filter for
+        :param transcript_filter: filter to be applied on transcripts
         :return: a vector of transcript or an iterable of type Transcript
         """
 
-        if filter is None:
-            filter = self.NO_FILTER
+        if transcript_filter is None:
+            transcript_filter = self.NO_FILTER
 
-        if filter in self.transcript_assembly_dict and span_size in self.transcript_assembly_dict[filter]:
-            return self.transcript_assembly_dict[filter][span_size]
+        if transcript_filter in self.transcript_assembly_dict and \
+                span_size in self.transcript_assembly_dict[transcript_filter]:
+            
+            return self.transcript_assembly_dict[transcript_filter][span_size]
 
-        return self.generate_transcript_assembly(span_size, filter)
+        return self.generate_transcript_assembly(span_size, transcript_filter)
 
     @preconditions(lambda span_size: isinstance(span_size, int))
-    def generate_transcript_assembly(self, span_size, filter=None):
+    def generate_transcript_assembly(self, span_size, transcript_filter=None):
         """
         Adds spanning regions to the start and the end of the transcript and yields the transcripts one-by-one.
         The original transcript assembly is left intact.
 
         :param span_size:  int span_size - defines the number of nucleotides to span
-        :param gene_set_filter: list of genes to filter for
+        :param transcript_filter: filter to apply on transcripts
 
         :return: transcript vector
         """
 
+        # error check
         if span_size < 0:
             error_message = "Negative span_size of %d provided: cannot span the transcripts with negative or " \
                             "zero values" % span_size
@@ -130,47 +138,64 @@ class Annotation:
             raise ValueError(error_message)
         self.logger.debug("Transcript span size: %d" % span_size)
 
-        if filter is not None:
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("Generating transcript assembly under filter: %s and span size: %d"
-                                                                 % (filter, span_size))
-        this_transcript_assembly = [None]*self.transcript_count
-        counter = 0
+        # info 
+        self.logger.info(
+            "Generating transcript assembly under filter: %s and span size: %d"
+            % (transcript_filter, span_size))
+        
+        # generation
+        this_transcript_assembly = []
         for transcript in self.transcript_assembly:
-            if filter == self.FORWARD_STRAND_FILTER:
+            # apply filter
+            if transcript_filter == self.FORWARD_STRAND_FILTER:
                 if transcript.strand != '+':
                     continue
 
-            elif filter == self.REVERSE_STRAND_FILTER:
+            elif transcript_filter == self.REVERSE_STRAND_FILTER:
                 if transcript.strand != '-':
                     continue
 
-            span = transcript.spanning_segment
+            # span
+            spanned_transcript = self.span_transcript(transcript, span_size)
 
-            # FIXME: I'm not sure this is a good solution: if you don't span where you have to,
-            # FIXME: and the user assumes it is spanned this will lead to problems
-            # FIXME: solution: return negative span size if allowed, and return 0's when retrieving counts on the negative segment
-
-            new_start = span.start - span_size
-            #if new_start < 0:
-            #    new_start = 0
-            start_span = plastid.GenomicSegment(
-                span.chrom, new_start, span.start, span.strand)
-
-            # FIXME how do we check if we've reached the end?
-            end_span = plastid.GenomicSegment(
-                span.chrom, span.end, span.end + span_size, span.strand)
-
-            spanned_transcript = transcript.__deepcopy__(None)
-            spanned_transcript.add_segments(start_span, end_span)
-            this_transcript_assembly[counter] = spanned_transcript
-            counter += 1
-
-        if filter in self.transcript_assembly_dict:
-            self.transcript_assembly_dict[filter].update({span_size:this_transcript_assembly})
+            # append 
+            this_transcript_assembly.append(spanned_transcript)
+        
+        # add assembly to dictionary
+        if transcript_filter in self.transcript_assembly_dict:
+            self.transcript_assembly_dict[transcript_filter].update({span_size: this_transcript_assembly})
         else:
-            self.transcript_assembly_dict.update({filter:{span_size:this_transcript_assembly}})
+            self.transcript_assembly_dict.update({transcript_filter: {span_size: this_transcript_assembly}})
 
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("Transcription assembly generation done")
+        # info
+        self.logger.info("Transcript assembly generated")
 
         return this_transcript_assembly
-    # TODO in case gene_set filter is provided also filter with it
+
+
+    @preconditions(lambda span_size: isinstance(span_size, int),
+                   lambda span_size: span_size >= 0)
+    def span_transcript(self, transcript, span_size):
+        """
+        Spans the transcript symmetrically by the given span size.
+        Spanning may result in going beyond boundaries of current genome, with negative and out of range coordinates,
+        which should be handled explicitly in other functions.
+
+        :param transcript:
+        :param span_size:
+        :return:
+        """
+        span = transcript.spanning_segment
+
+        new_start = span.start - span_size
+
+        start_span = plastid.GenomicSegment(
+            span.chrom, new_start, span.start, span.strand)
+
+        end_span = plastid.GenomicSegment(
+            span.chrom, span.end, span.end + span_size, span.strand)
+
+        spanned_transcript = transcript.__deepcopy__(None)
+        spanned_transcript.add_segments(start_span, end_span)
+
+        return spanned_transcript
