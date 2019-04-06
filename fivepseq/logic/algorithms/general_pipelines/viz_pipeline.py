@@ -29,6 +29,7 @@ class VizPipeline:
     FFT_START = "_fft_start"
 
     count_folders = None
+    title = "fivepseq_plot_canvas"
     png_dir = "png"
     svg_dir = "svg"
 
@@ -52,6 +53,8 @@ class VizPipeline:
     loci_meta_counts_dict = {}
     data_summary_dict = {}
     transcript_index = None
+
+    combine = False  # do not combine plots until data counts are successfully combined
 
     COMBINED = "combined"
     meta_count_start_combined = pd.DataFrame()
@@ -86,7 +89,7 @@ class VizPipeline:
     p_triangle_start_combined = None
     p_aa_heatmaps_combined = None
 
-    def __init__(self, args, count_folders = None):
+    def __init__(self, args, count_folders=None):
         """
         Initialize vizualization pipeline with arguments contained in args.
         If count_folders are provided explicitely, those will be used instead of sd and md arguments.
@@ -102,44 +105,78 @@ class VizPipeline:
             self.prepare_output_folders()
         except Exception as e:
             err_msg = "Problem with plotting: could not create folders for exporting images: %s" % str(e)
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(err_msg)
-            raise Exception(err_msg)
+            self.logger.error(err_msg)
+            raise e
 
-        if hasattr(self.args, 'sd') and  self.args.sd is not None:
-            self.logger.info("Plotting single sample: %s" % self.args.sd)
+        try:
+            self.process_count_folders()
+        except Exception as e:
+            err_msg = "Exception while processing input count folders: %s" % str(e)
+            self.logger.error(err_msg)
+            raise e
 
+        try:
+            self.setup_title()
+        except Exception as e:
+            err_msg = "Exception while setting up title for plot canvas: %s" % str(e)
+            self.logger.error(err_msg)
+            raise e
+
+        try:
             self.initialize_data()
-            self.logger.info("Finished reading data counts.")
+        except Exception as e:
+            err_msg = "Exception while reading data: %s" % str(e)
+            self.logger.error(err_msg)
+            raise e
 
-            if self.args.t is None:
-                title = os.path.basename(self.args.sd)
-            else:
-                title = self.args.t
+        try:
+            self.plot_multiple_samples()
+        except Exception as e:
+            err_msg = "Exception while plotting data: %s" % str(e)
+            self.logger.error(err_msg)
+            raise e
 
-            self.plot_single_sample(title, self.args.o)
+    def process_count_folders(self):
+        """
+        Read input as sd or md (if count_folders is not provided from within fivepseq)
+        and append the count_folders list in self.
 
-        else:
-            self.logger.info("Plotting multiple samples:")
+        Set up output file title.
 
-            if self.count_folders is None:
-                self.count_folders = []
+        :return:
+        """
+        if self.count_folders is None:
+            if hasattr(self.args, 'sd') and self.args.sd is not None:
+                if not os.path.isdir(self.args.sd):
+                    err_msg = "Provided sd %s is not a directory" % self.args.sd
+                    self.logger.error(err_msg)
+                    raise Exception(err_msg)
+                self.count_folders.append(self.args.sd)
+
+            elif hasattr(self.args, 'md') and self.args.sd is not None:
                 for d in glob.glob(self.args.md):
                     if os.path.isdir(d):
-                        self.logger.info("\t%s" % d)
+                        if d[-1] == "/":
+                            d = d[0:len(d) - 1]
                         self.count_folders.append(d)
-            else:
-                for d in self.count_folders:
-                    if os.path.isdir(d):
-                        self.logger.info("\t%s" % d)
 
-            self.initialize_data()
-            self.logger.info("Finished reading data counts.")
-            combined = True
-            if self.args.tf is None:
-                self.combine_counts()
-            else:
-                combined = False
-            self.plot_multiple_samples(combined)
+        if len(self.count_folders) == 0:
+            err_msg = "No count folders provided as input"
+            self.logger.error(err_msg)
+            raise Exception(err_msg)
+
+        self.logger.info("The following folders will be used for plotting")
+        for d in self.count_folders:
+            if os.path.isdir(d):
+                self.logger.info("\t%s" % d)
+
+    def setup_title(self):
+        if not hasattr(config.args, 't') or config.args.t is None:
+            config.args.t = os.path.basename(os.path.dirname(config.args.b)) + "_" + os.path.basename(config.args.b)
+            config.args.t.replace("_*", "")
+            config.args.t.replace("*", "")
+
+        self.title = config.args.t
 
     def prepare_output_folders(self):
         if not os.path.exists(self.args.o):
@@ -164,27 +201,25 @@ class VizPipeline:
                     raise Exception("Output directory %s could not be created: %s" % (self.svg_dir, str(e)))
 
     def initialize_data(self):
-        if hasattr(self.args, 'sd') and self.args.sd is not None:
-            if self.args.t is None:
-                sample = os.path.basename(self.args.sd)
-            else:
-                sample = self.args.t
+        self.logger.info("Reading data counts.")
+        for d in self.count_folders:
+            sample = os.path.basename(d)
             self.samples.append(sample)
-            self.update_dicts(sample, self.args.sd)
-        else:
-            # count_folders is either supplied directly or populated from md
-            for d in self.count_folders:
-                if os.path.isdir(d):
-                    if d[-1] == "/":
-                        d = d[0:len(d) - 1]
-                    sample = os.path.basename(d)
-                    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).debug("Sample: %s" % sample)
-                    self.samples.append(sample)
-                    self.update_dicts(sample, d)
+            self.update_dicts(sample, d)
 
         self.colors_dict = dict(
-            zip(self.meta_count_start_dict.keys(),
+            zip(self.samples,
                 self.large_colors_list[0:len(self.samples)]))
+
+        self.logger.info("Finished reading data counts.")
+
+        if len(self.count_folders) > 1:
+            try:
+                self.combine_counts()
+                self.combine = True
+            except Exception as e:
+                err_msg = "Could not combine data counts: %s. Combined plots will not be generated" % str(e)
+                self.logger.warn(err_msg)
 
     def update_dicts(self, sample, directory):
         self.logger.info("reading counts for sample: %s" % sample)
@@ -258,32 +293,15 @@ class VizPipeline:
                 if amino_acid_df is not None:
                     self.amino_acid_df_combined += amino_acid_df
 
-    def plot_single_sample(self, title, plot_dir):
-        self.make_single_sample_plots(title)
+    def plot_multiple_samples(self):
+        self.logger.info("Generating plots")
 
-        # TODO skip tables for now as those are not properly drawn
-        bokeh_composite(title, [self.p_scatter_start, self.p_scatter_term,
-                                self.p_triangle_term, self.p_triangle_start,
-                                self.p_aa_heatmap, None,
-                                self.p_aa_heatmap_scaled, None,
-                                self.p_frame_barplots_term, self.p_frame_barplots_start,
-                                self.p_loci_meta_counts, None,
-                                self.p_fft_plot_start, self.p_fft_plot_term],
-                        os.path.join(plot_dir, title + ".html"), 2)
+        self.make_single_sample_plots(self.title)
 
-    def plot_multiple_samples(self, combined=True):
-        self.logger.info("Generating plots for single samples")
-        if self.args.t is None:
-            self.args.t = os.path.basename(os.path.dirname(self.args.md)) + "_" + os.path.basename(self.args.md)
+        if self.combine:
+            self.make_combined_plots(self.title)
 
-        self.make_single_sample_plots(self.args.t)
-        if combined:
-            self.make_combined_plots(self.args.t)
-
-        if combined:
-
-            # TODO skip tables for now as those are not properly drawn
-            bokeh_composite(self.args.t,
+            bokeh_composite(self.title,
                             [self.p_scatter_start, self.p_scatter_term,
                              self.p_triangle_term, self.p_triangle_start,
                              self.p_aa_heatmap, None, None, None,
@@ -294,9 +312,9 @@ class VizPipeline:
                              self.p_scatter_start_combined, self.p_scatter_term_combined,
                              self.p_triangle_term_combined, self.p_triangle_start_combined,
                              self.p_aa_heatmaps_combined, None, None, None],
-                            os.path.join(self.args.o, self.args.t + ".html"), 4)
+                            os.path.join(self.args.o, self.title + ".html"), 4)
         else:
-            bokeh_composite(self.args.t,
+            bokeh_composite(self.title,
                             [self.p_scatter_start, self.p_scatter_term,
                              self.p_triangle_term, self.p_triangle_start,
                              self.p_aa_heatmap, None, None, None,
@@ -304,7 +322,7 @@ class VizPipeline:
                              self.p_frame_barplots_term, None, None, None,
                              self.p_frame_barplots_start, None, None, None,
                              self.p_fft_plot_start, self.p_fft_plot_term, None, None],
-                            os.path.join(self.args.o, self.args.t + ".html"), 4)
+                            os.path.join(self.args.o, self.title + ".html"), 4)
 
     def is_phantomjs_installed(self):
         if self.phantomjs_installed is not None:
@@ -504,12 +522,14 @@ class VizPipeline:
 
     def make_combined_plots(self, title):
         # Combined plots
-        self.p_scatter_term_combined = bokeh_scatter_plot(title + self.METACOUNTS_TERM + "_combined", FivePSeqCounts.TERM,
+        self.p_scatter_term_combined = bokeh_scatter_plot(title + self.METACOUNTS_TERM + "_combined",
+                                                          FivePSeqCounts.TERM,
                                                           {"combined": self.meta_count_term_combined},
                                                           self.combined_color_dict,
                                                           png_dir=self.png_dir, svg_dir=self.svg_dir)
 
-        self.p_scatter_start_combined = bokeh_scatter_plot(title + self.METACOUNTS_START + "_combined", FivePSeqCounts.START,
+        self.p_scatter_start_combined = bokeh_scatter_plot(title + self.METACOUNTS_START + "_combined",
+                                                           FivePSeqCounts.START,
                                                            {self.COMBINED: self.meta_count_start_combined},
                                                            self.combined_color_dict,
                                                            png_dir=self.png_dir, svg_dir=self.svg_dir)
