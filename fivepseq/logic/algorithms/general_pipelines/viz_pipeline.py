@@ -63,9 +63,11 @@ class VizPipeline:
     frame_count_TERM_combined = pd.DataFrame()
     amino_acid_df_combined = pd.DataFrame()
 
-    large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired']) +
-                         cl.to_numeric(cl.scales['8']['qual']['Set1']) +
-                         cl.to_numeric(cl.scales['5']['qual']['Set3']))
+    large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired'][0:6]) +
+                         cl.to_numeric(cl.scales['8']['qual']['Set1'][3:5]))
+    #                     cl.to_numeric(cl.scales['5']['qual']['Set3']))
+    #large_colors_list = ("#771155", "#AA4488", "#114477", "#4477AA", "#117777", "#44AAAA",
+    #                     "#777711", "#AAAA44", "#774411", "#AA7744", "#771122", "#AA4455")
     colors_dict = None
     combined_color_dict = {COMBINED: cl.to_numeric(cl.scales['9']['qual']['Set3'])[3]}
 
@@ -129,7 +131,6 @@ class VizPipeline:
             self.logger.error(err_msg)
             raise e
 
-
         try:
             self.plot_multiple_samples()
         except Exception as e:
@@ -166,10 +167,16 @@ class VizPipeline:
             self.logger.error(err_msg)
             raise Exception(err_msg)
 
+        if len(self.count_folders) > 8:
+            self.logger.info("The number of samples exceeds 8 (found %d). Only the first 8 will be plotted" % len(self.count_folders))
+            self.count_folders = self.count_folders[0:8]
+
         self.logger.info("The following folders will be used for plotting")
         for d in self.count_folders:
             if os.path.isdir(d):
                 self.logger.info("\t%s" % d)
+
+
 
     def setup_title(self):
         if not hasattr(config.args, 't') or config.args.t is None:
@@ -221,8 +228,6 @@ class VizPipeline:
             except Exception as e:
                 err_msg = "Could not combine data counts: %s. Combined plots will not be generated" % str(e)
                 self.logger.warn(err_msg)
-
-
 
     def update_dicts(self, sample, directory):
         self.logger.info("reading counts for sample: %s" % sample)
