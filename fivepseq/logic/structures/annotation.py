@@ -2,8 +2,10 @@
 This module keeps properties of annotation files and functions associated with those.
 """
 import logging
+import os
 
 import plastid
+from fivepseq.util.writers import FivePSeqOut
 from preconditions import preconditions
 
 from fivepseq import config
@@ -21,7 +23,7 @@ class Annotation:
 
     transcript_filter = NO_FILTER
     span_size = 0
-    
+
     logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     @preconditions(lambda file_path: isinstance(file_path, str),
@@ -40,7 +42,6 @@ class Annotation:
             error_message = "transcript_assembly is None. Cannot instantiate an Annotation object."
             self.logger.error(error_message)
             raise ValueError(error_message)
-        self.transcript_assembly = transcript_assembly  # the default transcript assembly with no span size and no filter applied
         self.transcript_count = len(transcript_assembly)
 
         self.transcript_assembly_dict.update({self.NO_FILTER: {
@@ -55,13 +56,52 @@ class Annotation:
 
         self.transcript_filter = transcript_filter
 
-    def set_default_geneset_filter(self, geneset_filter):
+    def set_gene_set_filter(self, geneset_filter_file, attribute="Name"):
         """
-        Sets the default gen set filter to be filter the transcript assembly.
+        Provide the file where the names of genes to be filtered are present.
+        The genes should be named according to the attribute in the gff file.
+        The default "Name" attribute is used, unless provided otherwise.
+
+        :param geneset_filter: the file containing genes separated by new lines
+        :param attribute: the attribute name in which genes are presented
+        :return:
         """
 
-        self.geneset_filter= geneset_filter
+        self.geneset_filter = self.read_geneset_file(geneset_filter_file)
+        self.apply_geneset_filter(self.geneset_filter, attribute)
 
+    def apply_geneset_filter(self, geneset_filter, attribute):
+        geneset_filtered_assembly = []
+        for transcript in self.get_transcript_assembly_default_filter():
+            if FivePSeqOut.get_transcript_attr(transcript, attribute) in geneset_filter:
+                geneset_filtered_assembly.append(transcript)
+
+        if len(geneset_filtered_assembly) == 0:
+            raise Exception("None of the genes in the geneset filter were present in the annotation file")
+
+        #TODO check if the following line suits: if transcript filters were applied prior, those will be preserved
+        self.transcript_assembly_dict.update({self.transcript_filter: {0: geneset_filtered_assembly}})
+
+
+    def read_geneset_file(self, geneset_filter_file):
+
+        if not os.path.exists(geneset_filter_file):
+            raise Exception("The gene set file %s does not exist" % geneset_filter_file)
+
+        geneset_filter = []
+        with open(geneset_filter_file) as file:
+            line = file.readline()
+            count = 1
+            while line:
+                if " " in line or "\t" in line:
+                    raise Exception("The gene set file %s should not contain spaces or tabs. Found one in line %d"
+                                    % (geneset_filter_file, count))
+
+                geneset_filter.append(line.rstrip("\n\r"))
+                line = file.readline()
+                count += 1
+
+        return geneset_filter
 
     def set_default_span_size(self, span_size):
         """
@@ -79,7 +119,7 @@ class Annotation:
 
         return self.get_transcript_assembly(self.span_size, self.transcript_filter)
 
-    def get_transcript_assembly_default_filter(self, span_size = 0):
+    def get_transcript_assembly_default_filter(self, span_size=0):
         """
         Returns the transcript assembly with default filters and specified span size.
 
@@ -113,7 +153,6 @@ class Annotation:
 
         if transcript_filter in self.transcript_assembly_dict and \
                 span_size in self.transcript_assembly_dict[transcript_filter]:
-            
             return self.transcript_assembly_dict[transcript_filter][span_size]
 
         return self.generate_transcript_assembly(span_size, transcript_filter)
@@ -142,10 +181,10 @@ class Annotation:
         self.logger.info(
             "Generating transcript assembly under filter: %s and span size: %d"
             % (transcript_filter, span_size))
-        
+
         # generation
         this_transcript_assembly = []
-        for transcript in self.transcript_assembly:
+        for transcript in self.get_transcript_assembly_default_filter():
             # apply filter
             if transcript_filter == self.FORWARD_STRAND_FILTER:
                 if transcript.strand != '+':
@@ -160,7 +199,7 @@ class Annotation:
 
             # append 
             this_transcript_assembly.append(spanned_transcript)
-        
+
         # add assembly to dictionary
         if transcript_filter in self.transcript_assembly_dict:
             self.transcript_assembly_dict[transcript_filter].update({span_size: this_transcript_assembly})
@@ -171,7 +210,6 @@ class Annotation:
         self.logger.info("Transcript assembly generated")
 
         return this_transcript_assembly
-
 
     @preconditions(lambda span_size: isinstance(span_size, int),
                    lambda span_size: span_size >= 0)
@@ -199,3 +237,4 @@ class Annotation:
         spanned_transcript.add_segments(start_span, end_span)
 
         return spanned_transcript
+
