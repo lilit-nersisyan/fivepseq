@@ -129,6 +129,7 @@ class VizPipeline:
             self.logger.error(err_msg)
             raise e
 
+
         try:
             self.plot_multiple_samples()
         except Exception as e:
@@ -220,6 +221,8 @@ class VizPipeline:
             except Exception as e:
                 err_msg = "Could not combine data counts: %s. Combined plots will not be generated" % str(e)
                 self.logger.warn(err_msg)
+
+
 
     def update_dicts(self, sample, directory):
         self.logger.info("reading counts for sample: %s" % sample)

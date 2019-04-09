@@ -6,24 +6,19 @@ The fivepseq entry point.
 # A few details are different in 2.x, especially some exception messages, which were improved in 3.x.
 import argparse
 import glob
-
-import os
 import logging
-import shutil
+import os
 import sys
 import time
 
-import dill
-
 from fivepseq import config
-from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts
-from fivepseq.util.readers import BamReader, AnnotationReader, FastaReader
-from fivepseq.util.formatting import pad_spaces
-from fivepseq.logic.structures.fivepseq_counts import CountManager
-from fivepseq.util.writers import FivePSeqOut
 from fivepseq.logic.algorithms.general_pipelines.count_pipeline import CountPipeline
 from fivepseq.logic.algorithms.general_pipelines.viz_pipeline import VizPipeline
 from fivepseq.logic.structures.annotation import Annotation
+from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts
+from fivepseq.util.formatting import pad_spaces
+from fivepseq.util.readers import BamReader, AnnotationReader, FastaReader
+from fivepseq.util.writers import FivePSeqOut
 
 FIVEPSEQ_COUNTS_DIR = "fivepseq_counts"
 FIVEPSEQ_PLOTS_DIR = "fivepseq_plots"
@@ -87,6 +82,13 @@ class FivepseqArguments:
                             choices=["INFO", "DEBUG", "info", "debug"],
                             default="DEBUG",
                             required=False)
+
+        parser.add_argument('--ds', '--downsample',
+                            help="The probablity threshold for poisson distribution: points less than this value will be downsampled"
+                                 "to be considered an outlier:",
+                            type=float,
+                            required=False,
+                            default=0)
 
         ##########################
         #       fivepseq count
@@ -487,7 +489,8 @@ def generate_and_store_fivepseq_counts(plot=False):
             os.mkdir(bam_out_dir)
 
         # combine objects into FivePSeqCounts object
-        fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation, fasta_reader.genome)
+        fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation, fasta_reader.genome,
+                                         downsample_constant= config.args.ds)
         fivepseq_counts_dict.update({bam: fivepseq_counts})
 
         # set up fivepseq out object for this bam
@@ -517,8 +520,9 @@ def generate_and_store_fivepseq_counts(plot=False):
         # set up job title if none is provided
         if not hasattr(config.args, 't') or config.args.t is None:
             config.args.t = os.path.basename(os.path.dirname(config.args.b)) + "_" + os.path.basename(config.args.b)
-            config.args.t.replace("_*", "")
-            config.args.t.replace("*", "")
+            config.args.t = config.args.t.replace(".bam", "")
+            config.args.t = config.args.t.replace("_*", "")
+            config.args.t = config.args.t.replace("*", "")
 
         #FIXME currently all count folders in the output directory are used for plotting.
         #FIXME this introduces conflicts with pre-existing count files in the folder

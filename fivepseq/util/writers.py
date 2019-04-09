@@ -32,6 +32,7 @@ class FivePSeqOut:
     FFT_STATS_DF_FILE = "fft_stats.txt"
     FFT_SIGNALS_START = "fft_signals_start.txt"
     FFT_SIGNALS_TERM = "fft_signals_term.txt"
+    OUTLIERS_DF = "outliers_df.txt"
 
     FAILED_COUNT_FILES_LIST = "failed_count_files_list.txt"
     BAM_SUCCESS_SUMMARY = "count_run_summary.txt"

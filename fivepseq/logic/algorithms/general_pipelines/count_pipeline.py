@@ -48,8 +48,12 @@ class CountPipeline:
             self.fivepseq_out.write_vector_list(self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH),
                                                 self.fivepseq_out.COUNT_FULL_FILE)
 
+        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.OUTLIERS_DF)):
+            self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_outliers_df(),
+                                               self.fivepseq_out.OUTLIERS_DF)
+
         # count stats
-        count_stats = CountStats(self.fivepseq_counts, self.fivepseq_out)
+        count_stats = CountStats(self.fivepseq_counts, self.fivepseq_out, config)
         count_stats.count_stats()
 
         # check if no reads are in the coding regions

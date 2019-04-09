@@ -46,6 +46,11 @@ The conflict mode specifies how to deal with files/folders that alraedy exist. T
 
 - alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory
 
+optional argument: --downsample/ --ds
+
+This arguments sets the p value threshold for outlier detection: point with less than the --ds probability of
+falling into Poisson distribution will be down-sampled.
+
 Note!
 -------
 bai index files should be in the same directory as the bam files

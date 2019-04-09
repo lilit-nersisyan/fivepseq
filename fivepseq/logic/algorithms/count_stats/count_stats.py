@@ -13,6 +13,7 @@ from fivepseq.util.writers import FivePSeqOut
 class CountStats:
     fivepseq_counts = None
     fivepseq_out = None
+    config = None
     logger = None
 
     F0 = "F0"
@@ -49,9 +50,10 @@ class CountStats:
     fft_stats_start = None
     fft_stats_term = None
 
-    def __init__(self, fivepseq_counts, fivepseq_out):
+    def __init__(self, fivepseq_counts, fivepseq_out, config):
         self.fivepseq_counts = fivepseq_counts
         self.fivepseq_out = fivepseq_out
+        self.config = config
         self.logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
     def count_stats(self):
@@ -109,7 +111,8 @@ class CountStats:
                 self.fivepseq_out.write_series_to_file(self.data_summary_series, FivePSeqOut.DATA_SUMMARY_FILE)
 
     def compute_fft_stats(self):
-        if (os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_TERM)) &
+        if config.args.conflicts == config.ADD_FILES and \
+                (os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_TERM)) &
                 os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_START)) &
                 os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_STATS_DF_FILE))):
             self.logger.info("Skipping FFT statistics calculation: files already exist")
@@ -188,7 +191,7 @@ class CountStats:
         :param frame_counts_df:
         :return: frame_stats_df
         """
-        if os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FRAME_STATS_DF_FILE)):
+        if config.args.conflicts == config.ADD_FILES and os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FRAME_STATS_DF_FILE)):
             self.logger.info("Skipping frame stats calculation: file %s exists" % FivePSeqOut.FRAME_STATS_DF_FILE)
         else:
             frame_counts_df = self.fivepseq_counts.get_frame_counts_df(FivePSeqCounts.START)
