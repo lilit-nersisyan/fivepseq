@@ -19,6 +19,8 @@ class VizPipeline:
 
     METACOUNTS_TERM = "_metacounts_term"
     METACOUNTS_START = "_metacounts_start"
+    METACOUNTS_TERM_SCALED = "_metacounts_term_scaled"
+    METACOUNTS_START_SCALED = "_metacounts_start_scaled"
     TRIANGLE_TERM = "_triangle_term"
     TRIANGLE_START = "_triangle_start"
     FRAME_TERM = "_frames_term"
@@ -66,16 +68,17 @@ class VizPipeline:
     large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired'][0:6]) +
                          cl.to_numeric(cl.scales['8']['qual']['Set1'][3:5]))
     #                     cl.to_numeric(cl.scales['5']['qual']['Set3']))
-    #large_colors_list = ("#771155", "#AA4488", "#114477", "#4477AA", "#117777", "#44AAAA",
+    # large_colors_list = ("#771155", "#AA4488", "#114477", "#4477AA", "#117777", "#44AAAA",
     #                     "#777711", "#AAAA44", "#774411", "#AA7744", "#771122", "#AA4455")
     colors_dict = None
     combined_color_dict = {COMBINED: cl.to_numeric(cl.scales['9']['qual']['Set3'])[3]}
 
     phantomjs_installed = None
 
-    scatter_term = None
     p_scatter_start = None
     p_triangle_term = None
+    p_scatter_start_scaled = None
+    p_triangle_term_scaled = None
     p_triangle_start = None
     p_aa_heatmap = None
     p_aa_heatmap_scaled = None
@@ -87,6 +90,8 @@ class VizPipeline:
 
     p_scatter_term_combined = None
     p_scatter_start_combined = None
+    p_scatter_term_scaled_combined = None
+    p_scatter_start_scaled_combined = None
     p_triangle_term_combined = None
     p_triangle_start_combined = None
     p_aa_heatmaps_combined = None
@@ -168,15 +173,14 @@ class VizPipeline:
             raise Exception(err_msg)
 
         if len(self.count_folders) > 8:
-            self.logger.info("The number of samples exceeds 8 (found %d). Only the first 8 will be plotted" % len(self.count_folders))
+            self.logger.info("The number of samples exceeds 8 (found %d). Only the first 8 will be plotted" % len(
+                self.count_folders))
             self.count_folders = self.count_folders[0:8]
 
         self.logger.info("The following folders will be used for plotting")
         for d in self.count_folders:
             if os.path.isdir(d):
                 self.logger.info("\t%s" % d)
-
-
 
     def setup_title(self):
         if not hasattr(config.args, 't') or config.args.t is None:
@@ -310,21 +314,24 @@ class VizPipeline:
             self.make_combined_plots(self.title)
 
             bokeh_composite(self.title,
-                            [self.p_scatter_start, self.p_scatter_term,
-                             self.p_triangle_term, self.p_triangle_start,
+                            [self.p_scatter_start, self.p_scatter_term, None, None,
+                             self.p_scatter_start_scaled, self.p_scatter_term_scaled, None, None,
+                             self.p_triangle_term, self.p_triangle_start, None, None,
                              self.p_aa_heatmap, None, None, None,
                              self.p_aa_heatmap_scaled, None, None, None,
                              self.p_frame_barplots_term, None, None, None,
                              self.p_frame_barplots_start, None, None, None,
                              self.p_fft_plot_start, self.p_fft_plot_term, None, None,
-                             self.p_scatter_start_combined, self.p_scatter_term_combined,
-                             self.p_triangle_term_combined, self.p_triangle_start_combined,
+                             self.p_scatter_start_combined, self.p_scatter_term_combined, None, None,
+                             self.p_scatter_start_scaled_combined, self.p_scatter_term_scaled_combined, None, None,
+                             self.p_triangle_term_combined, self.p_triangle_start_combined, None, None,
                              self.p_aa_heatmaps_combined, None, None, None],
                             os.path.join(self.args.o, self.title + ".html"), 4)
         else:
             bokeh_composite(self.title,
-                            [self.p_scatter_start, self.p_scatter_term,
-                             self.p_triangle_term, self.p_triangle_start,
+                            [self.p_scatter_start, self.p_scatter_term, None, None,
+                             self.p_scatter_start_scaled, self.p_scatter_term_scaled, None, None,
+                             self.p_triangle_term, self.p_triangle_start, None, None,
                              self.p_aa_heatmap, None, None, None,
                              self.p_aa_heatmap_scaled, None, None, None,
                              self.p_frame_barplots_term, None, None, None,
@@ -481,6 +488,18 @@ class VizPipeline:
                                                   self.colors_dict,
                                                   png_dir=self.png_dir, svg_dir=self.svg_dir)
 
+        self.p_scatter_term_scaled = bokeh_scatter_plot(title + self.METACOUNTS_TERM_SCALED, FivePSeqCounts.TERM,
+                                                        self.meta_count_term_dict,
+                                                        self.colors_dict,
+                                                        scale=True,
+                                                        png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_scatter_start_scaled = bokeh_scatter_plot(title + self.METACOUNTS_START_SCALED, FivePSeqCounts.START,
+                                                         self.meta_count_start_dict,
+                                                         self.colors_dict,
+                                                         scale=True,
+                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
+
         self.p_triangle_term = bokeh_triangle_plot(title + self.TRIANGLE_TERM,
                                                    self.frame_count_term_dict,
                                                    self.colors_dict,
@@ -541,6 +560,21 @@ class VizPipeline:
                                                            {self.COMBINED: self.meta_count_start_combined},
                                                            self.combined_color_dict,
                                                            png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        # Combined plots
+        self.p_scatter_term_scaled_combined = bokeh_scatter_plot(title + self.METACOUNTS_TERM_SCALED + "_combined",
+                                                                 FivePSeqCounts.TERM,
+                                                                 {"combined": self.meta_count_term_combined},
+                                                                 self.combined_color_dict,
+                                                                 scale=True,
+                                                                 png_dir=self.png_dir, svg_dir=self.svg_dir)
+
+        self.p_scatter_start_scaled_combined = bokeh_scatter_plot(title + self.METACOUNTS_START_SCALED + "_combined",
+                                                                  FivePSeqCounts.START,
+                                                                  {self.COMBINED: self.meta_count_start_combined},
+                                                                  self.combined_color_dict,
+                                                                  scale=True,
+                                                                  png_dir=self.png_dir, svg_dir=self.svg_dir)
 
         self.p_triangle_term_combined = bokeh_triangle_plot(title + self.TRIANGLE_TERM + "_combined",
                                                             {self.COMBINED: self.frame_count_TERM_combined},

@@ -59,14 +59,17 @@ def bokeh_table(title, table_df_dict):
     return mainLayout
 
 
-def bokeh_scatter_plot(title, region, count_series_dict, color_dict, png_dir=None, svg_dir=None):
+def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale = False, png_dir=None, svg_dir=None):
     if count_series_dict is None:
         return None
     logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot: " + region)
     output_file(title + ".png")
 
     my_x_label = "position from %s" % region
-    my_y_label = "5'seq read counts"
+    if scale:
+        my_y_label = "Scaled 5'seq read counts"
+    else:
+        my_y_label = "5'seq read counts"
 
     p = figure(title=title,
                x_axis_label=my_x_label, y_axis_label=my_y_label)
@@ -96,7 +99,11 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, png_dir=Non
             logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
             c = get_random_color()
         try:
-            line = p.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            if scale:
+                y = count_series.C/(sum(count_series.C)+1)
+            else:
+                y = count_series.C
+            line = p.line(count_series.D, y, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
         except Exception as e:
             print "Error at key %s, reason; %s" % (key, str(e))
             return None
@@ -108,13 +115,13 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, png_dir=Non
             p_key_png.line(count_series.D, count_series.C, line_color=RGB(c[0], c[1], c[2]), line_width=2)
             export_images(p_key_png, key_title, png_dir=png_dir)
         if p_key_svg is not None:
-            p_key_svg.line(count_series.D, count_series.C, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            p_key_svg.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
         if p_png is not None:
-            p_png.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            p_png.line(count_series.D, y, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
         if p_svg is not None:
-            p_svg.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            p_svg.line(count_series.D, y, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
 
     p.legend.click_policy = "hide"
     export_images(p_png, title + "_overlay", png_dir=png_dir)
@@ -369,7 +376,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, png_dir=No
         if amino_acid_df is not None:
             if scale:
                 for i in range(amino_acid_df.shape[0]):
-                    amino_acid_df.iloc[i, :] /= sum(amino_acid_df.iloc[i, :])
+                    amino_acid_df.iloc[i, :] /= (sum(amino_acid_df.iloc[i, :]) + 1)
 
             colormap = cm.get_cmap("viridis")
             bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]

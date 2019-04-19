@@ -168,7 +168,6 @@ class FivePSeqCounts:
 
         self.logger.info("Done generating transcript descriptors")
 
-
     def get_count_distribution(self):
         if self.count_distribution is not None:
             return self.count_distribution
@@ -226,7 +225,7 @@ class FivePSeqCounts:
         return outlier_lower
 
     def set_outlier_lower(self, outlier_lower):
-        #TODO add checks, set preconditions
+        # TODO add checks, set preconditions
         self.outlier_lower = outlier_lower
 
     def generate_count_vector_lists(self):
@@ -336,13 +335,14 @@ class FivePSeqCounts:
             # retrieve the count vector using plastid function "get_counts" called from the given Transcript object
             count_vector = self.get_count_vector_safe(transcript, span_size)
             if downsample and np.array(count_vector > self.outlier_lower).any():
-                count_vector_ds = [0]*len(count_vector)
+                count_vector_ds = [0] * len(count_vector)
                 for i in range(len(count_vector_ds)):
                     if count_vector[i] > self.outlier_lower:
                         count_vector_ds[i] = self.outlier_lower
                         outlier_params = [FivePSeqOut.get_transcript_attr(transcript, "ID"),
                                           FivePSeqOut.get_transcript_attr(transcript, "Name"),
-                                          i - span_size, len(count_vector) - i - span_size, count_vector[i], count_vector_ds[i]]
+                                          i - span_size, len(count_vector) - i - span_size, count_vector[i],
+                                          count_vector_ds[i]]
                         if outlier_params not in self.outliers:
                             self.outliers.append(outlier_params)
                     else:
@@ -393,12 +393,11 @@ class FivePSeqCounts:
             count_vector = transcript.get_counts(self.alignment.bam_array)
         except Exception as e:
 
-
             if transcript.spanning_segment.start < 0:
                 diff = -1 * transcript.spanning_segment.start
                 t_subchain = transcript.get_subchain(diff, transcript.spanning_segment.end, stranded=False)
                 subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
-                count_vector = [0] * diff  + subchain_counts
+                count_vector = [0] * diff + subchain_counts
 
                 logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
                     debug("Transcript %s at the beginning of the genome padded with %d zeros"
@@ -417,7 +416,7 @@ class FivePSeqCounts:
                               % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
 
                 else:
-                    t_subchain = transcript.get_subchain(diff, transcript.spanning_segment.end, stranded = False)
+                    t_subchain = transcript.get_subchain(diff, transcript.spanning_segment.end, stranded=False)
 
                     subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
                     count_vector = subchain_counts + [0] * diff
@@ -425,7 +424,6 @@ class FivePSeqCounts:
                     logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
                         debug("Transcript %s at the end of the genome padded with %d zeros"
                               % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
-
 
         return count_vector
 
@@ -442,7 +440,7 @@ class FivePSeqCounts:
 
                 if span_size < diff:
                     cds_sequence = sequence[transcript.cds_start + span_size - diff: transcript.cds_end + span_size]
-                else: #TODO I don't know how to get sequence in this case: need debugging
+                else:  # TODO I don't know how to get sequence in this case: need debugging
                     cds_sequence = sequence[transcript.cds_start + span_size - diff: transcript.cds_end + span_size]
 
                 logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
@@ -474,7 +472,7 @@ class FivePSeqCounts:
         :return:
         """
 
-        colnames =  ["ID", "Name", "position_from_start", "position_from_term", "actual_count", "downsampled_count"]
+        colnames = ["ID", "Name", "position_from_start", "position_from_term", "actual_count", "downsampled_count"]
         outliers_df = pd.DataFrame(self.outliers, index=None, columns=colnames)
         return outliers_df
 
@@ -620,7 +618,7 @@ class FivePSeqCounts:
 
     @preconditions(lambda dist: isinstance(dist, int),
                    lambda dist: dist > 0)
-    def get_amino_acid_pauses(self, dist, downsample=False):
+    def get_amino_acid_pauses(self, dist, downsample=True):
         """
         Counts the meta-number of 5' mapping positions at the given distance from the specified codon
         Only transcripts with cds of length multiple of 3 are accounted for.
@@ -660,7 +658,8 @@ class FivePSeqCounts:
                                  % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
             counter += 1
 
-            count_vector = self.get_count_vector(transcript, span_size=0, region=FivePSeqCounts.FULL_LENGTH,
+            count_vector = self.get_count_vector(transcript, span_size=0,
+                                                 region=FivePSeqCounts.FULL_LENGTH,
                                                  downsample=downsample)
             # sequence = transcript.get_sequence(self.genome.genome_dict)
             # cds_sequence = sequence[0: len(sequence) - 0]
@@ -1270,7 +1269,6 @@ class CountManager:
             counts = []
         else:
             counts = pd.read_csv(file_path, header=None)
-            counts = map(int, counts.iloc[:,0])
+            counts = map(int, counts.iloc[:, 0])
 
         return counts
-
