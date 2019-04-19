@@ -73,7 +73,13 @@ class Annotation:
     def apply_geneset_filter(self, geneset_filter, attribute):
         geneset_filtered_assembly = []
         for transcript in self.get_transcript_assembly_default_filter():
-            if FivePSeqOut.get_transcript_attr(transcript, attribute) in geneset_filter:
+            attr_value = FivePSeqOut.get_transcript_attr(transcript, attribute)
+            if attr_value in geneset_filter:
+                geneset_filtered_assembly.append(transcript)
+            #TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
+            elif attr_value.split("-")[0] in geneset_filter:
+                geneset_filtered_assembly.append(transcript)
+            elif attr_value.split(".")[0] in geneset_filter:
                 geneset_filtered_assembly.append(transcript)
 
         if len(geneset_filtered_assembly) == 0:

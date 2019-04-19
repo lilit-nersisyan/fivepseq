@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plastid
 from preconditions import preconditions
+from scipy import stats
 
 from fivepseq import config
 from fivepseq.logic.structures import codons
@@ -32,6 +33,7 @@ class FivePSeqCounts:
     NUMBER_READS = "NumOfReads"
     NUMBER_POSITIONS = "NumOfMapPositions"
 
+    count_distribution = None
     outlier_lower = None
     downsample_by = None
 
@@ -124,7 +126,7 @@ class FivePSeqCounts:
                                                             self.NUMBER_READS,
                                                             self.NUMBER_POSITIONS])
 
-        count_distribution = []
+        self.count_distribution = []
 
         for transcript_ind in range(transcript_count):
             transcript = transcript_assembly[transcript_ind]
@@ -135,7 +137,7 @@ class FivePSeqCounts:
             # NOTE the count distribution does not include values 0 and 1 to avoid skewness for outlier detection
             for c in count_vector:
                 if c > 0:
-                    count_distribution.append(c)
+                    self.count_distribution.append(c)
 
             start_codon = cds_sequence[0:3]
             stop_codon = cds_sequence[len(cds_sequence) - 3:len(cds_sequence)]
@@ -160,13 +162,40 @@ class FivePSeqCounts:
             else:
                 self.stop_codon_dict.update({stop_codon: 1})
 
-        self.outlier_lower = self.get_outlier_lower(count_distribution)
+        self.outlier_lower = self.get_outlier_lower()
 
         self.logger.info("The lower bound for outliers set as %f " % self.outlier_lower)
 
         self.logger.info("Done generating transcript descriptors")
 
-    def get_outlier_lower(self, count_distribution):
+
+    def get_count_distribution(self):
+        if self.count_distribution is not None:
+            return self.count_distribution
+
+        else:
+            self.generate_transcript_descriptors()
+            return self.count_distribution
+
+    @preconditions(lambda count_distribution: isinstance(count_distribution, list))
+    def set_count_distribution(self, count_distribution):
+        """
+        Sets the count distribution according to the specified count vector.
+
+        :param count_distribution: a vector of counts (should be [int] but [float] is also acceptable)
+        :return:
+        :raise: ValueError if values in the count distribution not convertable to int
+        """
+        if len(count_distribution) == 0:
+            self.count_distribution = []
+        else:
+            try:
+                count_distribution = map(int, count_distribution)
+                self.count_distribution = count_distribution
+            except Exception as e:
+                raise ValueError("problem converting count distribution values to int: %s" % str(e))
+
+    def get_outlier_lower(self):
         """
         Returns the lower bound for outliers detected as points lying self.downsample_by number times higher than the
         25-75% interquartile range.
@@ -174,7 +203,14 @@ class FivePSeqCounts:
         :param count_distribution:
         :return:
         """
-        from scipy import stats
+        if self.outlier_lower is not None:
+            return self.outlier_lower
+
+        count_distribution = self.get_count_distribution()
+        if len(count_distribution) == 0:
+            self.outlier_lower = 0
+            return 0
+
         scd = sorted(count_distribution)
         lam = np.mean(scd)
         ps = [1 - stats.poisson.cdf(x, lam) for x in scd]
@@ -186,7 +222,12 @@ class FivePSeqCounts:
         else:
             outlier_lower = max(scd) + 1
 
+        self.outlier_lower = outlier_lower
         return outlier_lower
+
+    def set_outlier_lower(self, outlier_lower):
+        #TODO add checks, set preconditions
+        self.outlier_lower = outlier_lower
 
     def generate_count_vector_lists(self):
         """
@@ -221,6 +262,9 @@ class FivePSeqCounts:
 
         for transcript in self.annotation.get_default_transcript_assembly():
 
+            if transcript.get_name() == "rna-XM_021479082.1":
+                print "here"
+
             # update to console
             if counter % 10000 == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
@@ -236,7 +280,7 @@ class FivePSeqCounts:
 
             except Exception as e:
                 error_message = "Problem retrieving counts for transcript %s. Reason: %s" \
-                                % (transcript.get_name, e.message)
+                                % (transcript.get_name(), e.message)
                 self.logger.error(error_message)
                 raise Exception(error_message)
 
@@ -291,7 +335,7 @@ class FivePSeqCounts:
         try:
             # retrieve the count vector using plastid function "get_counts" called from the given Transcript object
             count_vector = self.get_count_vector_safe(transcript, span_size)
-            if downsample and any(count_vector > self.outlier_lower):
+            if downsample and np.array(count_vector > self.outlier_lower).any():
                 count_vector_ds = [0]*len(count_vector)
                 for i in range(len(count_vector_ds)):
                     if count_vector[i] > self.outlier_lower:
@@ -301,9 +345,6 @@ class FivePSeqCounts:
                                           i - span_size, len(count_vector) - i - span_size, count_vector[i], count_vector_ds[i]]
                         if outlier_params not in self.outliers:
                             self.outliers.append(outlier_params)
-                        self.logger.info("Count %d at index %d in transcript %s downsampled to %f"
-                                         % (count_vector[i], i, FivePSeqOut.get_transcript_attr(transcript, "Name"),
-                                            count_vector_ds[i]))
                     else:
                         count_vector_ds[i] = count_vector[i]
                 count_vector = count_vector_ds
@@ -348,90 +389,81 @@ class FivePSeqCounts:
         :return:
         """
 
-        if transcript.spanning_segment.start < 0:
-            t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
-            diff = -1 * transcript.spanning_segment.start
-
-            if transcript.strand == "+":
-                t_subchain = transcript.get_subchain(diff, t_len)
-            else:
-                t_subchain = transcript.get_subchain(0, t_len - diff)
-
-            subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
-
-            count_vector = [0] * (0 - transcript.spanning_segment.start) \
-                           + subchain_counts
-
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
-                debug("Transcript %s at the beginning of the genome padded with %d zeros"
-                      % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
-
-        elif transcript.spanning_segment.end > len(self.genome.genome_dict[transcript.chrom].seq):
-            t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
-            diff = transcript.spanning_segment.end - len(self.genome.genome_dict[transcript.chrom].seq)
-
-            if diff > span_size:
-                # NOTE wrongly annotated transcripts go outside genome boundaries,
-                # NOTE return an empty vector spanned by span size as a safe way of discarding such transcripts
-                count_vector = [0] * t_len
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
-                    debug("Transcript %s exceeds genome dimensions by %d bases"
-                          % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
-
-            else:
-                if transcript.strand == "+":
-                    t_subchain = transcript.get_subchain(0, t_len - diff)
-                else:
-                    t_subchain = transcript.get_subchain(diff, t_len)
-
-                subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
-                count_vector = subchain_counts + [0] * diff
-
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
-                    debug("Transcript %s at the end of the genome padded with %d zeros"
-                          % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
-
-        else:
+        try:
             count_vector = transcript.get_counts(self.alignment.bam_array)
+        except Exception as e:
+
+
+            if transcript.spanning_segment.start < 0:
+                diff = -1 * transcript.spanning_segment.start
+                t_subchain = transcript.get_subchain(diff, transcript.spanning_segment.end, stranded=False)
+                subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
+                count_vector = [0] * diff  + subchain_counts
+
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                    debug("Transcript %s at the beginning of the genome padded with %d zeros"
+                          % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
+
+            else:
+                t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
+                diff = transcript.spanning_segment.end - len(self.genome.genome_dict[transcript.chrom].seq)
+
+                if diff > span_size:
+                    # NOTE wrongly annotated transcripts go outside genome boundaries,
+                    # NOTE return an empty vector spanned by span size as a safe way of discarding such transcripts
+                    count_vector = [0] * t_len
+                    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                        debug("Transcript %s exceeds genome dimensions by %d bases"
+                              % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
+
+                else:
+                    t_subchain = transcript.get_subchain(diff, transcript.spanning_segment.end, stranded = False)
+
+                    subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
+                    count_vector = subchain_counts + [0] * diff
+
+                    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                        debug("Transcript %s at the end of the genome padded with %d zeros"
+                              % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
+
 
         return count_vector
 
     def get_cds_sequence_safe(self, transcript, span_size):
-        if transcript.spanning_segment.start < 0:
-            t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
-            diff = -1 * transcript.spanning_segment.start
-
-            if transcript.strand == "+":
-                t_subchain = transcript.get_subchain(diff, t_len)
-            else:
-                t_subchain = transcript.get_subchain(0, t_len - diff)
-
-            sequence = t_subchain.get_sequence(self.genome.genome_dict)
-            cds_sequence = sequence[
-                           transcript.cds_start + span_size - diff: transcript.cds_end + span_size]
-
-
-        elif transcript.spanning_segment.end > len(self.genome.genome_dict[transcript.chrom].seq):
-            t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
-            diff = transcript.spanning_segment.end - len(self.genome.genome_dict[transcript.chrom].seq)
-
-            if diff > span_size:
-                # NOTE wrongly annotated transcripts go outside genome boundaries,
-                # NOTE return an empty sequence spanned by span size as a safe way of discarding such transcripts
-                cds_sequence = ''.join(['N'] * t_len)
-
-            else:
-                if transcript.strand == "+":
-                    t_subchain = transcript.get_subchain(0, t_len - diff)
-                else:
-                    t_subchain = transcript.get_subchain(diff, t_len)
-
-                sequence = t_subchain.get_sequence(self.genome.genome_dict)
-                cds_sequence = sequence[transcript.cds_start + span_size:
-                                        transcript.cds_end + span_size - diff]
-        else:
+        try:
             sequence = transcript.get_sequence(self.genome.genome_dict)
             cds_sequence = sequence[transcript.cds_start + span_size: transcript.cds_end + span_size]
+        except:
+
+            if transcript.spanning_segment.start < 0:
+                diff = -1 * transcript.spanning_segment.start
+                t_subchain = transcript.get_subchain(diff, transcript.spanning_segment.end, stranded=False)
+                sequence = t_subchain.get_sequence(self.genome.genome_dict)
+
+                if span_size < diff:
+                    cds_sequence = sequence[transcript.cds_start + span_size - diff: transcript.cds_end + span_size]
+                else: #TODO I don't know how to get sequence in this case: need debugging
+                    cds_sequence = sequence[transcript.cds_start + span_size - diff: transcript.cds_end + span_size]
+
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                    debug("Transcript %s at the beginning of the genome padded with %d N's"
+                          % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
+
+            else:
+                t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
+                diff = transcript.spanning_segment.end - len(self.genome.genome_dict[transcript.chrom].seq)
+
+                if diff > span_size:
+                    # NOTE wrongly annotated transcripts go outside genome boundaries,
+                    # NOTE return an empty sequence spanned by span size as a safe way of discarding such transcripts
+                    cds_sequence = ''.join(['N'] * t_len)
+
+                else:
+                    t_subchain = transcript.get_subchain(diff, transcript.spanning_segment.end, stranded=False)
+
+                    sequence = t_subchain.get_sequence(self.genome.genome_dict)
+                    cds_sequence = sequence[transcript.cds_start + span_size:
+                                            transcript.cds_end + span_size - diff]
 
         return cds_sequence
 
@@ -1217,3 +1249,28 @@ class CountManager:
                 "Problem retrieving canonical transcript indices. No file %s exists. "
                 "The filter will return None." % canonical_index_file)
             return None
+
+    @staticmethod
+    @preconditions(lambda file_path: isinstance(file_path, str))
+    def read_count_vector(file_path):
+        """
+        Reads and returns a list of counts from a new-line separated file of counts.
+
+        :param file_path: str: full path to the file
+        :return: [int]: a list of counts
+        :exception: raises IOError if file does not exist
+        """
+
+        if not os.path.exists(file_path):
+            error_message = "Problem reading counts: the file %s does not exist" % file_path
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
+            raise IOError(error_message)
+        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading count file %s" % file_path)
+        if os.stat(file_path).st_size == 0:
+            counts = []
+        else:
+            counts = pd.read_csv(file_path, header=None)
+            counts = map(int, counts.iloc[:,0])
+
+        return counts
+

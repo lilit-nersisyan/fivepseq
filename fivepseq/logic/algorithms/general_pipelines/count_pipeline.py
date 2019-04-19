@@ -18,6 +18,8 @@ class CountPipeline:
         self.fivepseq_out = fivepseq_out
 
     def run(self):
+        cancel = False
+
         # info 
         self.logger.info("\n\nFivepseq started for bam file %s\n\n"
                          % os.path.basename(self.fivepseq_counts.alignment.bam_file))
@@ -28,41 +30,61 @@ class CountPipeline:
                 self.fivepseq_counts.annotation.get_transcript_assembly_default_filter(0),
                 self.fivepseq_out.TRANSCRIPT_ASSEMBLY_FILE)
 
+        # case 1 transcript descriptor are not there: generate
+        # case 2 transcript descriptors are there, but both count_distribution and outliers are not there: generate
+        # case 3 transcript descriptors are there, count_distriubtion is there: set count_distribution
+        # case 4 transcript descriptors are there, outliers are there: set ouli
+
         # transcript descriptors
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TRANSCRIPT_DESCRIPTORS_FILE)):
+        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TRANSCRIPT_DESCRIPTORS_FILE)) or \
+                not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.COUNT_DISTRIBUTION_FILE)):
+
             self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_transcript_descriptors(),
                                                self.fivepseq_out.TRANSCRIPT_DESCRIPTORS_FILE)
+            self.fivepseq_out.write_vector(self.fivepseq_counts.get_count_distribution(),
+                                           self.fivepseq_out.COUNT_DISTRIBUTION_FILE)
 
-        #   start codon dictionary
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.START_CODON_DICT_FILE)):
-            self.fivepseq_out.write_dict(self.fivepseq_counts.get_start_codon_dict(),
-                                         self.fivepseq_out.START_CODON_DICT_FILE)
+        else:
+            count_distribution = CountManager.read_count_vector(self.fivepseq_out.get_file_path(
+                self.fivepseq_out.COUNT_DISTRIBUTION_FILE))
+            self.fivepseq_counts.set_count_distribution(count_distribution)
 
-        #   stop codon dictionary
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TERM_CODON_DICT_FILE)):
-            self.fivepseq_out.write_dict(self.fivepseq_counts.get_stop_codon_dict(),
-                                         self.fivepseq_out.TERM_CODON_DICT_FILE)
-
-        #   load or generate full length counts
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.COUNT_FULL_FILE)):
-            self.fivepseq_out.write_vector_list(self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH),
-                                                self.fivepseq_out.COUNT_FULL_FILE)
-
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.OUTLIERS_DF)):
-            self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_outliers_df(),
-                                               self.fivepseq_out.OUTLIERS_DF)
-
-        # count stats
-        count_stats = CountStats(self.fivepseq_counts, self.fivepseq_out, config)
-        count_stats.count_stats()
-
-        # check if no reads are in the coding regions
-        if count_stats.data_summary_series[count_stats.TOTAL_NUM_READS] == 0:
+        count_distribution = self.fivepseq_counts.get_count_distribution()
+        if len(count_distribution) == 0:
             self.logger.warning(
                 "No reads found in coding regions. Fivepseq will skip the rest of calculations.")
+            cancel = True
 
-        # if there are reads in the coding regions, proceed to the rest of calculations
-        else:
+
+        if not cancel:
+            self.fivepseq_out.write_vector(self.fivepseq_counts.get_count_distribution(),
+                                           self.fivepseq_out.COUNT_DISTRIBUTION_FILE)
+            self.fivepseq_out.write_vector([self.fivepseq_counts.get_outlier_lower()],
+                                           self.fivepseq_out.OUTLIER_LOWER_FILE)
+
+            #   start codon dictionary
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.START_CODON_DICT_FILE)):
+                self.fivepseq_out.write_dict(self.fivepseq_counts.get_start_codon_dict(),
+                                             self.fivepseq_out.START_CODON_DICT_FILE)
+
+            #   stop codon dictionary
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TERM_CODON_DICT_FILE)):
+                self.fivepseq_out.write_dict(self.fivepseq_counts.get_stop_codon_dict(),
+                                             self.fivepseq_out.TERM_CODON_DICT_FILE)
+
+            #   load or generate full length counts
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.COUNT_FULL_FILE)):
+                self.fivepseq_out.write_vector_list(self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH),
+                                                    self.fivepseq_out.COUNT_FULL_FILE)
+
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.OUTLIERS_DF)):
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_outliers_df(),
+                                                   self.fivepseq_out.OUTLIERS_DF)
+
+            # count stats
+            count_stats = CountStats(self.fivepseq_counts, self.fivepseq_out, config)
+            count_stats.count_stats()
+
             #   terminal counts
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.COUNT_TERM_FILE)):
                 term_counts = self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.TERM)
@@ -119,8 +141,9 @@ class CountPipeline:
         else:
             self.logger.info(
                 "\n\nFivepseq finished for bam file %s.\n Some files failed to be generated. Check those in %s.\n\n"
-                % (os.path.basename(self.fivepseq_counts.alignment.bam_file)),
-                self.fivepseq_out.get_file_path(FivePSeqOut.FAILED_COUNT_FILES_LIST))
+                % (os.path.basename(self.fivepseq_counts.alignment.bam_file),
+                self.fivepseq_out.get_file_path(FivePSeqOut.FAILED_COUNT_FILES_LIST)))
+
 
     def skip(self, file):
         if (self.fivepseq_out.conflict_mode == config.ADD_FILES) & (

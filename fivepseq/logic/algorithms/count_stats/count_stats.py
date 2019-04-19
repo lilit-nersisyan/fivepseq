@@ -221,7 +221,7 @@ class CountStats:
                     else:
                         frame_stats_df.loc[self.FPI, frame_names[i]] = np.log2(
                             float(sum(frame_counts_df.iloc[:, i])) /
-                            ((total_counts - sum(frame_counts_df.iloc[:, i])) / 2))
+                            ((total_counts - sum(frame_counts_df.iloc[:, i])) / 2.))
 
                     frame_stats_df.loc[self.PVAL_PAIR, frame_names[i]] = stats.ttest_ind \
                         (frame_counts_df.iloc[:, i],

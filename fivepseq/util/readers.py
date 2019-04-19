@@ -194,7 +194,7 @@ class AnnotationReader(TopReader):
 
         # if transcript assembly not loaded proceed to reading it
 
-        self.logger.debug("Reading in transcript assembly...")
+        self.logger.info("Reading in transcript assembly...")
 
         if self.extension == self.EXTENSION_GTF:
             transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)

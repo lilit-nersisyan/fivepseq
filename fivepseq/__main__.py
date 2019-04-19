@@ -448,6 +448,8 @@ def generate_and_store_fivepseq_counts(plot=False):
         if bam.endswith(".bam"):
             bam_files.append(bam)
             print "%s" % pad_spaces("\t%s" % bam)
+        else:
+            logger.info("non bam file found: %s" % bam)
 
     if len(bam_files) == 0:
         err_msg = "No bam files found at %s" % config.args.b
@@ -495,7 +497,7 @@ def generate_and_store_fivepseq_counts(plot=False):
 
         # set up fivepseq out object for this bam
         fivepseq_out = FivePSeqOut(bam_out_dir, config.args.conflicts)
-        count_folders.append(bam_out_dir)
+
 
         # run
         fivepseq_pipeline = CountPipeline(fivepseq_counts, fivepseq_out)
@@ -504,6 +506,7 @@ def generate_and_store_fivepseq_counts(plot=False):
         success = fivepseq_out.sanity_check_for_counts()
         if success:
             success_values.update({bam_name: "SUCCESS"})
+            count_folders.append(bam_out_dir)
         else:
             success_values.update({bam_name: "FAILURE"})
 
@@ -517,19 +520,23 @@ def generate_and_store_fivepseq_counts(plot=False):
     logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
 
     if plot:
-        # set up job title if none is provided
-        if not hasattr(config.args, 't') or config.args.t is None:
-            config.args.t = os.path.basename(os.path.dirname(config.args.b)) + "_" + os.path.basename(config.args.b)
-            config.args.t = config.args.t.replace(".bam", "")
-            config.args.t = config.args.t.replace("_*", "")
-            config.args.t = config.args.t.replace("*", "")
+        if len(count_folders) == 0:
+            err_msg = "None of the count directories succeeded. Plots will not be generated."
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(err_msg)
+        else:
+            # set up job title if none is provided
+            if not hasattr(config.args, 't') or config.args.t is None:
+                config.args.t = os.path.basename(os.path.dirname(config.args.b)) + "_" + os.path.basename(config.args.b)
+                config.args.t = config.args.t.replace(".bam", "")
+                config.args.t = config.args.t.replace("_*", "")
+                config.args.t = config.args.t.replace("*", "")
 
-        #FIXME currently all count folders in the output directory are used for plotting.
-        #FIXME this introduces conflicts with pre-existing count files in the folder
-        #FIXME the adding of count_folders list shouuld fix for this: need testing
-        #config.args.md = str(os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR)) + "/*"
-        config.args.o = config.out_dir = os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR)
-        generate_plots(count_folders)
+            #FIXME currently all count folders in the output directory are used for plotting.
+            #FIXME this introduces conflicts with pre-existing count files in the folder
+            #FIXME the adding of count_folders list shouuld fix for this: need testing
+            #config.args.md = str(os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR)) + "/*"
+            config.args.o = config.out_dir = os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR)
+            generate_plots(count_folders)
 
 
 def generate_plots(count_folders):

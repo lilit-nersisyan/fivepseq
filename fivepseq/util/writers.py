@@ -27,6 +27,8 @@ class FivePSeqOut:
     TERM_CODON_DICT_FILE = "term_codon_dict.txt"
     CANONICAL_TRANSCRIPT_INDEX_FILE = "canonical_transcript_index.txt"
     TRANSCRIPT_DESCRIPTORS_FILE = "transcript_descriptors.txt"
+    COUNT_DISTRIBUTION_FILE = "count_distribution.txt"
+    OUTLIER_LOWER_FILE = "outlier_lower.txt"
     DATA_SUMMARY_FILE = "data_summary.txt"
     FRAME_STATS_DF_FILE = "frame_stats.txt"
     FFT_STATS_DF_FILE = "fft_stats.txt"

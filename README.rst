@@ -51,6 +51,10 @@ optional argument: --downsample/ --ds
 This arguments sets the p value threshold for outlier detection: point with less than the --ds probability of
 falling into Poisson distribution will be down-sampled.
 
+optional argument: -s/-geneset
+
+Supply a text file with newline-separated list of gene names you'd like to filter/use. The names should correspond to those present under the Name tag in the gff file.
+
 Note!
 -------
 bai index files should be in the same directory as the bam files
