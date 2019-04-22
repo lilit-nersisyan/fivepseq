@@ -132,7 +132,7 @@ class Annotation:
         :return: list[Transcript] list of transcripts spanned and filtered according to default settings
         """
 
-        return self.get_transcript_assembly(span_size=0, transcript_filter=self.transcript_filter)
+        return self.get_transcript_assembly(span_size=span_size, transcript_filter=self.transcript_filter)
 
     def get_clean_transcript_assembly(self):
         """

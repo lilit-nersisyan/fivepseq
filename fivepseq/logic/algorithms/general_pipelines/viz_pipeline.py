@@ -34,6 +34,7 @@ class VizPipeline:
     title = "fivepseq_plot_canvas"
     png_dir = "png"
     svg_dir = "svg"
+    supplement_dir = "supplement"
 
     logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
 
@@ -47,6 +48,8 @@ class VizPipeline:
     count_vector_list_start_dict = {}
     count_vector_list_term_dict = {}
     amino_acid_df_dict = {}
+    codon_df_dict = {}
+    codon_basesorted_df_dict = {}
     frame_count_term_dict = {}
     frame_count_start_dict = {}
     frame_stats_df_dict = {}
@@ -64,6 +67,8 @@ class VizPipeline:
     frame_count_START_combined = pd.DataFrame()
     frame_count_TERM_combined = pd.DataFrame()
     amino_acid_df_combined = pd.DataFrame()
+    codon_df_combined = pd.DataFrame()
+    codon_basesorted_df_combined = pd.DataFrame()
 
     large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired'][0:6]) +
                          cl.to_numeric(cl.scales['8']['qual']['Set1'][3:5]))
@@ -143,6 +148,13 @@ class VizPipeline:
             self.logger.error(err_msg)
             raise e
 
+        try:
+            self.write_supplement()
+        except Exception as e:
+            err_msg = "Exception while writing supplements: %s" % str(e)
+            self.logger.error(err_msg)
+            raise e
+
     def process_count_folders(self):
         """
         Read input as sd or md (if count_folders is not provided from within fivepseq)
@@ -212,6 +224,13 @@ class VizPipeline:
                 except Exception as e:
                     raise Exception("Output directory %s could not be created: %s" % (self.svg_dir, str(e)))
 
+        self.supplement_dir = os.path.join(self.args.o, "supplement")
+        if not os.path.exists(self.supplement_dir):
+            try:
+                os.mkdir(self.supplement_dir)
+            except Exception as e:
+                raise Exception("Output directory %s could not be created: %s" % (self.supplement_dir, str(e)))
+
     def initialize_data(self):
         self.logger.info("Reading data counts.")
         for d in self.count_folders:
@@ -245,6 +264,8 @@ class VizPipeline:
         self.frame_count_start_dict.update({sample: self.read_frame_count_start(fivepseq_out)})
         self.frame_stats_df_dict.update({sample: self.read_frame_stats_df(fivepseq_out)})
         self.amino_acid_df_dict.update({sample: self.read_amino_acid_df(fivepseq_out)})
+        self.codon_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=False)})
+        self.codon_basesorted_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=True)})
 
         self.fft_signal_start_dict.update({sample: self.read_fft_signal_start(fivepseq_out)})
         self.fft_signal_term_dict.update({sample: self.read_fft_signal_term(fivepseq_out)})
@@ -291,12 +312,16 @@ class VizPipeline:
             frame_start = self.frame_count_start_dict.get(key)
             frame_term = self.frame_count_term_dict.get(key)
             amino_acid_df = self.amino_acid_df_dict.get(key)
+            codon_df = self.codon_df_dict.get(key)
+            codon_basesorted_df = self.codon_basesorted_df_dict.get(key)
             if len(self.meta_count_start_combined) == 0:
                 self.meta_count_start_combined = df_start.copy()
                 self.meta_count_term_combined = df_term.copy()
                 self.frame_count_START_combined = frame_start.copy()
                 self.frame_count_TERM_combined = frame_term.copy()
                 self.amino_acid_df_combined = amino_acid_df.copy()
+                self.codon_df_combined = codon_df.copy()
+                self.codon_basesorted_df_combined = codon_basesorted_df.copy()
             else:
                 self.meta_count_start_combined.C += df_start.C
                 self.meta_count_term_combined.C += df_term.C
@@ -304,6 +329,10 @@ class VizPipeline:
                 self.frame_count_TERM_combined.loc[:, ('F0', 'F1', 'F2')] += frame_term.loc[:, ('F0', 'F1', 'F2')]
                 if amino_acid_df is not None:
                     self.amino_acid_df_combined += amino_acid_df
+                if codon_df is not None:
+                    self.codon_df_combined += codon_df
+                if codon_basesorted_df is not None:
+                    self.codon_basesorted_df_combined += codon_basesorted_df
 
     def plot_multiple_samples(self):
         self.logger.info("Generating plots")
@@ -338,6 +367,21 @@ class VizPipeline:
                              self.p_frame_barplots_start, None, None, None,
                              self.p_fft_plot_start, self.p_fft_plot_term, None, None],
                             os.path.join(self.args.o, self.title + ".html"), 4)
+
+    def write_supplement(self):
+        self.logger.info("Generating supplement plots: codon pauses")
+        codon_title = self.title + "_codon_pauses"
+
+        bokeh_composite(codon_title,
+                        [bokeh_heatmap_grid(codon_title, self.codon_df_dict, scale=False),
+                         bokeh_heatmap_grid(codon_title + "_scaled", self.codon_df_dict, scale=True),
+                         bokeh_heatmap_grid(codon_title + "_combined", {"combined:": self.codon_df_combined}, scale=False),
+                         bokeh_heatmap_grid(codon_title + "_combined_scaled", {"combined:": self.codon_df_combined}, scale=True),
+                         bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict, scale=False),
+                         bokeh_heatmap_grid(codon_title + "_basesorted_scaled", self.codon_basesorted_df_dict, scale=True),
+                         bokeh_heatmap_grid(codon_title + "_basesorted_combined", {"basesored_combined": self.codon_basesorted_df_combined}, scale=False),
+                         bokeh_heatmap_grid(codon_title + "_basesorted_combined_scaled", {"basesored_combined": self.codon_basesorted_df_combined}, scale=True)],
+                        os.path.join(self.supplement_dir, codon_title + ".html"), 1)
 
     def is_phantomjs_installed(self):
         if self.phantomjs_installed is not None:
@@ -397,6 +441,24 @@ class VizPipeline:
             self.logger.warn("The file %s not found, plots for this will be skipped." % str(file))
             amino_acid_df = None
         return amino_acid_df
+
+    def read_codon_df(self, fivepseq_out, basesort=False):
+        file = fivepseq_out.get_file_path(FivePSeqOut.CODON_PAUSES_FILE)
+        try:
+            codon_df = CountManager.read_amino_acid_df(file)
+            if basesort:
+                sorted_index = [""] * len(codon_df.index)
+                for i in range(len(codon_df.index)):
+                    ind = codon_df.index[i]
+                    aa = ind.split("_")[0]
+                    codon = ind.split("_")[1]
+                    sorted_index[i] = codon + "_" + aa
+                codon_df.index = sorted_index
+                codon_df = codon_df.reindex(sorted(sorted_index))
+        except:
+            self.logger.warn("The file %s not found, plots for this will be skipped." % str(file))
+            codon_df = None
+        return codon_df
 
     def read_frame_count_term(self, fivepseq_out):
         file = fivepseq_out.get_file_path(FivePSeqOut.FRAME_COUNTS_TERM_FILE)

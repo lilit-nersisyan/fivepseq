@@ -635,8 +635,6 @@ class FivePSeqCounts:
         # amino_acid_count_dict = {}
         amino_acid_count_df = pd.DataFrame(data=0, index=Codons.AMINO_ACID_TABLE.keys(),
                                            columns=range(-1 * dist, 0))
-        # for aa in Codons.AMINO_ACID_TABLE.keys():
-        # amino_acid_count_dict.update({aa: np.zeros(dist)})
 
         counter = 1
         wrong_cds_count = 0
@@ -758,6 +756,86 @@ class FivePSeqCounts:
         # amino_acid_count_dict[aa][dist-d-1] += count_vector[i - d]
 
         return amino_acid_count_df
+
+    @preconditions(lambda dist_from: isinstance(dist_from, int),
+                   lambda dist_from: dist_from < 0,
+                   lambda dist_to: isinstance(dist_to, int),
+                   lambda dist_to: dist_to >= 0)
+    def get_codon_pauses(self, dist_from=-30, dist_to=6, downsample=True):
+        """
+        Counts the meta-number of 5' mapping positions at the given distance from the specified codon
+        Only transcripts with cds of length multiple of 3 are accounted for.
+        The only frame in these transcripts is considered.
+
+        :param codon:
+        :param dist_from: negative distance from each codon
+        :param dist_to: positive distance after each codon
+        :return:
+        """
+
+        self.logger.info(
+            "Counting codon specific pauses within %d to %d nt distance from the first nucleotide of each codon" %
+            (dist_from, dist_to))
+
+        codon_count_df = pd.DataFrame(data=0, index=Codons.CODON_TABLE.keys(),
+                                           columns=range(dist_from, dist_to))
+
+        counter = 1
+
+        transcript_assembly = self.annotation.get_transcript_assembly_default_filter(span_size=dist_to)
+        transcript_count = len(transcript_assembly)
+        for transcript in transcript_assembly:
+            if counter % np.floor(transcript_count / 10) == 0:
+                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
+                    counter, floor(100 * (counter - 1) / transcript_count), '%',), )
+            counter += 1
+
+            count_vector = self.get_count_vector(transcript, span_size=dist_to,
+                                                 region=FivePSeqCounts.FULL_LENGTH,
+                                                 downsample=downsample)
+            count_vector = count_vector[dist_to:len(count_vector)-dist_to]
+            cds_sequence = self.get_cds_sequence_safe(transcript, dist_to)
+
+            if sum(count_vector) == 0:
+                continue
+
+            if len(cds_sequence) != len(count_vector):
+                self.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
+                                    % (counter, len(cds_sequence), len(count_vector)))
+                continue
+
+            # identify 3nt bins with non-zero counts
+            ind = np.array(range(0, len(count_vector), 3))
+            hits = [sum(count_vector[i:i + 3]) > 0 for i in ind]
+            non_empty_ind = ind[hits]
+
+            # loop through non-empty triplets only
+            for i in non_empty_ind:
+                # loop through all codons dist_from nucleotides downstream and dist_to nucleotides upstream
+                j_range = list(np.arange(i, i-dist_to, -3))[::-1] + list(np.arange(i+3, i + 3 - dist_from, 3))
+                for j in j_range:
+                    if j < 0:
+                        continue
+                    if j + 3 > len(cds_sequence):
+                        break
+                    codon = cds_sequence[j: j + 3]
+
+                    if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
+                        for p in range(0, 3):
+                            d = i - j + p
+                            try:
+                                codon_count_df.at[codon, d] += count_vector[i + p]
+                            except Exception as e:
+                                self.logger.warn("Index out of range: i: %d, j: %d, p: %d, d: %d. %s"
+                                                 % (i, j, p, d, str(e)))
+
+
+        # rename codon_count_df indices by adding amino acid names
+        new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in codon_count_df.index]
+        codon_count_df.index = new_index
+        codon_count_df = codon_count_df.reindex(sorted(new_index))
+
+        return codon_count_df
 
     @preconditions(lambda padding: isinstance(padding, int),
                    lambda padding: padding > 0,

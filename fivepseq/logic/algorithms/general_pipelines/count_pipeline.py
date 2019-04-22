@@ -125,6 +125,12 @@ class CountPipeline:
                 self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_pauses(20),
                                                    self.fivepseq_out.AMINO_ACID_PAUSES_FILE)
 
+            #   codon pauses
+
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.CODON_PAUSES_FILE)):
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_codon_pauses(),
+                                                   self.fivepseq_out.CODON_PAUSES_FILE)
+
             #   loci pauses
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.LOCI_PAUSES_FILE)):
                 if self.fivepseq_counts.loci_file is not None:

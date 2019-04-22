@@ -19,6 +19,7 @@ class FivePSeqOut:
     META_COUNT_TERM_FILE = "meta_counts_TERM.txt"
     META_COUNT_START_FILE = "meta_counts_START.txt"
     AMINO_ACID_PAUSES_FILE = "amino_acid_pauses.txt"
+    CODON_PAUSES_FILE = "codon_pauses.txt"
     LOCI_PAUSES_FILE = "loci_pauses.txt"
     TRANSCRIPT_ASSEMBLY_FILE = "transcript_assembly.txt"
     FRAME_COUNTS_TERM_FILE = "frame_counts_TERM.txt"
