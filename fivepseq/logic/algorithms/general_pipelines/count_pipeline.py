@@ -122,7 +122,7 @@ class CountPipeline:
 
             #   amino acid pauses
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.AMINO_ACID_PAUSES_FILE)):
-                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_pauses(20),
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_pauses(50), # generate more than needed for visualization
                                                    self.fivepseq_out.AMINO_ACID_PAUSES_FILE)
 
             #   codon pauses

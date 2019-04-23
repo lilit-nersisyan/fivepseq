@@ -62,7 +62,7 @@ def bokeh_table(title, table_df_dict):
 def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale = False, png_dir=None, svg_dir=None):
     if count_series_dict is None:
         return None
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot: " + region)
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot: " + title + ": " + region)
     output_file(title + ".png")
 
     my_x_label = "position from %s" % region

@@ -11,6 +11,9 @@ from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCoun
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
     bokeh_composite, bokeh_fft_plot
+import numpy as np
+
+from logic.structures.codons import Codons
 
 
 class VizPipeline:
@@ -32,9 +35,11 @@ class VizPipeline:
 
     count_folders = None
     title = "fivepseq_plot_canvas"
-    png_dir = "png"
-    svg_dir = "svg"
+    png_dir = None
+    svg_dir = None
     supplement_dir = "supplement"
+    supplement_png_dir = None
+    supplement_svg_dir = None
 
     logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
 
@@ -48,6 +53,7 @@ class VizPipeline:
     count_vector_list_start_dict = {}
     count_vector_list_term_dict = {}
     amino_acid_df_dict = {}
+    amino_acid_df_full_dict = {}
     codon_df_dict = {}
     codon_basesorted_df_dict = {}
     frame_count_term_dict = {}
@@ -67,6 +73,7 @@ class VizPipeline:
     frame_count_START_combined = pd.DataFrame()
     frame_count_TERM_combined = pd.DataFrame()
     amino_acid_df_combined = pd.DataFrame()
+    amino_acid_df_full_combined = pd.DataFrame()
     codon_df_combined = pd.DataFrame()
     codon_basesorted_df_combined = pd.DataFrame()
 
@@ -100,6 +107,9 @@ class VizPipeline:
     p_triangle_term_combined = None
     p_triangle_start_combined = None
     p_aa_heatmaps_combined = None
+
+    # the distance to be used for plotting amino-acid heatmaps
+    dist_for_amino_acid_heatmaps = 20
 
     def __init__(self, args, count_folders=None):
         """
@@ -231,6 +241,21 @@ class VizPipeline:
             except Exception as e:
                 raise Exception("Output directory %s could not be created: %s" % (self.supplement_dir, str(e)))
 
+        if self.is_phantomjs_installed():
+            self.supplement_png_dir = os.path.join(self.supplement_dir, "png")
+            if not os.path.exists(self.supplement_png_dir):
+                try:
+                    os.mkdir(os.path.join(self.supplement_dir, "png"))
+                except Exception as e:
+                    raise Exception("Output directory %s could not be created: %s" % (self.supplement_png_dir, str(e)))
+
+            self.supplement_svg_dir = os.path.join(self.supplement_dir, "svg")
+            if not os.path.exists(os.path.join(self.supplement_dir, "svg")):
+                try:
+                    os.mkdir(os.path.join(self.supplement_dir, "svg"))
+                except Exception as e:
+                    raise Exception("Output directory %s could not be created: %s" % (self.supplement_svg_dir, str(e)))
+
     def initialize_data(self):
         self.logger.info("Reading data counts.")
         for d in self.count_folders:
@@ -263,7 +288,8 @@ class VizPipeline:
         self.frame_count_term_dict.update({sample: self.read_frame_count_term(fivepseq_out)})
         self.frame_count_start_dict.update({sample: self.read_frame_count_start(fivepseq_out)})
         self.frame_stats_df_dict.update({sample: self.read_frame_stats_df(fivepseq_out)})
-        self.amino_acid_df_dict.update({sample: self.read_amino_acid_df(fivepseq_out)})
+        self.amino_acid_df_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=False)})
+        self.amino_acid_df_full_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=True)})
         self.codon_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=False)})
         self.codon_basesorted_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=True)})
 
@@ -312,6 +338,7 @@ class VizPipeline:
             frame_start = self.frame_count_start_dict.get(key)
             frame_term = self.frame_count_term_dict.get(key)
             amino_acid_df = self.amino_acid_df_dict.get(key)
+            amino_acid_df_full = self.amino_acid_df_full_dict.get(key)
             codon_df = self.codon_df_dict.get(key)
             codon_basesorted_df = self.codon_basesorted_df_dict.get(key)
             if len(self.meta_count_start_combined) == 0:
@@ -320,6 +347,7 @@ class VizPipeline:
                 self.frame_count_START_combined = frame_start.copy()
                 self.frame_count_TERM_combined = frame_term.copy()
                 self.amino_acid_df_combined = amino_acid_df.copy()
+                self.amino_acid_df_full_combined = amino_acid_df_full.copy()
                 self.codon_df_combined = codon_df.copy()
                 self.codon_basesorted_df_combined = codon_basesorted_df.copy()
             else:
@@ -329,6 +357,8 @@ class VizPipeline:
                 self.frame_count_TERM_combined.loc[:, ('F0', 'F1', 'F2')] += frame_term.loc[:, ('F0', 'F1', 'F2')]
                 if amino_acid_df is not None:
                     self.amino_acid_df_combined += amino_acid_df
+                if amino_acid_df_full is not None:
+                    self.amino_acid_df_full_combined += amino_acid_df_full
                 if codon_df is not None:
                     self.codon_df_combined += codon_df
                 if codon_basesorted_df is not None:
@@ -369,19 +399,64 @@ class VizPipeline:
                             os.path.join(self.args.o, self.title + ".html"), 4)
 
     def write_supplement(self):
+        # codon pauses
         self.logger.info("Generating supplement plots: codon pauses")
         codon_title = self.title + "_codon_pauses"
 
-        bokeh_composite(codon_title,
-                        [bokeh_heatmap_grid(codon_title, self.codon_df_dict, scale=False),
-                         bokeh_heatmap_grid(codon_title + "_scaled", self.codon_df_dict, scale=True),
-                         bokeh_heatmap_grid(codon_title + "_combined", {"combined:": self.codon_df_combined}, scale=False),
-                         bokeh_heatmap_grid(codon_title + "_combined_scaled", {"combined:": self.codon_df_combined}, scale=True),
-                         bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict, scale=False),
-                         bokeh_heatmap_grid(codon_title + "_basesorted_scaled", self.codon_basesorted_df_dict, scale=True),
-                         bokeh_heatmap_grid(codon_title + "_basesorted_combined", {"basesored_combined": self.codon_basesorted_df_combined}, scale=False),
-                         bokeh_heatmap_grid(codon_title + "_basesorted_combined_scaled", {"basesored_combined": self.codon_basesorted_df_combined}, scale=True)],
-                        os.path.join(self.supplement_dir, codon_title + ".html"), 1)
+        if self.combine:
+            bokeh_composite(codon_title,
+                            [bokeh_heatmap_grid(codon_title, self.codon_df_dict, scale=False),
+                             bokeh_heatmap_grid(codon_title + "_scaled", self.codon_df_dict, scale=True),
+                             bokeh_heatmap_grid(codon_title + "_combined", {"combined:": self.codon_df_combined},
+                                                scale=False),
+                             bokeh_heatmap_grid(codon_title + "_combined_scaled", {"combined:": self.codon_df_combined},
+                                                scale=True),
+                             bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict, scale=False),
+                             bokeh_heatmap_grid(codon_title + "_basesorted_scaled", self.codon_basesorted_df_dict,
+                                                scale=True),
+                             bokeh_heatmap_grid(codon_title + "_basesorted_combined",
+                                                {"basesored_combined": self.codon_basesorted_df_combined}, scale=False),
+                             bokeh_heatmap_grid(codon_title + "_basesorted_combined_scaled",
+                                                {"basesored_combined": self.codon_basesorted_df_combined}, scale=True)],
+                            os.path.join(self.supplement_dir, codon_title + ".html"), 1)
+        else:
+            bokeh_composite(codon_title,
+                            [bokeh_heatmap_grid(codon_title, self.codon_df_dict, scale=False),
+                             bokeh_heatmap_grid(codon_title + "_scaled", self.codon_df_dict, scale=True),
+                             bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict,
+                                                scale=False),
+                             bokeh_heatmap_grid(codon_title + "_basesorted_scaled", self.codon_basesorted_df_dict,
+                                                scale=True)],
+                            os.path.join(self.supplement_dir, codon_title + ".html"), 1)
+        # amino acid scatter-plots
+        self.logger.info("Generating supplement plots: amino acid scatter-plots")
+        aa_scatterplots = []
+        for aa in Codons.AMINO_ACID_TABLE.keys():
+            self.logger.info("Plotting scatter for %s counts" % aa)
+
+            aa_count_dict = {}
+
+            for sample in self.samples:
+                amino_acid_df_full = self.amino_acid_df_full_dict[sample]
+                aa_df = pd.DataFrame(data={'D': map(int, amino_acid_df_full.columns), 'C': amino_acid_df_full.loc[aa, :]})
+                aa_df = aa_df.reset_index(drop=True)
+                aa_count_dict.update({sample: aa_df})
+            aa_sp = bokeh_scatter_plot(aa, FivePSeqCounts.TERM, aa_count_dict, self.colors_dict, scale=True,
+                               png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
+            aa_scatterplots.append(aa_sp)
+
+            if self.combine:
+                aa_df = pd.DataFrame(data={'D': map(int, self.amino_acid_df_full_combined.columns),
+                                           'C': self.amino_acid_df_full_combined.loc[aa, :]})
+                aa_df = aa_df.reset_index(drop=True)
+                aa_sp = bokeh_scatter_plot(aa + "_combined", FivePSeqCounts.TERM, {"combined": aa_df}, self.combined_color_dict,
+                                   scale=True,
+                                   png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
+
+                aa_scatterplots.append(aa_sp)
+
+        bokeh_composite(self.title + "amino_acid_scatterplots", aa_scatterplots,
+                        os.path.join(self.supplement_dir, self.title + "amino_acid_scatterplots.html"), 2)
 
     def is_phantomjs_installed(self):
         if self.phantomjs_installed is not None:
@@ -433,10 +508,16 @@ class VizPipeline:
             meta_count_start = None
         return meta_count_start
 
-    def read_amino_acid_df(self, fivepseq_out):
+    def read_amino_acid_df(self, fivepseq_out, full=False):
         file = fivepseq_out.get_file_path(FivePSeqOut.AMINO_ACID_PAUSES_FILE)
         try:
             amino_acid_df = CountManager.read_amino_acid_df(file)
+
+            if not full:
+                if amino_acid_df.shape[1] > self.dist_for_amino_acid_heatmaps:
+                    colrange = map(str, np.arange(-1 * self.dist_for_amino_acid_heatmaps, 0))
+                    amino_acid_df = amino_acid_df.loc[:, colrange]
+
         except:
             self.logger.warn("The file %s not found, plots for this will be skipped." % str(file))
             amino_acid_df = None
