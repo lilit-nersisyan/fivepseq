@@ -694,7 +694,7 @@ class FivePSeqCounts:
                 for j in range(i + 3, i + 3 + dist, 3):
                     if j + 3 > len(cds_sequence):
                         break
-                    codon = cds_sequence[j: j + 3]
+                    codon = cds_sequence[j: j + 3].upper()
 
                     # NOTE the comparison is case-sensitive and the low-case letters are now not counted
                     # NOTE however, low-case may indicate repetitive regions and it may be advantagous to skip them
@@ -818,7 +818,7 @@ class FivePSeqCounts:
                         continue
                     if j + 3 > len(cds_sequence):
                         break
-                    codon = cds_sequence[j: j + 3]
+                    codon = cds_sequence[j: j + 3].upper()
 
                     if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
                         for p in range(0, 3):
@@ -871,7 +871,7 @@ class FivePSeqCounts:
         done = False
         move_transcript = True
         move_locus = False
-        tg = self.annotation.get_transcript_assembly(0)
+        tg = self.annotation.get_transcript_assembly_default_filter(0)
         transcript = None
         while (True):
             if counter % 1000 == 0:
@@ -888,7 +888,7 @@ class FivePSeqCounts:
 
             if move_transcript:
                 try:
-                    transcript = tg.next()
+                    transcript = tg[counter]
                 except:
                     self.logger.debug("Reached the end of transcript assembly (counter: %d)" % counter)
                     break
@@ -909,7 +909,8 @@ class FivePSeqCounts:
                         continue
 
                     else:
-                        count_vector = self.get_count_vector(transcript, 0, FivePSeqCounts.FULL_LENGTH, counter,
+                        count_vector = self.get_count_vector(transcript, 0,
+                                                             FivePSeqCounts.FULL_LENGTH,
                                                              downsample=True)
 
                         if len(count_vector) > 2 * padding:

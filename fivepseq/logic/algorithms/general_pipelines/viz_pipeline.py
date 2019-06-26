@@ -13,7 +13,7 @@ from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bo
     bokeh_composite, bokeh_fft_plot
 import numpy as np
 
-from logic.structures.codons import Codons
+from fivepseq.logic.structures.codons import Codons
 
 
 class VizPipeline:
@@ -182,7 +182,7 @@ class VizPipeline:
                     raise Exception(err_msg)
                 self.count_folders.append(self.args.sd)
 
-            elif hasattr(self.args, 'md') and self.args.sd is not None:
+            elif hasattr(self.args, 'md') and self.args.md is not None:
                 for d in glob.glob(self.args.md):
                     if os.path.isdir(d):
                         if d[-1] == "/":
@@ -369,34 +369,30 @@ class VizPipeline:
 
         self.make_single_sample_plots(self.title)
 
+        figure_list = []
+        figure_list += [self.p_scatter_start, self.p_scatter_term]
+        figure_list += [self.p_scatter_start_scaled, self.p_scatter_term_scaled]
+        figure_list += [self.p_triangle_term, self.p_triangle_start]
+        figure_list += [self.p_aa_heatmap, None]
+        figure_list += [self.p_aa_heatmap_scaled, None]
+        figure_list += [self.p_frame_barplots_term, None]
+        figure_list += [self.p_frame_barplots_start, None]
+        figure_list += [self.p_fft_plot_start, self.p_fft_plot_term]
+
+        if self.p_loci_meta_counts is not None:
+            figure_list += [self.p_loci_meta_counts, None]
+
         if self.combine:
             self.make_combined_plots(self.title)
 
-            bokeh_composite(self.title,
-                            [self.p_scatter_start, self.p_scatter_term, None, None,
-                             self.p_scatter_start_scaled, self.p_scatter_term_scaled, None, None,
-                             self.p_triangle_term, self.p_triangle_start, None, None,
-                             self.p_aa_heatmap, None, None, None,
-                             self.p_aa_heatmap_scaled, None, None, None,
-                             self.p_frame_barplots_term, None, None, None,
-                             self.p_frame_barplots_start, None, None, None,
-                             self.p_fft_plot_start, self.p_fft_plot_term, None, None,
-                             self.p_scatter_start_combined, self.p_scatter_term_combined, None, None,
-                             self.p_scatter_start_scaled_combined, self.p_scatter_term_scaled_combined, None, None,
-                             self.p_triangle_term_combined, self.p_triangle_start_combined, None, None,
-                             self.p_aa_heatmaps_combined, None, None, None],
-                            os.path.join(self.args.o, self.title + ".html"), 4)
-        else:
-            bokeh_composite(self.title,
-                            [self.p_scatter_start, self.p_scatter_term, None, None,
-                             self.p_scatter_start_scaled, self.p_scatter_term_scaled, None, None,
-                             self.p_triangle_term, self.p_triangle_start, None, None,
-                             self.p_aa_heatmap, None, None, None,
-                             self.p_aa_heatmap_scaled, None, None, None,
-                             self.p_frame_barplots_term, None, None, None,
-                             self.p_frame_barplots_start, None, None, None,
-                             self.p_fft_plot_start, self.p_fft_plot_term, None, None],
-                            os.path.join(self.args.o, self.title + ".html"), 4)
+            figure_list += [self.p_scatter_start_combined, self.p_scatter_term_combined]
+            figure_list += [self.p_scatter_start_scaled_combined, self.p_scatter_term_scaled_combined]
+            figure_list += [self.p_triangle_term_combined, self.p_triangle_start_combined]
+            figure_list += [self.p_aa_heatmaps_combined, None]
+
+        bokeh_composite(self.title,
+                        figure_list,
+                        os.path.join(self.args.o, self.title + ".html"), 2)
 
     def write_supplement(self):
         # codon pauses
@@ -411,7 +407,8 @@ class VizPipeline:
                                                 scale=False),
                              bokeh_heatmap_grid(codon_title + "_combined_scaled", {"combined:": self.codon_df_combined},
                                                 scale=True),
-                             bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict, scale=False),
+                             bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict,
+                                                scale=False),
                              bokeh_heatmap_grid(codon_title + "_basesorted_scaled", self.codon_basesorted_df_dict,
                                                 scale=True),
                              bokeh_heatmap_grid(codon_title + "_basesorted_combined",
@@ -438,25 +435,27 @@ class VizPipeline:
 
             for sample in self.samples:
                 amino_acid_df_full = self.amino_acid_df_full_dict[sample]
-                aa_df = pd.DataFrame(data={'D': map(int, amino_acid_df_full.columns), 'C': amino_acid_df_full.loc[aa, :]})
+                aa_df = pd.DataFrame(
+                    data={'D': map(int, amino_acid_df_full.columns), 'C': amino_acid_df_full.loc[aa, :]})
                 aa_df = aa_df.reset_index(drop=True)
                 aa_count_dict.update({sample: aa_df})
             aa_sp = bokeh_scatter_plot(aa, FivePSeqCounts.TERM, aa_count_dict, self.colors_dict, scale=True,
-                               png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
+                                       png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
             aa_scatterplots.append(aa_sp)
 
             if self.combine:
                 aa_df = pd.DataFrame(data={'D': map(int, self.amino_acid_df_full_combined.columns),
                                            'C': self.amino_acid_df_full_combined.loc[aa, :]})
                 aa_df = aa_df.reset_index(drop=True)
-                aa_sp = bokeh_scatter_plot(aa + "_combined", FivePSeqCounts.TERM, {"combined": aa_df}, self.combined_color_dict,
-                                   scale=True,
-                                   png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
+                aa_sp = bokeh_scatter_plot(aa + "_combined", FivePSeqCounts.TERM, {"combined": aa_df},
+                                           self.combined_color_dict,
+                                           scale=True,
+                                           png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
 
                 aa_scatterplots.append(aa_sp)
 
-        bokeh_composite(self.title + "amino_acid_scatterplots", aa_scatterplots,
-                        os.path.join(self.supplement_dir, self.title + "amino_acid_scatterplots.html"), 2)
+        bokeh_composite(self.title + "_amino_acid_scatterplots", aa_scatterplots,
+                        os.path.join(self.supplement_dir, self.title + "_amino_acid_scatterplots.html"), 2)
 
     def is_phantomjs_installed(self):
         if self.phantomjs_installed is not None:

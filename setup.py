@@ -7,7 +7,7 @@ def readme():
 
 
 setup(name='fivepseq',
-      version='0.1',
+      version='0.3.2',
       entry_points={'console_scripts': ['fivepseq = fivepseq.__main__:main']},
       description='A package for analysis of 5pseq datasets',
       url='http://github.com/lilit-nersisyan/fivepseq',

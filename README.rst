@@ -32,7 +32,9 @@ count_and_plot \\
 
 -o output_directory \\
 
--t title_of_the_run
+-t title_of_the_run \\
+
+[-s geneset_file]
 
 
 

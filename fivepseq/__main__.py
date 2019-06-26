@@ -248,16 +248,20 @@ class FivepseqArguments:
         #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
 
         elif config.args.command == 'plot':
+            config.args.count_folders = []
             print "Call to fivepseq plot with arguments:\n"
             if config.args.sd is not None:
                 print "%s%s" % (pad_spaces("\tInput dir:"), os.path.abspath(config.args.sd))
+                config.args.count_folders.append(os.path.abspath(config.args.sd))
             else:
                 if len(glob.glob(config.args.md)) == 0:
                     err_msg = "Provided input %s does not contain proper fivepseq directories" % config.args.md
                     raise Exception(err_msg)
                 print "%s" % (pad_spaces("\tInput directories:"))
+
                 # TODO check for proper patterned input
                 for f in glob.glob(config.args.md):
+                    config.args.count_folders.append(f)
                     print "%s" % pad_spaces("\t%s" % f)
             print "%s%s" % (pad_spaces("\tGenome file:"), os.path.abspath(config.args.g))
             print "%s%s" % (pad_spaces("\tAnnotation file:"), os.path.abspath(config.args.a))
@@ -289,6 +293,9 @@ class FivepseqArguments:
 
             if config.args.tf is not None:
                 print "%s%s" % (pad_spaces("\tTranscript filter:"), config.args.tf )
+
+            if config.args.loci_file is not None:
+                print "%s%s" % (pad_spaces("\tLoci file:"), config.args.loci_file)
 
         #   if config.args.fivepseq_pickle is not None:
         #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
@@ -493,6 +500,8 @@ def generate_and_store_fivepseq_counts(plot=False):
         # combine objects into FivePSeqCounts object
         fivepseq_counts = FivePSeqCounts(bam_reader.alignment, annotation, fasta_reader.genome,
                                          downsample_constant= config.args.ds)
+        if hasattr(config.args, "loci_file"):
+            fivepseq_counts.loci_file = config.args.loci_file
         fivepseq_counts_dict.update({bam: fivepseq_counts})
 
         # set up fivepseq out object for this bam
@@ -582,7 +591,7 @@ def main():
     elif config.args.command == 'plot':
         plot_logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
         plot_logger.info("Fivepseq plot started")
-        generate_plots()
+        generate_plots(config.args.count_folders)
         elapsed_time = time.clock() - start_time
         if config.args.t is not None:
             title = config.args.t

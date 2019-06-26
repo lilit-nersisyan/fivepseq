@@ -135,9 +135,8 @@ class CountPipeline:
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.LOCI_PAUSES_FILE)):
                 if self.fivepseq_counts.loci_file is not None:
                     self.fivepseq_out.write_series_to_file(
-                        self.fivepseq_counts.get_pauses_from_loci(self.fivepseq_counts.loci_file,
-                                                                  self.fivepseq_counts.span_size,
-                                                                  20), self.fivepseq_out.LOCI_PAUSES_FILE)
+                        self.fivepseq_counts.get_pauses_from_loci(self.fivepseq_counts.loci_file),
+                        self.fivepseq_out.LOCI_PAUSES_FILE)
         # sanity check
         success = self.fivepseq_out.sanity_check_for_counts()
         if success:
