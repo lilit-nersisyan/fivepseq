@@ -12,7 +12,7 @@ from bokeh.io import output_file, save, export_svgs, export_png
 from bokeh.io import show
 from bokeh.layouts import gridplot, row, widgetbox
 from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearColorMapper, FactorRange, TableColumn, \
-    DataTable, PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool
+    DataTable, PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div
 from bokeh.plotting import figure
 from bokeh.transform import transform
 from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
@@ -39,6 +39,17 @@ def bokeh_composite(title, figure_list, filename, ncols=2):
     save(p, filename=filename)
 
 
+def fivepseq_header():
+    version = '0.1.5'
+    header = []
+    header += [Div(text="""<img src='ftp://data.pelechanolab.com/software/fivepseq/logo/fivepseq_logo.jpg'>""", height = 100), None]
+    header += [Div(text="""These plots are generated with fivepseq version """ + version
+                      + """. Please, follow <a href="https://github.com/lilit-nersisyan/fivepseq">this link </a> to 
+                      cite us.""",
+                 width = 400), None]
+    return header
+
+
 def bokeh_table(title, table_df_dict):
     output_file(title + ".html")
     mainLayout = row(row(), name=title)
@@ -59,7 +70,7 @@ def bokeh_table(title, table_df_dict):
     return mainLayout
 
 
-def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale = False, png_dir=None, svg_dir=None):
+def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False, png_dir=None, svg_dir=None):
     if count_series_dict is None:
         return None
     logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot: " + title + ": " + region)
@@ -100,7 +111,7 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale = Fal
             c = get_random_color()
         try:
             if scale:
-                y = count_series.C/(sum(count_series.C)+1)
+                y = count_series.C / (sum(count_series.C) + 1)
             else:
                 y = count_series.C
             line = p.line(count_series.D, y, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
@@ -463,14 +474,14 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
             frames = ["F1", "F2", "F3"]
             key_title = get_key_title(title_prefix, key)
             p = figure(x_range=frames, y_range=(0, count_max),
-                       plot_height=500, title=title_prefix)
+                       plot_height=500, title=key_title)
 
             # figures for export
             p_png = None
             p_svg = None
             if png_dir is not None:
                 p_png = figure(x_range=frames, y_range=(0, count_max),
-                               plot_height=1000, plot_width = 1000, title=title_prefix)
+                               plot_height=1000, plot_width=1000, title=title_prefix)
             if svg_dir is not None:
                 p_svg = figure(x_range=frames, y_range=(0, count_max),
                                plot_height=500, title=title_prefix)
@@ -550,7 +561,6 @@ def bokeh_aa_pause_scatterplot(title, amino_acid_df):
 
 
 def export_images(p, title, png_dir=None, svg_dir=None):
-
     if png_dir is not None:
         try:
             png_f = os.path.join(png_dir, title + ".png")
@@ -575,4 +585,4 @@ def get_key_title(title, key):
 
 
 def get_random_color():
-    return cl.to_numeric(cl.scales['9']['qual']['Set3'])[random.randint(0,8)]
+    return cl.to_numeric(cl.scales['9']['qual']['Set3'])[random.randint(0, 8)]

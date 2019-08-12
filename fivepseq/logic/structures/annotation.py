@@ -56,7 +56,7 @@ class Annotation:
 
         self.transcript_filter = transcript_filter
 
-    def set_gene_set_filter(self, geneset_filter_file, attribute="Name"):
+    def set_gene_set_filter(self, geneset_filter_file, attribute="gene_id"):
         """
         Provide the file where the names of genes to be filtered are present.
         The genes should be named according to the attribute in the gff file.
@@ -77,6 +77,8 @@ class Annotation:
             if attr_value in geneset_filter:
                 geneset_filtered_assembly.append(transcript)
             #TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
+            elif attr_value.split(":")[1] in geneset_filter: # gene_id filtering results in IDs in the form gene:xxx
+                geneset_filtered_assembly.append(transcript)
             elif attr_value.split("-")[0] in geneset_filter:
                 geneset_filtered_assembly.append(transcript)
             elif attr_value.split(".")[0] in geneset_filter:

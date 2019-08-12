@@ -261,9 +261,6 @@ class FivePSeqCounts:
 
         for transcript in self.annotation.get_default_transcript_assembly():
 
-            if transcript.get_name() == "rna-XM_021479082.1":
-                print "here"
-
             # update to console
             if counter % 10000 == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (

@@ -330,9 +330,9 @@ def check_file_path(file_path):
     """
     if not isinstance(file_path, str):
         raise TypeError("The file path argument is of type %s, expected string" % type(file_path))
-    alignment_file = pathlib2.Path(file_path)
-    if not alignment_file.is_file():
-        if alignment_file.is_dir():
+    file = pathlib2.Path(file_path)
+    if not file.is_file():
+        if file.is_dir():
             raise IOError("The provided alignment file path %s is a directory" % file_path)
         else:
             raise IOError("Could not open %s: no such file or directory" % file_path)

@@ -10,7 +10,7 @@ from fivepseq import config
 from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
-    bokeh_composite, bokeh_fft_plot
+    bokeh_composite, bokeh_fft_plot, fivepseq_header
 import numpy as np
 
 from fivepseq.logic.structures.codons import Codons
@@ -364,11 +364,12 @@ class VizPipeline:
                 if codon_basesorted_df is not None:
                     self.codon_basesorted_df_combined += codon_basesorted_df
 
-    def plot_multiple_samples(self):
+    def  plot_multiple_samples(self):
         self.logger.info("Generating plots")
 
         self.make_single_sample_plots(self.title)
 
+        #figure_list = [fivepseq_header()]
         figure_list = []
         figure_list += [self.p_scatter_start, self.p_scatter_term]
         figure_list += [self.p_scatter_start_scaled, self.p_scatter_term_scaled]

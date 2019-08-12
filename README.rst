@@ -55,7 +55,7 @@ falling into Poisson distribution will be down-sampled.
 
 optional argument: -s/-geneset
 
-Supply a text file with newline-separated list of gene names you'd like to filter/use. The names should correspond to those present under the Name tag in the gff file.
+Supply a text file with newline-separated list of gene ids you'd like to filter/use. The names should correspond to those present under the gene_id tag in the gff file.
 
 Note!
 -------

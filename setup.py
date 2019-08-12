@@ -1,5 +1,7 @@
 from setuptools import setup, find_packages
 
+VERSION = '0.1.5'
+
 
 def readme():
     with open('README.rst') as f:
@@ -7,7 +9,7 @@ def readme():
 
 
 setup(name='fivepseq',
-      version='0.3.2',
+      version=VERSION,
       entry_points={'console_scripts': ['fivepseq = fivepseq.__main__:main']},
       description='A package for analysis of 5pseq datasets',
       url='http://github.com/lilit-nersisyan/fivepseq',
@@ -31,5 +33,6 @@ setup(name='fivepseq',
       include_package_data=True,
       test_suite='nose.collector',
       tests_require=['nose'],
-      install_requires=['pathlib2', 'preconditions', 'plastid', 'numpy', 'pandas', 'pysam', 'dill', 'colorlover', 'bokeh', 'logging'],
+      install_requires=['pathlib2', 'preconditions', 'plastid', 'numpy', 'pandas', 'pysam', 'dill', 'colorlover',
+                        'bokeh', 'logging'],
       zip_safe=False)
