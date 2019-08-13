@@ -11,28 +11,40 @@ Preprocessing from FASTQ files (!NEW)
 --------
 A script for processing raw fastq files from yeast has been added to preprocess_scripts directory.
 It takes raw fastq files and
--- does quality checks (with FASTQC and MULTIQC),
--- trims adapters,
--- extracts UMI,
--- generates a STAR index if not provided
--- maps with STAR
--- deduplicates reads with umitools
--- analyzes RNA transcript content (relative content of coding versus non-coding RNA). The final stats are in the align_rna/rna_stats.txt
+- does quality checks (with FASTQC and MULTIQC),
+- trims adapters,
+- extracts UMI,
+- generates a STAR index if not provided
+- maps with STAR
+- deduplicates reads with umitools
+- analyzes RNA transcript content (relative content of coding versus non-coding RNA). The final stats are in the align_rna/rna_stats.txt
 
 
 Run the script with options:
 
+
 -f directory with fastq files (leave only the files you'd like to use (Read1 for fivepseq))
+
 -o output directory
+
 -g genome (fasta) file path
+
 -a annotation (gff) file path
+
 -i STAR index path, if you'd like to use existing index
+
 -s specify which steps of the pipeline you'd like to skip. Possible values are:
+
    c   skip trimming adapters with cutadapt
+
    u   skip UMI extraction
+
    d   skip deduplication after alignment
+
    q   skip quality check: FASTQC and MULTIQC
+
    m   skip mapping
+
    or any combination of these characters, e.g. use -s cudqm to skip all
 
 Before you start fivepseq
