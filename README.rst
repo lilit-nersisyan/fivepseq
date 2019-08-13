@@ -10,7 +10,9 @@ count_and_plot - performs counts and generates plots afterwards
 Before you start
 --------
 - Make sure you're using python version 2.7
-- Install the latest stable version of fivepseq by typing:
+- Install the latest stable version of fivepseq by
+- - cd /proj/sllstore2017018/lilit/fivepseq_v0.1.6:
+- - fivepseq_v0.1.6
 
   python /proj/sllstore2017018/lilit/fivepseq_v0.1.5/setup.py install
 

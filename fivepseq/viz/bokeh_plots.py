@@ -12,7 +12,7 @@ from bokeh.io import output_file, save, export_svgs, export_png
 from bokeh.io import show
 from bokeh.layouts import gridplot, row, widgetbox
 from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearColorMapper, FactorRange, TableColumn, \
-    DataTable, PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div
+    DataTable, PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div, Legend
 from bokeh.plotting import figure
 from bokeh.transform import transform
 from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
@@ -24,6 +24,8 @@ import colorlover as cl
 
 tools = [PanTool(), BoxZoomTool(), WheelZoomTool(), SaveTool(), ResetTool()]
 
+LEGEND_POSITION = 'above'
+LEGEND_ALIGNMENT = 'bottom_left'
 
 def bokeh_composite(title, figure_list, filename, ncols=2):
     logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making composite plot")
@@ -94,6 +96,9 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
         p_svg = figure(title=title,
                        x_axis_label=my_x_label, y_axis_label=my_y_label)
 
+    legend_items = []
+    legend_items_png = []
+    legend_items_svg = []
     for key in count_series_dict.keys():
         count_series = count_series_dict.get(key)
         if count_series is None:
@@ -114,12 +119,14 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
                 y = count_series.C / (sum(count_series.C) + 1)
             else:
                 y = count_series.C
-            line = p.line(count_series.D, y, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            line = p.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            legend_items.append((key, [line]))
         except Exception as e:
             print "Error at key %s, reason; %s" % (key, str(e))
             return None
         hover = HoverTool(tooltips=[('position', '@x'), ('count', '@y')], renderers=[line])
         p.add_tools(hover)
+
 
         # figures for exporting
         if p_key_png is not None:
@@ -130,13 +137,25 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
         if p_png is not None:
-            p_png.line(count_series.D, y, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            line_png = p_png.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            legend_items_png.append((key, [line_png]))
         if p_svg is not None:
-            p_svg.line(count_series.D, y, legend=key, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            line_svg = p_svg.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            legend_items_svg.append((key, [line_svg]))
 
+    legend = Legend(items=legend_items, location = LEGEND_ALIGNMENT)
+    p.add_layout(legend, LEGEND_POSITION)
     p.legend.click_policy = "hide"
-    export_images(p_png, title + "_overlay", png_dir=png_dir)
-    export_images(p_svg, title + "_overlay", svg_dir=svg_dir)
+
+    if p_png is not None:
+        legend_png = Legend(items=legend_items_png, location = LEGEND_ALIGNMENT)
+        p_png.add_layout(legend_png, LEGEND_POSITION)
+        export_images(p_png, title + "_overlay", png_dir=png_dir)
+
+    if p_svg is not None:
+        legend_svg = Legend(items=legend_items_svg, location = LEGEND_ALIGNMENT)
+        p_svg.add_layout(legend_svg, LEGEND_POSITION)
+        export_images(p_svg, title + "_overlay", svg_dir=svg_dir)
 
     return p
 
@@ -159,6 +178,9 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
     if svg_dir is not None:
         p_svg = figure(title=title, x_range=(0, period_max), x_axis_label=my_x_label, y_axis_label=my_y_label)
 
+    legend_items = []
+    legend_items_png = []
+    legend_items_svg = []
     for key in signal_series_dict.keys():
         count_series = signal_series_dict.get(key)
         if count_series is None:
@@ -168,10 +190,11 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
         if c is None:
             logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
             c = get_random_color()
-        line = p.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]),
+        line = p.line(count_series.D, count_series.C, line_color=RGB(c[0], c[1], c[2]),
                       line_width=2)
         hover = HoverTool(tooltips=[('period', '@x'), ('signal', '@y')], renderers=[line])
         p.add_tools(hover)
+        legend_items.append((key, [line]))
 
         # figures for exporting
         if png_dir is not None:
@@ -186,15 +209,29 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
         if p_png is not None:
-            p_png.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]),
+            line_png = p_png.line(count_series.D, count_series.C, line_color=RGB(c[0], c[1], c[2]),
                        line_width=2)
+            legend_items_png.append((key, [line_png]))
         if p_svg is not None:
-            p_svg.line(count_series.D, count_series.C, legend=key, line_color=RGB(c[0], c[1], c[2]),
+            line_svg = p_svg.line(count_series.D, count_series.C, line_color=RGB(c[0], c[1], c[2]),
                        line_width=2)
+            legend_items_svg.append((key, [line_svg]))
 
+
+    legend = Legend(items=legend_items, location = LEGEND_ALIGNMENT)
+    p.add_layout(legend, LEGEND_POSITION)
     p.legend.click_policy = "hide"
-    export_images(p_png, title + "_overlay", png_dir=png_dir)
-    export_images(p_svg, title + "_overlay", svg_dir=svg_dir)
+
+    if p_png is not None:
+        legend_png = Legend(items=legend_items_png, location = LEGEND_ALIGNMENT)
+        p_png.add_layout(legend_png, LEGEND_POSITION)
+        export_images(p_png, title + "_overlay", png_dir=png_dir)
+
+    if p_svg is not None:
+        legend_svg = Legend(items=legend_items_svg, location = LEGEND_ALIGNMENT)
+        p_svg.add_layout(legend_svg, LEGEND_POSITION)
+        export_images(p_svg, title + "_overlay", svg_dir=svg_dir)
+
     return p
 
 
@@ -207,6 +244,7 @@ def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_
                x_axis_label="normalized position within the transcript and surrounding span regions",
                y_axis_label="5'seq read counts")
 
+    legend_items = []
     for key in transcript_count_list_dict.keys():
         count_vector_list = transcript_count_list_dict.get(key)
         # normalized_vector_list = [[]]*x_max
@@ -229,9 +267,13 @@ def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_
             logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
             c = get_random_color()
 
-        line = p.line(list(range(0, x_max)), normalized_meta_counts, legend=key, line_color=RGB(c[0], c[1], c[2]))
+        line = p.line(list(range(0, x_max)), normalized_meta_counts, line_color=RGB(c[0], c[1], c[2]))
+        legend_items.append((key, [line]))
         hover = HoverTool(tooltips=[('position', '@x'), ('count', '@y')], renderers=[line])
         p.add_tools(hover)
+
+    legend = Legend(items=legend_items, location = LEGEND_ALIGNMENT)
+    p.add_layout(legend, LEGEND_POSITION)
     p.legend.click_policy = "hide"
 
     if show_plot:
@@ -250,6 +292,7 @@ def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_
                x_axis_label="position from %s" % align_to, y_axis_label="5'seq read counts")
     # try setting range limits - p = figure(x_range=[0, 10], y_range=(10, 20))
 
+    legend_items = []
     for key in transcript_count_list_dict.keys():
         count_vector_list = transcript_count_list_dict.get(key)
         if index_filter is None:
@@ -265,12 +308,16 @@ def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_
                 if c is None:
                     logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
                     c = cl.scales['9']['qual']['Set3'][1]
-                line = p.line(count_series.index, count_series.values, legend=key, line_color=RGB(c[0], c[1], c[2]))
-
+                line = p.line(count_series.index, count_series.values, line_color=RGB(c[0], c[1], c[2]))
+                legend_items.append((key, [line]))
                 p.add_tools(HoverTool(tooltips=[('position', '@x'), ('count', '@y'),
                                                 ['transcript', transcript],
                                                 ['gene', gene]], renderers=[line]))
+
+    legend = Legend(items=legend_items, location = LEGEND_ALIGNMENT)
+    p.add_layout(legend, LEGEND_POSITION)
     p.legend.click_policy = "hide"
+
     if save_plot:
         show(p)
     return p
@@ -296,6 +343,9 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_index=None,
         p_svg = get_empty_triangle_canvas(title=title)
 
     # draw points
+    legend_items = []
+    legend_items_png = []
+    legend_items_svg = []
     for key in frame_df_dict.keys():
         key_title = get_key_title(title, key)
         p_key_png = None
@@ -325,27 +375,42 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_index=None,
         x = x[0:(counter - 1)]
         y = y[0:(counter - 1)]
 
-        p.circle(x, y, color=color_dict.get(key), legend=key)
+        circles = p.circle(x, y, color=color_dict.get(key))
+        legend_items.append((key, [circles]))
         if p_key_png is not None:
-            p_key_png.circle(x, y, color=color_dict.get(key), legend=key)
+            circles_png = p_key_png.circle(x, y, color=color_dict.get(key))
+            legend_items_png.append((key, [circles_png]))
             export_images(p_key_png, key_title, png_dir=png_dir)
         if p_key_svg is not None:
-            p_key_svg.circle(x, y, color=color_dict.get(key), legend=key)
+            circles_svg = p_key_svg.circle(x, y, color=color_dict.get(key))
+            legend_items_svg.append((key, [circles_svg]))
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
         if p_png is not None:
-            p_png.circle(x, y, color=color_dict.get(key), legend=key)
+            p_png.circle(x, y, color=color_dict.get(key))
         if p_svg is not None:
-            p_svg.circle(x, y, color=color_dict.get(key), legend=key)
+            p_svg.circle(x, y, color=color_dict.get(key))
 
+
+    legend = Legend(items=legend_items, location = LEGEND_ALIGNMENT)
+    p.add_layout(legend, LEGEND_POSITION)
     p.legend.click_policy = "hide"
-    export_images(p_png, title + "_overlay", png_dir=png_dir)
-    export_images(p_svg, title + "_overlay", svg_dir=svg_dir)
+
+    if p_png is not None:
+        legend_png = Legend(items=legend_items_png, location = LEGEND_ALIGNMENT)
+        p_png.add_layout(legend_png, LEGEND_POSITION)
+        export_images(p_png, title + "_overlay", png_dir=png_dir)
+
+    if p_svg is not None:
+        legend_svg = Legend(items=legend_items_svg, location = LEGEND_ALIGNMENT)
+        p_svg.add_layout(legend_svg, LEGEND_POSITION)
+        export_images(p_svg, title + "_overlay", svg_dir=svg_dir)
+
     return p
 
 
 def get_empty_triangle_canvas(title):
-    p = figure(title=title)
+    p = figure(title=title, x_range=(-0.1, 1.1), y_range=(-0.1,1.1))
     # draw the axes
     f0 = (0, 0, 1)
     f1 = (0, 1, 0)
@@ -464,7 +529,9 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
         else:
             counts_dict.update({key: None})
 
+
     for key in frame_df_dict.keys():
+        legend_items = []
         color = color_dict.get(key)
         counts = counts_dict.get(key)
         if counts is None:
@@ -486,19 +553,29 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
                 p_svg = figure(x_range=frames, y_range=(0, count_max),
                                plot_height=500, title=title_prefix)
 
-            legend = ""
             frame_stats_df = frame_stats_df_dict.get(key)
             if frame_stats_df is None:
-                legend = "Index: %.3f" % (np.log(float(counts[1] / np.mean([counts[0], counts[2]]))))
+                legend_text = "Index: %.3f" % (np.log(float(counts[1] / np.mean([counts[0], counts[2]]))))
             else:
-                legend = "p-vals:\tF0: %.2f\tF1: %.2f\tF2: %.2f" % (
-                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F0], 2),
-                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F1], 2),
-                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F2], 2),
+                bars = p.vbar(x=frames, width=0.8, top=counts, bottom=0,
+                       fill_color=color, line_color=None)
+
+                legend_text = "FPI:    \tF0=%.2f | \tF1=%.2f | \tF2=%.2f" % (
+                    np.round(frame_stats_df.loc[CountStats.FPI, CountStats.F0], 2),
+                    np.round(frame_stats_df.loc[CountStats.FPI, CountStats.F1], 2),
+                    np.round(frame_stats_df.loc[CountStats.FPI, CountStats.F2], 2),
                 )
-                p.vbar(x=frames, width=0.8, top=counts, bottom=0,
-                       fill_color=color, line_color=None,
-                       legend=legend)
+                legend_items.append((legend_text, [bars]))
+                legend_text = "p-vals: \tF0=%.2f | \tF1=%.2f | \tF2=%.2f" % (
+                    np.round(frame_stats_df.loc[CountStats.PVAL_FPI, CountStats.F0], 2),
+                    np.round(frame_stats_df.loc[CountStats.PVAL_FPI, CountStats.F1], 2),
+                    np.round(frame_stats_df.loc[CountStats.PVAL_FPI, CountStats.F2], 2),
+                )
+                legend_items.append((legend_text, [bars]))
+
+                legend = Legend(items=legend_items, location = LEGEND_ALIGNMENT)
+                p.add_layout(legend, LEGEND_POSITION)
+                p.legend.click_policy = "hide"
 
                 if p_png is not None:
                     p_png.vbar(x=frames, width=0.8, top=counts, bottom=0,
@@ -506,12 +583,12 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
 
                 if p_svg is not None:
                     p_png.vbar(x=frames, width=0.8, top=counts, bottom=0,
-                               fill_color=color, line_color=None,
-                               legend=legend)
+                               fill_color=color, line_color=None)
 
                 mainLayout.children[0].children.append(p)
                 export_images(p_png, key_title, png_dir=png_dir)
                 export_images(p_svg, key_title, svg_dir=svg_dir)
+
 
     if len(mainLayout.children[0].children) == 0:
         return None
