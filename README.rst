@@ -27,7 +27,7 @@ It takes raw fastq files and
 - analyzes RNA transcript content (relative content of coding versus non-coding RNA). The final stats are in the align_rna/rna_stats.txt
 
 
-Run the script with options:
+*Run the script with options:*
 
 
 -f directory with fastq files (leave only the files you'd like to use (Read1 for fivepseq))
