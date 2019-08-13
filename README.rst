@@ -7,14 +7,40 @@ count - generates count vectors and meta-vectors from the given alignment file a
 plot - generates plots based on input count data folder and stores those to an html file
 count_and_plot - performs counts and generates plots afterwards
 
-Before you start
+Preprocessing from FASTQ files (!NEW)
+--------
+A script for processing raw fastq files from yeast has been added to preprocess_scripts directory.
+It takes raw fastq files and
+-- does quality checks (with FASTQC and MULTIQC),
+-- trims adapters,
+-- extracts UMI,
+-- generates a STAR index if not provided
+-- maps with STAR
+-- deduplicates reads with umitools
+-- analyzes RNA transcript content (relative content of coding versus non-coding RNA). The final stats are in the align_rna/rna_stats.txt
+
+
+Run the script with options:
+
+-f directory with fastq files (leave only the files you'd like to use (Read1 for fivepseq))
+-o output directory
+-g genome (fasta) file path
+-a annotation (gff) file path
+-i STAR index path, if you'd like to use existing index
+-s specify which steps of the pipeline you'd like to skip. Possible values are:
+   c   skip trimming adapters with cutadapt
+   u   skip UMI extraction
+   d   skip deduplication after alignment
+   q   skip quality check: FASTQC and MULTIQC
+   m   skip mapping
+   or any combination of these characters, e.g. use -s cudqm to skip all
+
+Before you start fivepseq
 --------
 - Make sure you're using python version 2.7
 - Install the latest stable version of fivepseq by
-- - cd /proj/sllstore2017018/lilit/fivepseq_v0.1.6:
-- - fivepseq_v0.1.6
-
-  python /proj/sllstore2017018/lilit/fivepseq_v0.1.5/setup.py install
+- - cd /proj/sllstore2017018/lilit/fivepseq_latest:
+- - python setup.py install
 
 Usage - count_and_plot
 --------
