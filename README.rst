@@ -11,12 +11,19 @@ Preprocessing from FASTQ files (!NEW)
 --------
 A script for processing raw fastq files from yeast has been added to preprocess_scripts directory.
 It takes raw fastq files and
+
 - does quality checks (with FASTQC and MULTIQC),
+
 - trims adapters,
+
 - extracts UMI,
+
 - generates a STAR index if not provided
+
 - maps with STAR
+
 - deduplicates reads with umitools
+
 - analyzes RNA transcript content (relative content of coding versus non-coding RNA). The final stats are in the align_rna/rna_stats.txt
 
 
