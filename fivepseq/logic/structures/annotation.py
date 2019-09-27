@@ -13,15 +13,20 @@ from fivepseq import config
 
 class Annotation:
     file_path = None
-    geneset_filter = None
+    gene_filter = None
 
+    transcript_assembly_default = None
     transcript_assembly_dict = {}
+
 
     FORWARD_STRAND_FILTER = "fwd"
     REVERSE_STRAND_FILTER = "rev"
     NO_FILTER = "none"
 
     transcript_filter = NO_FILTER
+    gs_transcript_dict = None
+    gs_transcriptInd_dict = None
+    gs_geneID_attribute = None
     span_size = 0
 
     logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
@@ -56,7 +61,7 @@ class Annotation:
 
         self.transcript_filter = transcript_filter
 
-    def set_gene_set_filter(self, geneset_filter_file, attribute="gene_id"):
+    def set_gene_filter(self, gene_filter_file, attribute="gene_id"):
         """
         Provide the file where the names of genes to be filtered are present.
         The genes should be named according to the attribute in the gff file.
@@ -67,49 +72,49 @@ class Annotation:
         :return:
         """
 
-        self.geneset_filter = self.read_geneset_file(geneset_filter_file)
-        self.apply_geneset_filter(self.geneset_filter, attribute)
+        self.gene_filter = self.read_gene_filter_file(gene_filter_file)
+        self.apply_gene_filter(self.gene_filter, attribute)
 
-    def apply_geneset_filter(self, geneset_filter, attribute):
-        geneset_filtered_assembly = []
+    def apply_gene_filter(self, gene_filter, attribute):
+        gene_filtered_assembly = []
         for transcript in self.get_transcript_assembly_default_filter():
             attr_value = FivePSeqOut.get_transcript_attr(transcript, attribute)
-            if attr_value in geneset_filter:
-                geneset_filtered_assembly.append(transcript)
-            #TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
-            elif attr_value.split(":")[1] in geneset_filter: # gene_id filtering results in IDs in the form gene:xxx
-                geneset_filtered_assembly.append(transcript)
-            elif attr_value.split("-")[0] in geneset_filter:
-                geneset_filtered_assembly.append(transcript)
-            elif attr_value.split(".")[0] in geneset_filter:
-                geneset_filtered_assembly.append(transcript)
+            if attr_value in gene_filter:
+                gene_filtered_assembly.append(transcript)
+            # TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
+            elif len(attr_value.split(":")) > 1 and attr_value.split(":")[1] in gene_filter:  # gene_id filtering results in IDs in the form gene:xxx
+                gene_filtered_assembly.append(transcript)
+            elif attr_value.split("-")[0] in gene_filter:
+                gene_filtered_assembly.append(transcript)
+            elif attr_value.split(".")[0] in gene_filter:
+                gene_filtered_assembly.append(transcript)
 
-        if len(geneset_filtered_assembly) == 0:
+        if len(gene_filtered_assembly) == 0:
             raise Exception("None of the genes in the geneset filter were present in the annotation file")
 
-        #TODO check if the following line suits: if transcript filters were applied prior, those will be preserved
-        self.transcript_assembly_dict.update({self.transcript_filter: {0: geneset_filtered_assembly}})
+        # TODO check if the following line suits: if transcript filters were applied prior, those will be preserved
+        self.transcript_assembly_dict.update({self.transcript_filter: {0: gene_filtered_assembly}})
 
+    def read_gene_filter_file(self, gene_filter_file):
 
-    def read_geneset_file(self, geneset_filter_file):
+        if not os.path.exists(gene_filter_file):
+            raise Exception("The gene set file %s does not exist" % gene_filter_file)
 
-        if not os.path.exists(geneset_filter_file):
-            raise Exception("The gene set file %s does not exist" % geneset_filter_file)
-
-        geneset_filter = []
-        with open(geneset_filter_file) as file:
+        gene_filter = []
+        with open(gene_filter_file) as file:
             line = file.readline()
             count = 1
             while line:
+                #TODO check if this can work with spaces, as they are common
                 if " " in line or "\t" in line:
                     raise Exception("The gene set file %s should not contain spaces or tabs. Found one in line %d"
-                                    % (geneset_filter_file, count))
+                                    % (gene_filter_file, count))
 
-                geneset_filter.append(line.rstrip("\n\r"))
+                gene_filter.append(line.rstrip("\n\r"))
                 line = file.readline()
                 count += 1
 
-        return geneset_filter
+        return gene_filter
 
     def set_default_span_size(self, span_size):
         """
@@ -217,6 +222,9 @@ class Annotation:
         # info
         self.logger.info("Transcript assembly generated")
 
+        if self.transcript_assembly_default is None:
+            self.transcript_assembly_default = this_transcript_assembly
+
         return this_transcript_assembly
 
     @preconditions(lambda span_size: isinstance(span_size, int),
@@ -246,3 +254,120 @@ class Annotation:
 
         return spanned_transcript
 
+    def store_gene_sets(self, geneset_file):
+        """
+        Provide the file where the names of genes and their mappings to one or several gene sets.
+        The file should be a tab delimited file, with the first column containing gene IDs and the second one - gene sets.
+        The header of the first column should be equal to the attribute in the gff file, which has been used for gene ID specification.
+        The header of the second column should be named "geneset"
+
+        GFF_ATTRIBUTE_NAME(e.g.: gene_id)  geneset
+        gene1   GS1
+        gene2   GS1
+        gene3   GS2
+        gene4   GS2
+
+
+        :param geneset_file: a tab-delimited file containing gene-geneset mapping
+        :return: stores and returns a {geneset,[transcript]} dictionary
+        """
+
+        # check file
+        if not os.path.exists(geneset_file):
+            raise Exception("The gene set file %s does not exist" % geneset_file)
+
+        # read genesets, store in GS:[geneIDs] dictionary
+        gs_dict = {}
+        geneIDs = []
+        with open(geneset_file) as file:
+            header = file.readline()
+            tokens = header.split("\t")
+            if len(tokens) != 2:
+                raise Exception("The geneset file should have exactly two columns. Found %d instead."
+                                % len(tokens))
+            attribute = tokens[0]
+            self.gs_geneID_attribute = attribute
+            self.logger.info("The attribute %s will be used to read gff for setting the geneset dictionary"
+                             % attribute)
+            line = file.readline()
+            count = 1
+            while line:
+                if " " in line:
+                    raise Exception("The geneset file %s should not contain spaces. Found one in line %d"
+                                    % (geneset_file, count))
+                tokens = line.split('\t')
+                if len(tokens) != 2:
+                    raise Exception(
+                        "The geneset file should have exactly two columns. Found %d in line %d instead."
+                        % (len(tokens), count))
+                geneID = tokens[0]
+                geneIDs.append(geneID)
+                geneset = tokens[1].rstrip("\n\r")
+
+                if gs_dict.has_key(geneset):
+                    gs_dict[geneset].append(geneID)
+                else:
+                    gs_dict.update({geneset: [geneID]})
+
+                line = file.readline()
+                count += 1
+
+        # check if the gene IDs are in the default transcript assembly
+        # for those that are, create geneID:transcript dictionary
+
+        geneID_transcript_dict = {}
+        geneID_transcriptInd_dict = {}
+        transcript_ind = 0
+        for transcript in self.get_transcript_assembly_default_filter():
+            attr_value = FivePSeqOut.get_transcript_attr(transcript, attribute)
+            # TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
+            geneID = None
+            if attr_value in geneIDs:
+                geneID = geneIDs[geneIDs.index(attr_value)]
+            elif len(attr_value.split(":")) > 1 and attr_value.split(":")[1] in geneIDs:
+                geneID = geneIDs[geneIDs.index(attr_value.split(":")[1])]
+            # attr_value.split("-")[0] in geneIDs or \
+            # attr_value.split(".")[0] in geneIDs:
+            if geneID is not None:
+                geneID_transcript_dict.update({geneID: transcript})
+                geneID_transcriptInd_dict.update({geneID: transcript_ind})
+
+            transcript_ind = transcript_ind + 1
+
+        if len(geneID_transcript_dict) == 0:
+            raise Exception("None of the genes in the geneset file were present in the annotation file")
+
+        # with those geneIDs that mapped to actual transcripts,
+        # store a {GS: [transcripts]} dictionary
+        gs_transcript_dict = {}
+        gs_transcriptInd_dict = {}
+        for gs in gs_dict.keys():
+            gs_transcript_dict.update({gs: []})
+            gs_transcriptInd_dict.update({gs: []})
+            for geneID in gs_dict[gs]:
+                if geneID_transcript_dict.has_key(geneID):
+                    gs_transcript_dict[gs].append(geneID_transcript_dict[geneID])
+                    gs_transcriptInd_dict[gs].append(geneID_transcriptInd_dict[geneID])
+
+        self.gs_transcript_dict = gs_transcript_dict
+        self.gs_transcriptInd_dict = gs_transcriptInd_dict
+
+
+        self.logger.info("Genesets processed. %d out of %d unique geneIDs matched corresponding transcripts"
+                         % (len(set(geneID_transcript_dict.keys())), len(set(geneIDs))))
+
+        return gs_transcript_dict
+
+    def remove_geneset_filter(self):
+        self.transcript_assembly_dict.update({self.transcript_filter: {0: self.transcript_assembly_default}})
+
+    def apply_geneset_filter(self, gs):
+        if not self.gs_transcript_dict.has_key(gs):
+            raise Exception("The annotation does not have a filter named %s" % gs)
+
+        gene_filtered_assembly = self.gs_transcript_dict[gs]
+
+        if len(gene_filtered_assembly) == 0:
+            raise Exception("No genes remain after applying the geneset filter %s " % gs)
+
+        self.transcript_assembly_dict.update({self.transcript_filter: {0: gene_filtered_assembly}})

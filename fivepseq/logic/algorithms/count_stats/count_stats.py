@@ -27,6 +27,10 @@ class CountStats:
     PVAL_PAIR_MAX = "p_val_pair_max"
     PVAL_FPI = "p_val_fpi"
 
+    FFT_PERIOD = "period"
+    FFT_SIGNAL = "signal"
+    COUNT = "count"
+
     # total stat strings
     TOTAL_NUM_READS = "NumOfReads"
     TOTAL_NUM_POSITIONS = "NumOfMapPositions"
@@ -49,6 +53,8 @@ class CountStats:
     frame_stats_df = None
     fft_stats_start = None
     fft_stats_term = None
+    transcript_fpi_df = None
+    transcript_fft_df = None
 
     def __init__(self, fivepseq_counts, fivepseq_out, config):
         self.fivepseq_counts = fivepseq_counts
@@ -65,11 +71,13 @@ class CountStats:
         self.summarize_transcript_stats()
 
         if self.data_summary_series[self.TOTAL_NUM_READS] == 0:
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).warning("Zero reads in coding regions: frame and fft stats will not be calculated")
+            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).warning(
+                "Zero reads in coding regions: frame and fft stats will not be calculated")
         else:
             self.compute_frame_preference_stats()
-
+            self.compute_fpi_per_transcript()
             self.compute_fft_stats()
+            self.compute_fft_per_transcript()
 
     def summarize_transcript_stats(self):
         self.logger.info("Summarizing transcript counts")
@@ -81,7 +89,8 @@ class CountStats:
         else:
             if os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE)):
                 self.logger.info("Using existing file %s" % FivePSeqOut.DATA_SUMMARY_FILE)
-                self.data_summary_series = pd.read_csv(self.fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE), sep = "\t",  header = None, index_col = 0).iloc[:,0]
+                self.data_summary_series = pd.read_csv(self.fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE),
+                                                       sep="\t", header=None, index_col=0).iloc[:, 0]
             else:
                 self.data_summary_series = pd.Series(name=(self.TOTAL_NUM_READS,
                                                            self.TOTAL_NUM_POSITIONS,
@@ -113,8 +122,8 @@ class CountStats:
     def compute_fft_stats(self):
         if config.args.conflicts == config.ADD_FILES and \
                 (os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_TERM)) &
-                os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_START)) &
-                os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_STATS_DF_FILE))):
+                 os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_START)) &
+                 os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_STATS_DF_FILE))):
             self.logger.info("Skipping FFT statistics calculation: files already exist")
         else:
             self.logger.info("Computing FFT statistics")
@@ -128,18 +137,20 @@ class CountStats:
                 lengths[i] = len(count_vector)
 
             # align start
-            size = int(stats.scoreatpercentile(lengths, per=25))
-            num = 3 * len(count_vector_list) // 4
+            #NOTE I've wrapped lengths around tuple() to supress futurewarning
+            size = int(stats.scoreatpercentile(tuple(lengths), per=25)) # determine the length that 75% of vectors will stretch to
+            num = int(np.ceil((3. / 4) * len(count_vector_list))) # only those 75% of vectors will be computed
             start_array = np.zeros((num, size))
             term_array = np.zeros((num, size))
 
-            ind = 0
-            for i in range(len(count_vector_list)):
+            i = 0
+            while i < num:
+            #for i in range(len(count_vector_list)):
                 count_vector = count_vector_list[i][span_size:len(count_vector_list[i]) - span_size]
-                if (len(count_vector)) > size:
-                    start_array[ind, :] = count_vector[0:size]
-                    term_array[ind, :] = count_vector[len(count_vector) - size:len(count_vector)]
-                    ind += 1
+                if (len(count_vector)) >= size:
+                    start_array[i, :] = count_vector[0:size]
+                    term_array[i, :] = count_vector[len(count_vector) - size:len(count_vector)]
+                i += 1
             start_mean = start_array.mean(axis=0)
             term_mean = term_array.mean(axis=0)
 
@@ -191,7 +202,8 @@ class CountStats:
         :param frame_counts_df:
         :return: frame_stats_df
         """
-        if config.args.conflicts == config.ADD_FILES and os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FRAME_STATS_DF_FILE)):
+        if config.args.conflicts == config.ADD_FILES and os.path.exists(
+                self.fivepseq_out.get_file_path(FivePSeqOut.FRAME_STATS_DF_FILE)):
             self.logger.info("Skipping frame stats calculation: file %s exists" % FivePSeqOut.FRAME_STATS_DF_FILE)
         else:
             frame_counts_df = self.fivepseq_counts.get_frame_counts_df(FivePSeqCounts.START)
@@ -242,6 +254,78 @@ class CountStats:
 
             self.fivepseq_out.write_df_to_file(self.frame_stats_df, FivePSeqOut.FRAME_STATS_DF_FILE)
 
+    def compute_fpi_per_transcript(self):
+        """
+        For each transcript-row:
+        Frame of preference (0,1,2) | FPI
+
+        :return:
+        """
+
+        if config.args.conflicts == config.ADD_FILES and os.path.exists(
+                self.fivepseq_out.get_file_path(FivePSeqOut.TRANSCRIPT_FPI_FILE)):
+            self.logger.info(
+                "Skipping per-transcript frame preference calculation: file %s exists" % FivePSeqOut.TRANSCRIPT_FPI_FILE)
+        else:
+            frame_counts_df = self.fivepseq_counts.get_frame_counts_df(FivePSeqCounts.START)
+            self.logger.info("Computing per-transcript frame preference statistics")
+            transcript_fpi_df = pd.DataFrame(index=frame_counts_df.index,
+                                             columns=[self.COUNT, "F", self.FRAME_COUNT,
+                                                      self.FRAME_PERC, self.FPI])
+            for index, row in frame_counts_df.iterrows():
+                f_counts = (row['F0'], row['F1'], row['F2'])
+                fmax = np.argmax(f_counts)
+                nom = f_counts[fmax]
+                if nom == 0:
+                    fpi = None
+                    f_perc = None
+                else:
+                    denom = (sum(f_counts) - nom) / 2.
+                    if denom == 0:
+                        fpi = np.log2(float(nom) / 0.5)
+                    else:
+                        fpi = np.log2(float(nom / denom))
+                    f_perc = 100 * (float(f_counts[fmax]) / sum(f_counts))
+
+                transcript_fpi_df.at[index, self.COUNT] = sum(f_counts)
+                transcript_fpi_df.at[index, 'F'] = fmax
+                transcript_fpi_df.at[index, self.FRAME_COUNT] = f_counts[fmax]
+                transcript_fpi_df.at[index, self.FRAME_PERC] = f_perc
+                transcript_fpi_df.at[index, self.FPI] = fpi
+
+            self.transcript_fpi_df = transcript_fpi_df
+
+            self.fivepseq_out.write_df_to_file(transcript_fpi_df, FivePSeqOut.TRANSCRIPT_FPI_FILE)
+
+    def compute_fft_per_transcript(self):
+        """
+        For each transcript-row:
+        Frame of preference (0,1,2) | FPI
+
+        :return:
+        """
+
+        if config.args.conflicts == config.ADD_FILES and os.path.exists(
+                self.fivepseq_out.get_file_path(FivePSeqOut.TRANSCRIPT_FFT_FILE)):
+            self.logger.info(
+                "Skipping per-transcript frame preference calculation: file %s exists" % FivePSeqOut.TRANSCRIPT_FFT_FILE)
+        else:
+            self.logger.info("Computing FFT statistics")
+            count_vector_list = self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH)
+            transcript_fft_df = pd.DataFrame(index=range(len(count_vector_list)),
+                                             columns=[self.COUNT, self.FFT_PERIOD, self.FFT_SIGNAL])
+            i = 0
+            for count_vector in count_vector_list:
+                fft = self.fft_stats_on_vector(count_vector)
+                transcript_fft_df.at[i, self.COUNT] = sum(count_vector)
+                if fft[1][0] != 1 and fft[1][0] < len(count_vector) and fft[2][0] > 0:
+                    transcript_fft_df.at[i, self.FFT_PERIOD] = fft[1][0]
+                    transcript_fft_df.at[i, self.FFT_SIGNAL] = fft[2][0]
+                i += 1
+
+            self.transcript_fft_df = transcript_fft_df
+
+            self.fivepseq_out.write_df_to_file(transcript_fft_df, FivePSeqOut.TRANSCRIPT_FFT_FILE)
 
     def get_frame_of_preference(self):
         if self.frame_stats_df is None:

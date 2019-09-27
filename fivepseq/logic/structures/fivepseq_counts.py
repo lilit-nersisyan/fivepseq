@@ -35,7 +35,8 @@ class FivePSeqCounts:
 
     count_distribution = None
     outlier_lower = None
-    downsample_by = None
+    downsample_constant = None
+    outlier_probability = None
 
     alignment = None
     annotation = None
@@ -49,31 +50,43 @@ class FivePSeqCounts:
     frame_counts_df_start = None
     frame_counts_df_term = None
 
-    outliers = []
+    outliers = None
 
-    start_codon_dict = {}
-    stop_codon_dict = {}
-    canonical_transcript_index = []
+    start_codon_dict = None
+    stop_codon_dict = None
+    canonical_transcript_index = None
     transcript_descriptors = None
 
-    loci_file = None
+    loci_overlaps = None
+    READ_LOCATIONS_ALL = "_ALL"
+    READ_LOCATIONS_3UTR = "_3UTR"
+    READ_LOCATIONS_5UTR = "_5UTR"
+    READ_LOCATIONS_CDS = "_CDS"
 
     logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
 
-    def __init__(self, alignment, annotation, genome, downsample_constant, transcript_filter=None):
+    def __init__(self, alignment, annotation, genome, outlier_probability, downsample_constant, transcript_filter=None):
         """
         Initializes a FivePSeqCounts object with Alignment and Annotation instances.
 
         :param alignment: fivepseq.logic.structures.Alignment type object
         :param annotation: fivepseq.logic.structures.Annotation type object
         :param genome: fivepseq.logic.structures.Genome: Genome type object
+        :param outlier_probability: a float setting the probability threshold for Poisson distribution that will be used to downsample outliers
+        :param downsample_constant: a float specifying a constant threshold: higher values will be down-sampled to this constant (without Poisson check)
         """
 
         self.alignment = alignment
         self.annotation = annotation
         self.genome = genome
         self.transcript_filter = transcript_filter
-        self.downsample_by = downsample_constant
+        self.outlier_probability = outlier_probability
+        self.outlier_lower = downsample_constant
+        self.outliers = []
+        self.start_codon_dict = {}
+        self.stop_codon_dict = {}
+        self.canonical_transcript_index = []
+
         self.logger.info("Initiated a FivePSeqCounts object with"
                          "\n\talignment from file %s"
                          "\n\tannotation from file %s "
@@ -213,7 +226,7 @@ class FivePSeqCounts:
         scd = sorted(count_distribution)
         lam = np.mean(scd)
         ps = [1 - stats.poisson.cdf(x, lam) for x in scd]
-        ind = np.where(np.asarray(ps) <= 0)[0].tolist()
+        ind = np.where(np.asarray(ps) <= self.outlier_probability)[0].tolist()
 
         if len(ind) > 0:
             # outliers = [scd[i] for i in ind]
@@ -775,7 +788,7 @@ class FivePSeqCounts:
             (dist_from, dist_to))
 
         codon_count_df = pd.DataFrame(data=0, index=Codons.CODON_TABLE.keys(),
-                                           columns=range(dist_from, dist_to))
+                                      columns=range(dist_from, dist_to))
 
         counter = 1
 
@@ -790,7 +803,7 @@ class FivePSeqCounts:
             count_vector = self.get_count_vector(transcript, span_size=dist_to,
                                                  region=FivePSeqCounts.FULL_LENGTH,
                                                  downsample=downsample)
-            count_vector = count_vector[dist_to:len(count_vector)-dist_to]
+            count_vector = count_vector[dist_to:len(count_vector) - dist_to]
             cds_sequence = self.get_cds_sequence_safe(transcript, dist_to)
 
             if sum(count_vector) == 0:
@@ -809,7 +822,7 @@ class FivePSeqCounts:
             # loop through non-empty triplets only
             for i in non_empty_ind:
                 # loop through all codons dist_from nucleotides downstream and dist_to nucleotides upstream
-                j_range = list(np.arange(i, i-dist_to, -3))[::-1] + list(np.arange(i+3, i + 3 - dist_from, 3))
+                j_range = list(np.arange(i, i - dist_to, -3))[::-1] + list(np.arange(i + 3, i + 3 - dist_from, 3))
                 for j in j_range:
                     if j < 0:
                         continue
@@ -826,7 +839,6 @@ class FivePSeqCounts:
                                 self.logger.warn("Index out of range: i: %d, j: %d, p: %d, d: %d. %s"
                                                  % (i, j, p, d, str(e)))
 
-
         # rename codon_count_df indices by adding amino acid names
         new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in codon_count_df.index]
         codon_count_df.index = new_index
@@ -834,10 +846,8 @@ class FivePSeqCounts:
 
         return codon_count_df
 
-    @preconditions(lambda padding: isinstance(padding, int),
-                   lambda padding: padding > 0,
-                   lambda loci_file: str)
-    def get_pauses_from_loci(self, loci_file, padding=100):
+    @preconditions(lambda loci_file: str)
+    def get_pauses_from_loci(self, loci_file, read_locations = READ_LOCATIONS_ALL):
         """
         Counts the meta-number of 5' mapping positions at the given distance from the specified loci
 
@@ -853,14 +863,16 @@ class FivePSeqCounts:
         """
 
         self.logger.info(
-            "Counting pauses from loci given in file %s" % loci_file)
+            "Counting pauses in %s region from loci given in file %s" % (read_locations, loci_file))
 
-        loci = pd.read_csv(loci_file, sep="\t", header=None, names=['chr', 'pos'], index_col=None)
-
+        loci = pd.read_csv(loci_file, sep="\t", index_col=None)
+        self.loci_overlaps = []
         # the results will be kept in a dictionary:
         #   key - distance from any locus
         #   value - number of mapping positions at key distance from any locus
         loci_pauses_dict = {}
+
+        span_size = self.annotation.span_size
 
         counter = 0
         loci_row = 0
@@ -868,9 +880,10 @@ class FivePSeqCounts:
         done = False
         move_transcript = True
         move_locus = False
-        tg = self.annotation.get_transcript_assembly_default_filter(0)
+        tg = self.annotation.get_transcript_assembly_default_filter(span_size)
         transcript = None
-        while (True):
+
+        while True:
             if counter % 1000 == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / self.annotation.transcript_count), '%',), )
@@ -897,31 +910,78 @@ class FivePSeqCounts:
             if loci_row < loci.shape[0]:
                 if str(transcript.chrom) == str(loci.loc[loci_row, "chr"]):
 
-                    if transcript.cds_genome_start > loci.loc[loci_row, "pos"]:
+                    if loci.loc[loci_row, "str"] == "+":
+                        locus_pos = loci.loc[loci_row, "start"]
+                    else:
+                        locus_pos = loci.loc[loci_row, "end"]
+
+                    # locus is upstream of transcript -> move locus
+                    if transcript.cds_genome_start - span_size> locus_pos:
                         move_locus = True
                         continue
-
-                    elif transcript.cds_genome_end < loci.loc[loci_row, "pos"]:
+                    # transcript is upstream of locus -> move transcript
+                    elif transcript.cds_genome_end + span_size < locus_pos:
                         move_transcript = True
                         continue
 
+                    elif str(transcript.strand) != str(loci.loc[loci_row, "str"]):
+                        move_locus = True
+                        continue
+
                     else:
-                        count_vector = self.get_count_vector(transcript, 0,
-                                                             FivePSeqCounts.FULL_LENGTH,
+                        count_vector = self.get_count_vector(transcript, span_size, FivePSeqCounts.FULL_LENGTH,
                                                              downsample=True)
 
-                        if len(count_vector) > 2 * padding:
-                            for i in range(padding, len(count_vector) - padding):
-                                if count_vector[i] > 0:
-                                    genomic_position = transcript.cds_genome_start + i
-                                    distance = genomic_position - loci.loc[loci_row, "pos"]
-                                    if distance in loci_pauses_dict.keys():
-                                        loci_pauses_dict[distance] += count_vector[i]
-                                    else:
-                                        loci_pauses_dict.update({distance: count_vector[i]})
-                            move_locus = True
+                        transcript_genome_start = transcript.cds_genome_start - span_size
+                        transcript_genome_end = transcript.cds_genome_end + span_size
+
+                        if len(count_vector) != transcript_genome_end - transcript_genome_start:
+                            move_transcript = True
+                            continue
+
+
+                        if transcript.strand == "+":
+                            locus_ind = locus_pos - transcript_genome_start
                         else:
-                            move_locus = True
+                            locus_ind = transcript_genome_end - locus_pos
+
+                        if read_locations == self.READ_LOCATIONS_ALL:
+                            ind = np.array(range(len(count_vector) - 2*span_size, len(count_vector)))
+                        elif read_locations == self.READ_LOCATIONS_5UTR:
+                            ind = np.array(range(0, span_size))
+                        elif read_locations == self.READ_LOCATIONS_3UTR:
+                            ind = np.array(range(len(count_vector) - span_size, len(count_vector)))
+                        elif  read_locations == self.READ_LOCATIONS_CDS:
+                            ind = np.array(range(len(count_vector) - 2*span_size, len(count_vector) - span_size))
+                        else:
+                            ind = np.array(range(0, len(count_vector)))
+
+                        hits = [count_vector[i] > 0 for i in ind]
+                        non_empty_ind = ind[hits]
+
+                        for i in non_empty_ind:
+                            distance = i - locus_ind
+
+                            if distance < 2*span_size and distance >= -2*span_size:
+                                if distance in loci_pauses_dict.keys():
+                                    loci_pauses_dict[distance] += count_vector[i]
+                                else:
+                                    loci_pauses_dict.update({distance: count_vector[i]})
+
+                                overlap = [FivePSeqOut.get_transcript_attr(transcript, "ID"),
+                                           FivePSeqOut.get_transcript_attr(transcript, "Name"),
+                                           transcript.chrom, transcript.strand,
+                                           transcript.cds_genome_start,
+                                           transcript.cds_genome_end,
+                                           loci.loc[loci_row, "symbol"],
+                                           loci.loc[loci_row, "chr"],
+                                           loci.loc[loci_row, "str"],
+                                           loci.loc[loci_row, "start"],
+                                           loci.loc[loci_row, "end"],
+                                           i, distance, count_vector[i]]
+                                self.loci_overlaps.append(overlap)
+
+                        move_locus = True
 
                 elif str(transcript.chrom) > str(loci.loc[loci_row, "chr"]):
                     move_locus = True
@@ -932,16 +992,29 @@ class FivePSeqCounts:
                     continue
             else:
                 break
-        # turn the dictionary into a metacount vector, with indices from -1*maxdistance to 0
+
+        # turn the dictionary into a metacount vector, with indices from -1*maxdistance to maxdistance
         self.logger.debug("Merging the dictionary into metacounts")
-        maxdist = max(loci_pauses_dict.keys())
-        metacount_vector = [0] * maxdist
-        for i in range(-1 * maxdist, 0):
+        maxdist = 2*span_size
+        metacount_vector = [0] * 2*maxdist
+        for i in range(-1*maxdist, maxdist):
             if i in loci_pauses_dict.keys():
-                metacount_vector[i] = loci_pauses_dict[i]
-        metacount_series = pd.Series(data=metacount_vector, index=np.arange(-1 * maxdist, 0))
+                metacount_vector[maxdist+i] = loci_pauses_dict[i]
+        metacount_series = pd.Series(data=metacount_vector, index=np.arange(-1 * maxdist, maxdist))
 
         return metacount_series
+
+    def get_loci_overlaps_df(self):
+        """
+        Returns the overlaps of transcripts with given loci in the form of a data-frame with column names.
+
+        :return:
+        """
+        colnames = ["ID", "Name", "chr", "str", "genome_start", "genome_end", "RBP", "loc_chr", "loc_str", "loc_start", "loc_end",
+                    "i", "dist", "count"]
+
+        outliers_df = pd.DataFrame(self.loci_overlaps, index=None, columns=colnames)
+        return outliers_df
 
     @preconditions(lambda num: isinstance(num, int))
     def top_populated_transcript_indices(self, num=1000):
@@ -961,6 +1034,42 @@ class FivePSeqCounts:
         populated_indices = sorted(range(len(populated)), key=lambda k: populated[k])
 
         return populated_indices
+
+
+class FivePSeqCountsContainer:
+    """
+    A wraper for the following data structures:
+        count_vector_list_start = None
+        count_vector_list_term = None
+        count_vector_list_full_length = None
+        meta_count_series_start = None
+        meta_count_series_term = None
+        frame_counts_df_start = None
+        frame_counts_df_term = None
+
+    """
+    count_vector_list_start = None
+    count_vector_list_term = None
+    count_vector_list_full_length = None
+    meta_count_series_start = None
+    meta_count_series_term = None
+    frame_counts_df_start = None
+    frame_counts_df_term = None
+
+    def __init__(self, count_vector_list_start,
+                 count_vector_list_term,
+                 count_vector_list_full_length,
+                 meta_count_series_start,
+                 meta_count_series_term,
+                 frame_counts_df_start,
+                 frame_counts_df_term):
+        self.count_vector_list_start = count_vector_list_start
+        self.count_vector_list_term = count_vector_list_term
+        self.count_vector_list_full_length = count_vector_list_full_length
+        self.meta_count_series_term = meta_count_series_term
+        self.meta_count_series_start = meta_count_series_start
+        self.frame_counts_df_start = frame_counts_df_start
+        self.frame_counts_df_term = frame_counts_df_term
 
 
 class CountManager:
@@ -1348,3 +1457,64 @@ class CountManager:
             counts = map(int, counts.iloc[:, 0])
 
         return counts
+
+    @staticmethod
+    @preconditions(lambda file_path: isinstance(file_path, str))
+    def read_outlier_lower(file_path):
+        """
+        Reads and returns the lower value of read numbers to be considered as outliers for downsampling.
+
+        :param file_path: a file containing a single float number
+        :return: float
+        """
+
+        outlier_lower = float(pd.read_csv(file_path, header=None))
+        return outlier_lower
+
+    @staticmethod
+    def filter_fivepseqCountsContainer(fivepseqcountsContainer, transcript_indices, span_size=100):
+        """
+        Gets a fivepseq_counts instance with non-empty count items and filters each by provided transcript indices
+            count_vector_list_start = None
+            count_vector_list_term = None
+            count_vector_list_full_length = None
+            meta_count_series_start = None
+            meta_count_series_term = None
+            frame_counts_df_start = None
+            frame_counts_df_term = None
+
+        :param fivepseqcountsContainer:
+        :param transcript_ind:
+        :return:
+        """
+        if fivepseqcountsContainer.count_vector_list_full_length is not None:
+            count_vector_list_full_length = [fivepseqcountsContainer.count_vector_list_full_length[i] for i
+                                             in transcript_indices]
+        else:
+            count_vector_list_full_length = None
+
+        count_vector_list_term = [fivepseqcountsContainer.count_vector_list_term[i] for i in
+                                  transcript_indices]
+
+        count_vector_list_start = [fivepseqcountsContainer.count_vector_list_start[i] for i in
+                                   transcript_indices]
+
+        meta_count_series_term = CountManager.count_vector_to_df(
+            CountManager.compute_meta_counts(count_vector_list_term),
+            FivePSeqCounts.TERM, tail=span_size)
+
+        meta_count_series_start = CountManager.count_vector_to_df(
+            CountManager.compute_meta_counts(count_vector_list_start),
+            FivePSeqCounts.START, tail=span_size)
+
+        frame_counts_df_term = fivepseqcountsContainer.frame_counts_df_term.iloc[transcript_indices,]
+
+        frame_counts_df_start = fivepseqcountsContainer.frame_counts_df_start.iloc[
+            transcript_indices,]
+
+        fivepseq_counts_filtered = FivePSeqCountsContainer(count_vector_list_start, count_vector_list_term,
+                                                           count_vector_list_full_length,
+                                                           meta_count_series_start, meta_count_series_term,
+                                                           frame_counts_df_start, frame_counts_df_term)
+
+        return fivepseq_counts_filtered

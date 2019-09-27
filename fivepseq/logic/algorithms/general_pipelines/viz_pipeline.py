@@ -5,12 +5,14 @@ import os
 import pandas as pd
 from bokeh.io import export_svgs, export_png
 from bokeh.plotting import figure
+from sympy.strategies.core import switch
 
 from fivepseq import config
-from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts
+from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts, FivePSeqCountsContainer
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
-    bokeh_composite, bokeh_fft_plot, fivepseq_header
+    bokeh_composite, bokeh_fft_plot, fivepseq_header, bokeh_tabbed_scatter_plot, bokeh_tabbed_triangle_plot, \
+    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot
 import numpy as np
 
 from fivepseq.logic.structures.codons import Codons
@@ -19,6 +21,13 @@ from fivepseq.logic.structures.codons import Codons
 class VizPipeline:
     FILTER_TOP_POPULATED = "populated"
     FILTER_CANONICAL_TRANSCRIPTS = "canonical"
+
+    DATA_TYPE_META_COUNTS = 0
+    DATA_TYPE_FRAME_COUNTS = 1
+    DATA_TYPE_FFT_SIGNALS = 2
+    DATA_TYPE_AMINO_ACID_DF = 3
+    DATA_TYPE_FRAME_STATS = 4
+    DATA_TYPE_LIB_SIZE = 5
 
     METACOUNTS_TERM = "_metacounts_term"
     METACOUNTS_START = "_metacounts_start"
@@ -34,12 +43,17 @@ class VizPipeline:
     FFT_START = "_fft_start"
 
     count_folders = None
+    sample_folders_dict = {}
     title = "fivepseq_plot_canvas"
     png_dir = None
     svg_dir = None
     supplement_dir = "supplement"
     supplement_png_dir = None
     supplement_svg_dir = None
+
+    geneset_dir = "genesets"
+    geneset_png_dir = None
+    geneset_svg_dir = None
 
     logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
 
@@ -62,8 +76,15 @@ class VizPipeline:
     fft_signal_start_dict = {}
     fft_signal_term_dict = {}
     loci_meta_counts_dict = {}
+    loci_meta_counts_dict_ALL = {}
+    loci_meta_counts_dict_3UTR = {}
+    loci_meta_counts_dict_5UTR = {}
+    loci_meta_counts_dict_CDS = {}
     data_summary_dict = {}
+    lib_size_dict = {}
     transcript_index = None
+
+    fivepseq_counts_container_dict = {}
 
     combine = False  # do not combine plots until data counts are successfully combined
 
@@ -76,14 +97,19 @@ class VizPipeline:
     amino_acid_df_full_combined = pd.DataFrame()
     codon_df_combined = pd.DataFrame()
     codon_basesorted_df_combined = pd.DataFrame()
+    lib_size_combined = None
 
-    large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired'][0:6]) +
-                         cl.to_numeric(cl.scales['8']['qual']['Set1'][3:5]))
+    # large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired'][0:6]) +
+    #                     cl.to_numeric(cl.scales['8']['qual']['Set1'][3:5]))
+    large_colors_list = (cl.scales['8']['qual']['Paired'][0:6] +
+                         cl.scales['8']['qual']['Set1'][3:5])
     #                     cl.to_numeric(cl.scales['5']['qual']['Set3']))
-    # large_colors_list = ("#771155", "#AA4488", "#114477", "#4477AA", "#117777", "#44AAAA",
-    #                     "#777711", "#AAAA44", "#774411", "#AA7744", "#771122", "#AA4455")
+    gs_colors_list = ("#AA4488", "#4477AA", "#AAAA44", "#AA7744", "#AA4455", "#44AAAA",
+                      "#771155", "#114477", "#777711", "#774411", "#771122", "#117777")
+
     colors_dict = None
-    combined_color_dict = {COMBINED: cl.to_numeric(cl.scales['9']['qual']['Set3'])[3]}
+    # combined_color_dict = {COMBINED: cl.to_numeric(cl.scales['9']['qual']['Set3'])[3]}
+    combined_color_dict = {COMBINED: cl.scales['9']['qual']['Set3'][3]}
 
     phantomjs_installed = None
 
@@ -97,6 +123,10 @@ class VizPipeline:
     p_frame_barplots_term = None
     p_frame_barplots_start = None
     p_loci_meta_counts = None
+    p_loci_meta_counts_ALL = None
+    p_loci_meta_counts_3UTR = None
+    p_loci_meta_counts_5UTR = None
+    p_loci_meta_counts_CDS = None
     p_fft_plot_start = None
     p_fft_plot_term = None
 
@@ -111,7 +141,9 @@ class VizPipeline:
     # the distance to be used for plotting amino-acid heatmaps
     dist_for_amino_acid_heatmaps = 20
 
-    def __init__(self, args, count_folders=None):
+    gs_transcriptInd_dict = None
+
+    def __init__(self, args, count_folders=None, gs_transcriptInd_dict=None):
         """
         Initialize vizualization pipeline with arguments contained in args.
         If count_folders are provided explicitely, those will be used instead of sd and md arguments.
@@ -119,6 +151,8 @@ class VizPipeline:
         :param args:
         :param count_folders:
         """
+
+        self.gs_transcriptInd_dict = gs_transcriptInd_dict
         self.args = args
         self.count_folders = count_folders
 
@@ -162,6 +196,14 @@ class VizPipeline:
             self.write_supplement()
         except Exception as e:
             err_msg = "Exception while writing supplements: %s" % str(e)
+            self.logger.error(err_msg)
+            raise e
+
+        try:
+            if self.gs_transcriptInd_dict is not None:
+                self.write_genesets()
+        except Exception as e:
+            err_msg = "Exception while writing genesets: %s" % str(e)
             self.logger.error(err_msg)
             raise e
 
@@ -241,6 +283,14 @@ class VizPipeline:
             except Exception as e:
                 raise Exception("Output directory %s could not be created: %s" % (self.supplement_dir, str(e)))
 
+        if self.gs_transcriptInd_dict is not None:
+            self.geneset_dir = os.path.join(self.args.o, "genesets")
+            if not os.path.exists(self.geneset_dir):
+                try:
+                    os.mkdir(self.geneset_dir)
+                except Exception as e:
+                    raise Exception("Output directory %s could not be created: %s" % (self.geneset_dir, str(e)))
+
         if self.is_phantomjs_installed():
             self.supplement_png_dir = os.path.join(self.supplement_dir, "png")
             if not os.path.exists(self.supplement_png_dir):
@@ -256,11 +306,29 @@ class VizPipeline:
                 except Exception as e:
                     raise Exception("Output directory %s could not be created: %s" % (self.supplement_svg_dir, str(e)))
 
+            if self.gs_transcriptInd_dict is not None:
+                self.geneset_png_dir = os.path.join(self.geneset_dir, "png")
+                if not os.path.exists(self.geneset_png_dir):
+                    try:
+                        os.mkdir(os.path.join(self.geneset_dir, "png"))
+                    except Exception as e:
+                        raise Exception("Output directory %s could not be created: %s" % (self.geneset_png_dir, str(e)))
+
+                self.geneset_svg_dir = os.path.join(self.geneset_dir, "svg")
+                if not os.path.exists(os.path.join(self.geneset_dir, "svg")):
+                    try:
+                        os.mkdir(os.path.join(self.geneset_dir, "svg"))
+                    except Exception as e:
+                        raise Exception("Output directory %s could not be created: %s" % (self.geneset_svg_dir, str(e)))
+
     def initialize_data(self):
         self.logger.info("Reading data counts.")
         for d in self.count_folders:
             sample = os.path.basename(d)
+            # TODO check this line below: it should work with the new implementation
+            sample = os.path.basename(os.path.dirname(d))
             self.samples.append(sample)
+            self.sample_folders_dict.update({sample: os.path.dirname(d)})
             self.update_dicts(sample, d)
 
         self.colors_dict = dict(
@@ -281,7 +349,9 @@ class VizPipeline:
         self.logger.info("reading counts for sample: %s" % sample)
         fivepseq_out = FivePSeqOut(directory)
 
-        self.data_summary_dict.update({sample: self.read_data_summary(fivepseq_out)})
+        data_summary = self.read_data_summary(fivepseq_out)
+        self.data_summary_dict.update({sample: data_summary})
+        self.lib_size_dict.update({sample: data_summary.iloc[0, 0]})
         self.meta_count_start_dict.update({sample: self.read_meta_count_start(fivepseq_out)})
         self.meta_count_term_dict.update({sample: self.read_meta_count_term(fivepseq_out)})
 
@@ -299,8 +369,30 @@ class VizPipeline:
         self.count_vector_list_start_dict.update({sample: self.read_count_vector_list_start(fivepseq_out)})
         self.count_vector_list_term_dict.update({sample: self.read_count_vector_list_term(fivepseq_out)})
 
-        self.loci_meta_counts_dict.update({sample: self.read_loci_meta_counts(fivepseq_out)})
+        self.fivepseq_counts_container_dict.update({sample: FivePSeqCountsContainer(
+            self.count_vector_list_start_dict[sample],
+            self.count_vector_list_term_dict[sample],
+            None,
+            self.meta_count_start_dict[sample],
+            self.meta_count_term_dict[sample],
+            self.frame_count_start_dict[sample],
+            self.frame_count_term_dict[sample]
+        )})
 
+        self.loci_meta_counts_dict_ALL.update({sample: self.read_loci_meta_counts(
+            fivepseq_out, file=fivepseq_out.get_file_path(
+                FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_ALL + ".txt"))})
+        self.loci_meta_counts_dict_3UTR.update({sample: self.read_loci_meta_counts(
+            fivepseq_out, file=fivepseq_out.get_file_path(
+                FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_3UTR + ".txt"))})
+        self.loci_meta_counts_dict_5UTR.update({sample: self.read_loci_meta_counts(
+            fivepseq_out, file=fivepseq_out.get_file_path(
+                FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_5UTR + ".txt"))})
+        self.loci_meta_counts_dict_CDS.update({sample: self.read_loci_meta_counts(
+            fivepseq_out, file=fivepseq_out.get_file_path(
+                FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_CDS + ".txt"))})
+
+        # TODO remove transcript filter
         if self.args.tf is not None:
             filter = self.args.tf
             if filter == self.FILTER_TOP_POPULATED:
@@ -330,9 +422,48 @@ class VizPipeline:
 
             # TODO amino acids pauses not subsettable
 
+    def combine_meta_counts(self, meta_counts_dict):
+        meta_counts_combined = None
+        start = True
+        for key in meta_counts_dict.keys():
+            if start:
+                meta_counts_combined = meta_counts_dict[key].copy()
+                start = False
+            else:
+                meta_counts_combined.C += meta_counts_dict[key].C
+
+        return meta_counts_combined
+
+    def combine_frame_counts(self, frame_counts_dict):
+        frame_counts_combined = None
+        start = True
+
+        for key in frame_counts_dict.keys():
+            if start:
+                frame_counts_combined = frame_counts_dict[key].copy()
+                start = False
+            else:
+                frame_counts_combined.loc[:, ('F0', 'F1', 'F2')] += frame_counts_dict[key].loc[:, ('F0', 'F1', 'F2')]
+
+        return frame_counts_combined
+
+    def combine_amino_acid_df(self, amino_acid_df_dict):
+        amino_acid_df_combined = None
+        start = True
+
+        for key in amino_acid_df_dict.keys():
+            if start:
+                amino_acid_df_combined = amino_acid_df_dict[key].copy()
+            else:
+                amino_acid_df_combined += amino_acid_df_dict[key]
+
+        return amino_acid_df_combined
+
     def combine_counts(self):
         self.logger.info("Combining data counts.")
+        self.lib_size_combined = 0
         for key in self.meta_count_start_dict.keys():
+            self.lib_size_combined += self.lib_size_dict.get(key)
             df_start = self.meta_count_start_dict.get(key)
             df_term = self.meta_count_term_dict.get(key)
             frame_start = self.frame_count_start_dict.get(key)
@@ -341,6 +472,7 @@ class VizPipeline:
             amino_acid_df_full = self.amino_acid_df_full_dict.get(key)
             codon_df = self.codon_df_dict.get(key)
             codon_basesorted_df = self.codon_basesorted_df_dict.get(key)
+
             if len(self.meta_count_start_combined) == 0:
                 self.meta_count_start_combined = df_start.copy()
                 self.meta_count_term_combined = df_term.copy()
@@ -364,12 +496,12 @@ class VizPipeline:
                 if codon_basesorted_df is not None:
                     self.codon_basesorted_df_combined += codon_basesorted_df
 
-    def  plot_multiple_samples(self):
+    def plot_multiple_samples(self):
         self.logger.info("Generating plots")
 
         self.make_single_sample_plots(self.title)
 
-        #figure_list = [fivepseq_header()]
+        # figure_list = [fivepseq_header()]
         figure_list = []
         figure_list += [self.p_scatter_start, self.p_scatter_term]
         figure_list += [self.p_scatter_start_scaled, self.p_scatter_term_scaled]
@@ -380,8 +512,15 @@ class VizPipeline:
         figure_list += [self.p_frame_barplots_start, None]
         figure_list += [self.p_fft_plot_start, self.p_fft_plot_term]
 
-        if self.p_loci_meta_counts is not None:
-            figure_list += [self.p_loci_meta_counts, None]
+        if self.p_loci_meta_counts_ALL is not None:
+            figure_list += [self.p_loci_meta_counts_ALL]
+        if self.p_loci_meta_counts_3UTR is not None:
+            figure_list += [self.p_loci_meta_counts_3UTR]
+        if self.p_loci_meta_counts_5UTR is not None:
+            figure_list += [self.p_loci_meta_counts_5UTR]
+        if self.p_loci_meta_counts_CDS is not None:
+            figure_list += [self.p_loci_meta_counts_CDS]
+
 
         if self.combine:
             self.make_combined_plots(self.title)
@@ -394,6 +533,23 @@ class VizPipeline:
         bokeh_composite(self.title,
                         figure_list,
                         os.path.join(self.args.o, self.title + ".html"), 2)
+
+    def write_genesets(self):
+
+        self.logger.info("Generating geneset-specific plots")
+        # tabs = genesets, overlay = samples
+        geneset_title = self.title + "_samples_per_geneset"
+
+        tabbed_plots = self.gs_tabbed_plots(geneset_title)
+        bokeh_composite(geneset_title, tabbed_plots, os.path.join(self.geneset_dir, geneset_title + ".html"), 1)
+
+        # tabs = samples, overlay = genesets
+        sample_geneset_title = self.title + "_genesets_per_sample"
+
+        sample_gs_tabbed_plots = self.sample_geneset_tabbed_plots(sample_geneset_title)
+        bokeh_composite(sample_geneset_title, sample_gs_tabbed_plots,
+                        os.path.join(self.geneset_dir, sample_geneset_title + ".html"), 1)
+        self.logger.info("Wrote geneset-specific plots")
 
     def write_supplement(self):
         # codon pauses
@@ -441,6 +597,7 @@ class VizPipeline:
                 aa_df = aa_df.reset_index(drop=True)
                 aa_count_dict.update({sample: aa_df})
             aa_sp = bokeh_scatter_plot(aa, FivePSeqCounts.TERM, aa_count_dict, self.colors_dict, scale=True,
+                                       lib_size_dict=self.lib_size_dict,
                                        png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
             aa_scatterplots.append(aa_sp)
 
@@ -451,6 +608,7 @@ class VizPipeline:
                 aa_sp = bokeh_scatter_plot(aa + "_combined", FivePSeqCounts.TERM, {"combined": aa_df},
                                            self.combined_color_dict,
                                            scale=True,
+                                           lib_size_dict={self.COMBINED: self.lib_size_combined},
                                            png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
 
                 aa_scatterplots.append(aa_sp)
@@ -490,8 +648,12 @@ class VizPipeline:
                 "To install phantomjs, run 'conda install phantomjs selenium pillow'")
         return self.phantomjs_installed
 
-    def read_meta_count_term(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_TERM_FILE)
+    def read_meta_count_term(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_TERM_FILE)
+
         try:
             meta_count_term = CountManager.read_meta_counts(file)
         except:
@@ -499,8 +661,12 @@ class VizPipeline:
             meta_count_term = None
         return meta_count_term
 
-    def read_meta_count_start(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_START_FILE)
+    def read_meta_count_start(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_START_FILE)
+
         try:
             meta_count_start = CountManager.read_meta_counts(file)
         except:
@@ -508,8 +674,11 @@ class VizPipeline:
             meta_count_start = None
         return meta_count_start
 
-    def read_amino_acid_df(self, fivepseq_out, full=False):
-        file = fivepseq_out.get_file_path(FivePSeqOut.AMINO_ACID_PAUSES_FILE)
+    def read_amino_acid_df(self, fivepseq_out=None, file=None, full=False):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.AMINO_ACID_PAUSES_FILE)
         try:
             amino_acid_df = CountManager.read_amino_acid_df(file)
 
@@ -523,8 +692,11 @@ class VizPipeline:
             amino_acid_df = None
         return amino_acid_df
 
-    def read_codon_df(self, fivepseq_out, basesort=False):
-        file = fivepseq_out.get_file_path(FivePSeqOut.CODON_PAUSES_FILE)
+    def read_codon_df(self, fivepseq_out=None, file=None, basesort=False):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.CODON_PAUSES_FILE)
         try:
             codon_df = CountManager.read_amino_acid_df(file)
             if basesort:
@@ -541,8 +713,12 @@ class VizPipeline:
             codon_df = None
         return codon_df
 
-    def read_frame_count_term(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.FRAME_COUNTS_TERM_FILE)
+    def read_frame_count_term(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.FRAME_COUNTS_TERM_FILE)
+
         try:
             frame_count_term = CountManager.read_frame_counts(file)
         except:
@@ -550,8 +726,11 @@ class VizPipeline:
             frame_count_term = None
         return frame_count_term
 
-    def read_frame_count_start(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.FRAME_COUNTS_START_FILE)
+    def read_frame_count_start(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.FRAME_COUNTS_START_FILE)
         try:
             frame_count_start = CountManager.read_frame_counts(file)
         except:
@@ -559,16 +738,24 @@ class VizPipeline:
             frame_count_start = None
         return frame_count_start
 
-    def read_frame_stats_df(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.FRAME_STATS_DF_FILE)
+    def read_frame_stats_df(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.FRAME_STATS_DF_FILE)
+
         if os.path.exists(file):
             frame_stats_df = pd.read_csv(file, sep="\t", header=0, index_col=0)
         else:
             frame_stats_df = None
         return frame_stats_df
 
-    def read_count_vector_list_term(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.COUNT_TERM_FILE)
+    def read_count_vector_list_term(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.COUNT_TERM_FILE)
+
         try:
             count_vector_list_term = CountManager.read_counts_as_list(file)
         except:
@@ -576,8 +763,12 @@ class VizPipeline:
             count_vector_list_term = None
         return count_vector_list_term
 
-    def read_count_vector_list_start(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.COUNT_START_FILE)
+    def read_count_vector_list_start(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.COUNT_START_FILE)
+
         try:
             count_vector_list_start = CountManager.read_counts_as_list(file)
         except:
@@ -585,16 +776,23 @@ class VizPipeline:
             count_vector_list_start = None
         return count_vector_list_start
 
-    def read_loci_meta_counts(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.LOCI_PAUSES_FILE)
+    def read_loci_meta_counts(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.LOCI_PAUSES_FILE)
+
         loci_meta_counts = None
         if os.path.exists(file):
-            self.logger.info("Loci count file found")
+            self.logger.info("Loci count file found:" + str(file))
             loci_meta_counts = CountManager.read_meta_counts(file)
         return loci_meta_counts
 
-    def read_fft_signal_start(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_START)
+    def read_fft_signal_start(self, fivepseq_out, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_START)
         try:
             fft_signals_start = CountManager.read_meta_counts(file)
         except:
@@ -602,8 +800,11 @@ class VizPipeline:
             fft_signals_start = None
         return fft_signals_start
 
-    def read_fft_signal_term(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_TERM)
+    def read_fft_signal_term(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_TERM)
         try:
             fft_signals_term = CountManager.read_meta_counts(file)
         except:
@@ -611,14 +812,287 @@ class VizPipeline:
             fft_signals_term = None
         return fft_signals_term
 
-    def read_data_summary(self, fivepseq_out):
-        file = fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE)
+    def read_data_summary(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE)
         try:
             data_summary = pd.read_csv(file, sep="\t", header=None, index_col=0)
         except:
             self.logger.warn("The file %s was not found, table will not be generated" % str(file))
             data_summary = None
         return data_summary
+
+    def generate_gs_sample_dict(self, filename, data_type):
+        gs_sample_dict = {}
+        for gs in self.gs_transcriptInd_dict.keys():
+            gs_sample_dict.update({gs: {}})
+            for sample in self.samples:
+                if data_type == self.DATA_TYPE_META_COUNTS:
+                    gs_sample_dict[gs].update({sample: self.read_meta_count_term(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_FRAME_COUNTS:
+                    gs_sample_dict[gs].update({sample: self.read_frame_count_term(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_FRAME_STATS:
+                    gs_sample_dict[gs].update({sample: self.read_frame_stats_df(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_AMINO_ACID_DF:
+                    gs_sample_dict[gs].update({sample: self.read_amino_acid_df(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_FFT_SIGNALS:
+                    gs_sample_dict[gs].update({sample: self.read_fft_signal_term(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_LIB_SIZE:
+                    gs_sample_dict[gs].update({sample: self.lib_size_dict.get(sample)})
+
+        return gs_sample_dict
+
+    def generate_sample_gs_dict(self, filename, data_type):
+        sample_gs_dict = {}
+        for sample in self.samples:
+            sample_gs_dict.update({sample: {}})
+            for gs in self.gs_transcriptInd_dict.keys():
+                if data_type == self.DATA_TYPE_META_COUNTS:
+                    sample_gs_dict[sample].update({gs: self.read_meta_count_term(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_FRAME_COUNTS:
+                    sample_gs_dict[sample].update({gs: self.read_frame_count_term(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_FRAME_STATS:
+                    sample_gs_dict[sample].update({gs: self.read_frame_stats_df(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_AMINO_ACID_DF:
+                    sample_gs_dict[sample].update({gs: self.read_amino_acid_df(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_FFT_SIGNALS:
+                    sample_gs_dict[sample].update({gs: self.read_fft_signal_term(
+                        file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
+                elif data_type == self.DATA_TYPE_LIB_SIZE:
+                    sample_gs_dict[sample].update({gs: self.lib_size_dict.get(sample)})
+        return sample_gs_dict
+
+    def gs_tabbed_plots(self, title):
+
+        plots = []
+
+        # gs_sample_count_series_dict_dict
+        gs_meta_count_start_dict = self.generate_gs_sample_dict(FivePSeqOut.META_COUNT_START_FILE,
+                                                                self.DATA_TYPE_META_COUNTS)
+        gs_meta_count_term_dict = self.generate_gs_sample_dict(FivePSeqOut.META_COUNT_TERM_FILE,
+                                                               self.DATA_TYPE_META_COUNTS)
+        gs_frame_count_term_dict = self.generate_gs_sample_dict(FivePSeqOut.FRAME_COUNTS_TERM_FILE,
+                                                                self.DATA_TYPE_FRAME_COUNTS)
+        gs_frame_stats_dict = self.generate_gs_sample_dict(FivePSeqOut.FRAME_STATS_DF_FILE, self.DATA_TYPE_FRAME_STATS)
+        gs_amino_acid_df_dict = self.generate_gs_sample_dict(FivePSeqOut.AMINO_ACID_PAUSES_FILE,
+                                                             self.DATA_TYPE_AMINO_ACID_DF)
+        gs_fft_start_dict = self.generate_gs_sample_dict(FivePSeqOut.FFT_SIGNALS_START, self.DATA_TYPE_FFT_SIGNALS)
+        gs_fft_term_dict = self.generate_gs_sample_dict(FivePSeqOut.FFT_SIGNALS_TERM, self.DATA_TYPE_FFT_SIGNALS)
+        gs_lib_size_dict = self.generate_gs_sample_dict(None, self.DATA_TYPE_LIB_SIZE)
+
+        plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_START_SCALED, FivePSeqCounts.START,
+                                               gs_meta_count_start_dict,
+                                               self.colors_dict, scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_TERM_SCALED, FivePSeqCounts.TERM,
+                                               gs_meta_count_term_dict,
+                                               self.colors_dict, scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(bokeh_tabbed_triangle_plot(title + self.TRIANGLE_TERM,
+                                                gs_frame_count_term_dict,
+                                                self.colors_dict,
+                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(bokeh_tabbed_frame_barplots(title + self.FRAME_TERM,
+                                                 gs_frame_count_term_dict,
+                                                 gs_frame_stats_dict,
+                                                 self.colors_dict,
+                                                 png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(bokeh_tabbed_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED, gs_amino_acid_df_dict, scale=True,
+                                               png_dir=self.geneset_png_dir,
+                                               svg_dir=self.geneset_svg_dir))
+
+        plots.append(
+            bokeh_tabbed_fft_plot(title + self.FFT_START, FivePSeqCounts.START, gs_fft_start_dict, self.colors_dict,
+                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(
+            bokeh_tabbed_fft_plot(title + self.FFT_TERM, FivePSeqCounts.TERM, gs_fft_term_dict, self.colors_dict,
+                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        # combined dicts
+        if self.combine:
+            gs_meta_counts_start_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                gs_meta_counts_start_combined.update(
+                    {gs: {self.COMBINED: self.combine_meta_counts(gs_meta_count_start_dict[gs])}})
+
+            gs_meta_counts_term_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                gs_meta_counts_term_combined.update(
+                    {gs: {self.COMBINED: self.combine_meta_counts(gs_meta_count_term_dict[gs])}})
+
+            gs_frame_counts_term_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                gs_frame_counts_term_combined.update(
+                    {gs: {self.COMBINED: self.combine_frame_counts(gs_frame_count_term_dict[gs])}})
+
+            gs_amino_acid_counts_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                gs_amino_acid_counts_combined.update(
+                    {gs: {self.COMBINED: self.combine_amino_acid_df(gs_amino_acid_df_dict[gs])}})
+
+            gs_lib_size_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                gs_lib_size_combined.update({gs: {self.COMBINED: self.lib_size_combined}})
+
+            plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_TERM_SCALED + "_" + self.COMBINED,
+                                                   FivePSeqCounts.START,
+                                                   gs_meta_counts_start_combined,
+                                                   self.combined_color_dict, scale=True,
+                                                   lib_size_dict_dict=gs_lib_size_combined,
+                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+            plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_TERM_SCALED + "_" + self.COMBINED,
+                                                   FivePSeqCounts.TERM,
+                                                   gs_meta_counts_term_combined,
+                                                   self.combined_color_dict, scale=True,
+                                                   lib_size_dict_dict=gs_lib_size_combined,
+                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+            plots.append(bokeh_tabbed_triangle_plot(title + self.TRIANGLE_TERM + "_" + self.COMBINED,
+                                                    gs_frame_counts_term_combined,
+                                                    self.combined_color_dict,
+                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+            plots.append(
+                bokeh_tabbed_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED + "_" + self.COMBINED,
+                                          gs_amino_acid_counts_combined, scale=True,
+                                          png_dir=self.geneset_png_dir,
+                                          svg_dir=self.geneset_svg_dir))
+
+        return plots
+
+    def sample_geneset_tabbed_plots(self, title):
+        plots = []
+
+        # gs_sample_count_series_dict_dict
+        sample_gs_meta_count_start_dict = self.generate_sample_gs_dict(FivePSeqOut.META_COUNT_START_FILE,
+                                                                       self.DATA_TYPE_META_COUNTS)
+        sample_gs_meta_count_term_dict = self.generate_sample_gs_dict(FivePSeqOut.META_COUNT_TERM_FILE,
+                                                                      self.DATA_TYPE_META_COUNTS)
+        sample_gs_frame_count_term_dict = self.generate_sample_gs_dict(FivePSeqOut.FRAME_COUNTS_TERM_FILE,
+                                                                       self.DATA_TYPE_FRAME_COUNTS)
+        sample_gs_frame_stats_dict = self.generate_sample_gs_dict(FivePSeqOut.FRAME_STATS_DF_FILE,
+                                                                  self.DATA_TYPE_FRAME_STATS)
+        sample_gs_amino_acid_df_dict = self.generate_sample_gs_dict(FivePSeqOut.AMINO_ACID_PAUSES_FILE,
+                                                                    self.DATA_TYPE_AMINO_ACID_DF)
+        sample_gs_fft_start_dict = self.generate_sample_gs_dict(FivePSeqOut.FFT_SIGNALS_START,
+                                                                self.DATA_TYPE_FFT_SIGNALS)
+        sample_gs_fft_term_dict = self.generate_sample_gs_dict(FivePSeqOut.FFT_SIGNALS_TERM, self.DATA_TYPE_FFT_SIGNALS)
+
+        sample_gs_lib_size_dict = self.generate_sample_gs_dict(None, self.DATA_TYPE_LIB_SIZE)
+
+        gs_colors_dict = dict(
+            zip(self.gs_transcriptInd_dict.keys(),
+                self.gs_colors_list[0:len(self.gs_transcriptInd_dict.keys())]))
+
+        plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_START, FivePSeqCounts.START,
+                                               sample_gs_meta_count_start_dict,
+                                               gs_colors_dict, scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
+                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_TERM, FivePSeqCounts.TERM,
+                                               sample_gs_meta_count_term_dict,
+                                               gs_colors_dict, scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
+                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(bokeh_tabbed_triangle_plot(title + self.TRIANGLE_TERM,
+                                                sample_gs_frame_count_term_dict,
+                                                gs_colors_dict,
+                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(bokeh_tabbed_frame_barplots(title + self.FRAME_TERM,
+                                                 sample_gs_frame_count_term_dict,
+                                                 sample_gs_frame_stats_dict,
+                                                 gs_colors_dict,
+                                                 png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(
+            bokeh_tabbed_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED, sample_gs_amino_acid_df_dict, scale=True,
+                                      png_dir=self.geneset_png_dir,
+                                      svg_dir=self.geneset_svg_dir))
+
+        plots.append(bokeh_tabbed_fft_plot(title + self.FFT_START, FivePSeqCounts.START, sample_gs_fft_start_dict,
+                                           gs_colors_dict,
+                                           png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(
+            bokeh_tabbed_fft_plot(title + self.FFT_TERM, FivePSeqCounts.TERM, sample_gs_fft_term_dict, gs_colors_dict,
+                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        # combined plots
+        if self.combine:
+            # combined dicts
+            sample_gs_meta_counts_start_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                sample_temp_dict = {}
+                for sample in self.samples:
+                    sample_temp_dict.update({sample: sample_gs_meta_count_start_dict[sample][gs]})
+                sample_gs_meta_counts_start_combined.update(
+                    {gs: self.combine_meta_counts(sample_temp_dict)})
+
+            sample_gs_meta_counts_term_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                sample_temp_dict = {}
+                for sample in self.samples:
+                    sample_temp_dict.update({sample: sample_gs_meta_count_term_dict[sample][gs]})
+                sample_gs_meta_counts_term_combined.update(
+                    {gs: self.combine_meta_counts(sample_temp_dict)})
+
+            sample_gs_frame_counts_term_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                sample_temp_dict = {}
+                for sample in self.samples:
+                    sample_temp_dict.update({sample: sample_gs_frame_count_term_dict[sample][gs]})
+                sample_gs_frame_counts_term_combined.update(
+                    {gs: self.combine_frame_counts(sample_temp_dict)})
+
+            sample_gs_amino_acid_counts_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                sample_temp_dict = {}
+                for sample in self.samples:
+                    sample_temp_dict.update({sample: sample_gs_amino_acid_df_dict[sample][gs]})
+                sample_gs_amino_acid_counts_combined.update(
+                    {gs: self.combine_amino_acid_df(sample_temp_dict)})
+
+            sample_gs_lib_size_combined = {}
+            for gs in self.gs_transcriptInd_dict.keys():
+                sample_gs_lib_size_combined.update({gs: self.lib_size_combined})
+
+            plots.append(bokeh_scatter_plot(title + self.METACOUNTS_TERM + "_" + self.COMBINED, FivePSeqCounts.START,
+                                            sample_gs_meta_counts_start_combined,
+                                            gs_colors_dict, scale=True, lib_size_dict=sample_gs_lib_size_combined,
+                                            png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+            plots.append(bokeh_scatter_plot(title + self.METACOUNTS_TERM + "_" + self.COMBINED, FivePSeqCounts.TERM,
+                                            sample_gs_meta_counts_term_combined,
+                                            gs_colors_dict, scale=True, lib_size_dict=sample_gs_lib_size_combined,
+                                            png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+            plots.append(bokeh_triangle_plot(title + self.TRIANGLE_TERM + "_" + self.COMBINED,
+                                             sample_gs_frame_counts_term_combined,
+                                             gs_colors_dict,
+                                             png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+            plots.append(bokeh_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED + "_" + self.COMBINED,
+                                            sample_gs_amino_acid_counts_combined, scale=True,
+                                            png_dir=self.geneset_png_dir,
+                                            svg_dir=self.geneset_svg_dir))
+
+        return plots
 
     def make_single_sample_plots(self, title):
         self.p_scatter_term = bokeh_scatter_plot(title + self.METACOUNTS_TERM, FivePSeqCounts.TERM,
@@ -634,13 +1108,13 @@ class VizPipeline:
         self.p_scatter_term_scaled = bokeh_scatter_plot(title + self.METACOUNTS_TERM_SCALED, FivePSeqCounts.TERM,
                                                         self.meta_count_term_dict,
                                                         self.colors_dict,
-                                                        scale=True,
+                                                        scale=True, lib_size_dict=self.lib_size_dict,
                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
 
         self.p_scatter_start_scaled = bokeh_scatter_plot(title + self.METACOUNTS_START_SCALED, FivePSeqCounts.START,
                                                          self.meta_count_start_dict,
                                                          self.colors_dict,
-                                                         scale=True,
+                                                         scale=True, lib_size_dict=self.lib_size_dict,
                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
 
         self.p_triangle_term = bokeh_triangle_plot(title + self.TRIANGLE_TERM,
@@ -673,11 +1147,28 @@ class VizPipeline:
                                                            self.colors_dict,
                                                            png_dir=self.png_dir, svg_dir=self.svg_dir)
 
-        self.p_loci_meta_counts = bokeh_scatter_plot(title + "_loci_meta_counts",
-                                                     "loci",
-                                                     self.loci_meta_counts_dict,
-                                                     self.colors_dict,
-                                                     png_dir=self.png_dir, svg_dir=self.svg_dir)
+        self.p_loci_meta_counts_ALL = bokeh_scatter_plot(title + "_loci_meta_counts",
+                                                         "loci_ALL",
+                                                         self.loci_meta_counts_dict_ALL,
+                                                         self.colors_dict, scale=True, lib_size_dict=self.lib_size_dict,
+                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
+        self.p_loci_meta_counts_3UTR = bokeh_scatter_plot(title + "_loci_meta_counts",
+                                                          "loci_3UTR",
+                                                          self.loci_meta_counts_dict_3UTR,
+                                                          self.colors_dict, scale=True,
+                                                          lib_size_dict=self.lib_size_dict,
+                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
+        self.p_loci_meta_counts_5UTR = bokeh_scatter_plot(title + "_loci_meta_counts",
+                                                         "loci_5UTR",
+                                                         self.loci_meta_counts_dict_5UTR,
+                                                         self.colors_dict, scale=True, lib_size_dict=self.lib_size_dict,
+                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
+        self.p_loci_meta_counts_CDS = bokeh_scatter_plot(title + "_loci_meta_counts",
+                                                          "loci_CDS",
+                                                          self.loci_meta_counts_dict_CDS,
+                                                          self.colors_dict, scale=True,
+                                                          lib_size_dict=self.lib_size_dict,
+                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
 
         # fft plots
         self.p_fft_plot_start = bokeh_fft_plot(title + self.FFT_START, "start",
@@ -710,6 +1201,7 @@ class VizPipeline:
                                                                  {"combined": self.meta_count_term_combined},
                                                                  self.combined_color_dict,
                                                                  scale=True,
+                                                                 lib_size_dict={self.COMBINED: self.lib_size_combined},
                                                                  png_dir=self.png_dir, svg_dir=self.svg_dir)
 
         self.p_scatter_start_scaled_combined = bokeh_scatter_plot(title + self.METACOUNTS_START_SCALED + "_combined",
@@ -717,6 +1209,7 @@ class VizPipeline:
                                                                   {self.COMBINED: self.meta_count_start_combined},
                                                                   self.combined_color_dict,
                                                                   scale=True,
+                                                                  lib_size_dict={self.COMBINED: self.lib_size_combined},
                                                                   png_dir=self.png_dir, svg_dir=self.svg_dir)
 
         self.p_triangle_term_combined = bokeh_triangle_plot(title + self.TRIANGLE_TERM + "_combined",

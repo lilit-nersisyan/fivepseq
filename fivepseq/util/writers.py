@@ -21,6 +21,9 @@ class FivePSeqOut:
     AMINO_ACID_PAUSES_FILE = "amino_acid_pauses.txt"
     CODON_PAUSES_FILE = "codon_pauses.txt"
     LOCI_PAUSES_FILE = "loci_pauses.txt"
+    LOCI_PAUSES_FILE_PREFIX = "loci_pauses"
+    LOCI_OVERLAPS_FILE = "loci_overlaps.txt"
+    LOCI_OVERLAPS_FILE_PREFIX = "loci_overlaps"
     TRANSCRIPT_ASSEMBLY_FILE = "transcript_assembly.txt"
     FRAME_COUNTS_TERM_FILE = "frame_counts_TERM.txt"
     FRAME_COUNTS_START_FILE = "frame_counts_START.txt"
@@ -32,10 +35,14 @@ class FivePSeqOut:
     OUTLIER_LOWER_FILE = "outlier_lower.txt"
     DATA_SUMMARY_FILE = "data_summary.txt"
     FRAME_STATS_DF_FILE = "frame_stats.txt"
+    TRANSCRIPT_FPI_FILE = "transcript_frame_prefs.txt"
     FFT_STATS_DF_FILE = "fft_stats.txt"
+    TRANSCRIPT_FFT_FILE = "transcript_fft.txt"
     FFT_SIGNALS_START = "fft_signals_start.txt"
     FFT_SIGNALS_TERM = "fft_signals_term.txt"
     OUTLIERS_DF = "outliers_df.txt"
+    GENESET_FILE = "genesets.txt"
+
 
     FAILED_COUNT_FILES_LIST = "failed_count_files_list.txt"
     BAM_SUCCESS_SUMMARY = "count_run_summary.txt"
@@ -227,6 +234,31 @@ class FivePSeqOut:
 
             f.close()
 
+    def write_geneset_transcript_dict_to_file(self, geneset_transcript_dict, file_name):
+        """
+        Gets a dictionary of the form {GS:[transcripts]}, and writes the GS concatenated with transcript descriptors to a file.
+        Each row is a transcript. The genesets are in order.
+
+        :param geneset_transcript_dict: a dictionary of the form {GS:[transcripts]}
+        :param file_name: the name of the file (the parent directory is the count directory of each sample)
+        :return:
+        """
+
+        f = self.open_file_for_writing(file_name)
+        if f is not None:
+            f.write('\t'.join(["GS", "ID", "gene", "chr", "cds_start", "cds_end", "type"]) + "\n")
+            for gs in geneset_transcript_dict.keys():
+                for transcript in geneset_transcript_dict[gs]:
+                    f.write('\t'.join([gs,
+                                       self.get_transcript_attr(transcript, "ID"),
+                                       self.get_transcript_attr(transcript, "Name"),
+                                       str(transcript.chrom),
+                                       str(self.get_transcript_attr(transcript, "cds_genome_start")),
+                                       str(self.get_transcript_attr(transcript, "cds_genome_end")),
+                                       self.get_transcript_attr(transcript, "type")]) + '\n')
+
+            f.close()
+
     @staticmethod
     def get_transcript_attr(transcript, key):
         if key in transcript.attr.keys():
@@ -250,7 +282,7 @@ class FivePSeqOut:
             try:
                 os.remove(self.get_file_path(self.FAILED_COUNT_FILES_LIST))
             except Exception as e:
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error\
+                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error \
                     ("Problem removing existing failed files report: %s" % str(e))
 
         failed_files = []

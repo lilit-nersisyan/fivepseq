@@ -30,6 +30,12 @@ class CountPipeline:
                 self.fivepseq_counts.annotation.get_transcript_assembly_default_filter(0),
                 self.fivepseq_out.TRANSCRIPT_ASSEMBLY_FILE)
 
+        #   gene sets: always re-write gene sets, because those can change at each run
+        # if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.GENESET_FILE)):
+        if self.fivepseq_counts.annotation.gs_transcript_dict is not None:
+            self.fivepseq_out.write_geneset_transcript_dict_to_file(self.fivepseq_counts.annotation.gs_transcript_dict,
+                                                                    self.fivepseq_out.GENESET_FILE)
+
         # case 1 transcript descriptor are not there: generate
         # case 2 transcript descriptors are there, but both count_distribution and outliers are not there: generate
         # case 3 transcript descriptors are there, count_distriubtion is there: set count_distribution
@@ -55,7 +61,6 @@ class CountPipeline:
                 "No reads found in coding regions. Fivepseq will skip the rest of calculations.")
             cancel = True
 
-
         if not cancel:
             self.fivepseq_out.write_vector(self.fivepseq_counts.get_count_distribution(),
                                            self.fivepseq_out.COUNT_DISTRIBUTION_FILE)
@@ -74,8 +79,9 @@ class CountPipeline:
 
             #   load or generate full length counts
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.COUNT_FULL_FILE)):
-                self.fivepseq_out.write_vector_list(self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH),
-                                                    self.fivepseq_out.COUNT_FULL_FILE)
+                self.fivepseq_out.write_vector_list(
+                    self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH),
+                    self.fivepseq_out.COUNT_FULL_FILE)
 
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.OUTLIERS_DF)):
                 self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_outliers_df(),
@@ -122,7 +128,8 @@ class CountPipeline:
 
             #   amino acid pauses
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.AMINO_ACID_PAUSES_FILE)):
-                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_pauses(50), # generate more than needed for visualization
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_pauses(50),
+                                                   # generate more than needed for visualization
                                                    self.fivepseq_out.AMINO_ACID_PAUSES_FILE)
 
             #   codon pauses
@@ -132,11 +139,52 @@ class CountPipeline:
                                                    self.fivepseq_out.CODON_PAUSES_FILE)
 
             #   loci pauses
-            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.LOCI_PAUSES_FILE)):
+            read_locations = FivePSeqCounts.READ_LOCATIONS_ALL
+            loci_pauses_filename = self.fivepseq_out.LOCI_PAUSES_FILE_PREFIX + read_locations + ".txt"
+            if not self.skip(self.fivepseq_out.get_file_path(loci_pauses_filename)):
                 if self.fivepseq_counts.loci_file is not None:
                     self.fivepseq_out.write_series_to_file(
-                        self.fivepseq_counts.get_pauses_from_loci(self.fivepseq_counts.loci_file),
-                        self.fivepseq_out.LOCI_PAUSES_FILE)
+                        self.fivepseq_counts.get_pauses_from_loci(self.fivepseq_counts.loci_file,
+                                                                  read_locations=read_locations),
+                        loci_pauses_filename)
+                    self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_loci_overlaps_df(),
+                                                       self.fivepseq_out.LOCI_OVERLAPS_FILE_PREFIX + read_locations)
+
+            read_locations = FivePSeqCounts.READ_LOCATIONS_3UTR
+            loci_pauses_filename = self.fivepseq_out.LOCI_PAUSES_FILE_PREFIX + read_locations + ".txt"
+            if not self.skip(self.fivepseq_out.get_file_path(loci_pauses_filename)):
+                if self.fivepseq_counts.loci_file is not None:
+                    self.fivepseq_out.write_series_to_file(
+                        self.fivepseq_counts.get_pauses_from_loci(self.fivepseq_counts.loci_file,
+                                                                  read_locations=read_locations),
+                        loci_pauses_filename
+                    )
+                    self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_loci_overlaps_df(),
+                                                       self.fivepseq_out.LOCI_OVERLAPS_FILE_PREFIX + read_locations)
+
+            read_locations = FivePSeqCounts.READ_LOCATIONS_5UTR
+            loci_pauses_filename = self.fivepseq_out.LOCI_PAUSES_FILE_PREFIX + read_locations + ".txt"
+            if not self.skip(self.fivepseq_out.get_file_path(loci_pauses_filename)):
+                if self.fivepseq_counts.loci_file is not None:
+                    self.fivepseq_out.write_series_to_file(
+                        self.fivepseq_counts.get_pauses_from_loci(self.fivepseq_counts.loci_file,
+                                                                  read_locations=read_locations),
+                        loci_pauses_filename)
+                    self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_loci_overlaps_df(),
+                                                       self.fivepseq_out.LOCI_OVERLAPS_FILE_PREFIX + read_locations)
+
+            read_locations = FivePSeqCounts.READ_LOCATIONS_CDS
+            loci_pauses_filename = self.fivepseq_out.LOCI_PAUSES_FILE_PREFIX + read_locations + ".txt"
+            if not self.skip(self.fivepseq_out.get_file_path(loci_pauses_filename)):
+                if self.fivepseq_counts.loci_file is not None:
+                    self.fivepseq_out.write_series_to_file(
+                        self.fivepseq_counts.get_pauses_from_loci(self.fivepseq_counts.loci_file,
+                                                                  read_locations=read_locations),
+                        loci_pauses_filename
+                    )
+                    self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_loci_overlaps_df(),
+                                                       self.fivepseq_out.LOCI_OVERLAPS_FILE_PREFIX + read_locations)
+
         # sanity check
         success = self.fivepseq_out.sanity_check_for_counts()
         if success:
@@ -147,8 +195,7 @@ class CountPipeline:
             self.logger.info(
                 "\n\nFivepseq finished for bam file %s.\n Some files failed to be generated. Check those in %s.\n\n"
                 % (os.path.basename(self.fivepseq_counts.alignment.bam_file),
-                self.fivepseq_out.get_file_path(FivePSeqOut.FAILED_COUNT_FILES_LIST)))
-
+                   self.fivepseq_out.get_file_path(FivePSeqOut.FAILED_COUNT_FILES_LIST)))
 
     def skip(self, file):
         if (self.fivepseq_out.conflict_mode == config.ADD_FILES) & (

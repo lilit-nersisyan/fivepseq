@@ -72,7 +72,7 @@ fivepseq \\
 
 -a path_to_your_annotation_gff (sorry no gtf for now) \\
 
-[--conflicts conflict_mode] \\
+[optional arguments for counts] \\
 
 count_and_plot \\
 
@@ -86,7 +86,7 @@ count_and_plot \\
 
 
 
-optional argument: --conflicts
+optional arguments for counts: --conflicts
 
 The conflict mode specifies how to deal with files/folders that alraedy exist. There are three options you may choose from:
 
@@ -96,14 +96,40 @@ The conflict mode specifies how to deal with files/folders that alraedy exist. T
 
 - alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory
 
-optional argument: --downsample/ --ds
+optional argument: --op (default = 0)
 
-This arguments sets the p value threshold for outlier detection: point with less than the --ds probability of
-falling into Poisson distribution will be down-sampled.
+This arguments sets the p value threshold for outlier detection: point with less than the --op probability of
+falling into Poisson distribution will be down-sampled. If you want to turn off downsampling, set the --op to -1.
 
-optional argument: -s/-geneset
+optional argument: --ds
+
+A constant value for down-sampling. Instead of outlier detection, values less than this constant will be down-sampled
+to match --ds.
+
+optional argument: -gf/-genefilter
 
 Supply a text file with newline-separated list of gene ids you'd like to filter/use. The names should correspond to those present under the gene_id tag in the gff file.
+Note, only these genes will be used in all the calculations.
+
+optional argument: -gs/-geneset
+This option provides a possibility to compared plots for different samples. Supply a tab separated text file, with the following structure:
+Column names: gene_attribute (e.g. Name)->geneset
+Rows: value_of_the_attribute->geneset_name
+
+Note, the gene_attribute is the attribute name in the gtf or gff file. In case of gff, the attribute in the cds feature will be considered.
+With this option, fivepseq will generate a separate plotting directory called genesets, with tabbed-plots to either compare samples for each geneset, or genesets for each sample.
+The counts folder will also be divided according to the geneset used. The default folder will be named protein_coding.
+
+optional argument: --loci-file
+
+This option requires a file with coordinates of the loci (e.g. RBP binding coordinates), relative to which, the user wants to generate scatter-plots.
+The file should be tab-separated, with the following structure:
+Columns: chr->str->start->end->symbol
+Rows: the chromosome name, strand (+ or -), start and end coordinates and the name of the RBP (or the locus).
+
+This feature is in beta-, so scatter plots of reads relative to all the loci combined will be plotted underneath the main html file.
+Four different plots will correspond to reads located in (1) 3UTR and CDS regions, (2) only 3UTR, (3) only 5UTR and (4) only CDS.
+
 
 Note!
 -------
