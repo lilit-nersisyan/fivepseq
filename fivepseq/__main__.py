@@ -47,8 +47,8 @@ class FivepseqArguments:
         # TODO parse arguments for fivepseq count and viz programs separately;
         # TODO implement main accordingly
 
-        subparsers = parser.add_subparsers(help="Use help functions of commands count or plot",
-                                           dest="command")
+ #       subparsers = parser.add_subparsers(help="Use help functions of commands count or plot",
+ #                                          dest="command")
 
         ##########################
         #       common arguments
@@ -97,122 +97,40 @@ class FivepseqArguments:
                             required=False,
                             default=0)
 
-        ##########################
-        #       fivepseq count
-        ##########################
-
-        count_parser = subparsers.add_parser('count', help="fivepseq count help")
-
-        count_parser.add_argument("-b", "-bam",
-                                  help="the full path one or many bam/sam files (many files should be provided with a pattern, within brackets)",
-                                  type=str,
-                                  required=True)
-
-        count_parser.add_argument("-o", "-outdir",
-                                  help="the output directory",
-                                  type=str,
-                                  required=False,
-                                  default="fivepseq_out")
-
-        count_parser.add_argument("-gf", "-genefilter",
-                                  help="the file containing gene names of interest",
-                                  type=str,
-                                  required=False)
-
-        count_parser.add_argument("--loci-file",
-                                  help="file with loci to count mapping positions relative to",
-                                  required=False,
-                                  type=str)
-
-        count_parser.add_argument("--ignore-cache",
-                                  help="read in transcript assembly and rewrite existing pickle paths",
-                                  action="store_true",
-                                  default=False,
-                                  required=False)
-
-        count_parser.add_argument("-gs", "-gene_sets",
-                                  help="A file with gene-geneset mapping",
-                                  type=str,
-                                  required=False)
-
-        # FIXME not possible to save to pickle path: reason cython reduce not working for pysam Alignment class
-        # count_parser.add_argument("--fivepseq-pickle",
-        #                          help="specify the pickle path to read in existing FivePSeqCounts object",
-        #                          required=False)
-
-        ##########################
-        #       fivepseq plot
-        ##########################
-
-        plot_parser = subparsers.add_parser('plot', help="fivepseq plot help")
-
-        input_arg_group = plot_parser.add_mutually_exclusive_group(required=True)
-        input_arg_group.add_argument("-sd", "-fivepseq_dir",
-                                     help="the full path to the fivepseq counts directory",
-                                     type=str,
-                                     required=False)
-        input_arg_group.add_argument("-md", "-multi-fivepseq_dir",
-                                     help="the full path to the directory containing fivepseq count directories for multiple sampels",
-                                     type=str,
-                                     required=False)
-
-        plot_parser.add_argument("-o", "-outdir",
-                                 help="the output directory",
-                                 type=str,
-                                 required=False,
-                                 default="fivepseq_plots")
-
-        plot_parser.add_argument("-t", "-title",
-                                 help="title of the html file",
-                                 type=str,
-                                 required=False)
-
-        plot_parser.add_argument("-tf", "-transcript_filter",
-                                 help="Name of filter to apply on transcripts",
-                                 type=str,
-                                 choices=[VizPipeline.FILTER_TOP_POPULATED,
-                                          VizPipeline.FILTER_CANONICAL_TRANSCRIPTS],
-                                 required=False)
-
-        #################################
-        #       fivepseq count_and_plot
-        #################################
-
-        count_and_plot_parser = subparsers.add_parser('count_and_plot', help="fivepseq count_and_plot help")
-
-        count_and_plot_parser.add_argument("-b", "-bam",
+        # NOTE I am replacing count_and_plot_parser with parser below - to combine all the the subprograms into one
+        parser.add_argument("-b", "-bam",
                                            help="the full path one or many bam/sam files (many files should be provided with a pattern, within brackets)",
                                            type=str,
                                            required=True)
 
-        count_and_plot_parser.add_argument("-o", "-outdir",
+        parser.add_argument("-o", "-outdir",
                                            help="the output directory",
                                            type=str,
                                            required=False,
                                            default="fivepseq_out")
 
-        count_and_plot_parser.add_argument("-gf", "-genefilter",
+        parser.add_argument("-gf", "-genefilter",
                                            help="the file containing gene names of interest",
                                            type=str,
                                            required=False)
 
-        count_and_plot_parser.add_argument("--loci-file",
+        parser.add_argument("--loci-file",
                                            help="file with loci to count mapping positions relative to",
                                            required=False,
                                            type=str)
 
-        count_and_plot_parser.add_argument("--ignore-cache",
+        parser.add_argument("--ignore-cache",
                                            help="read in transcript assembly and rewrite existing pickle paths",
                                            action="store_true",
                                            default=False,
                                            required=False)
 
-        count_and_plot_parser.add_argument("-t", "-title",
+        parser.add_argument("-t", "-title",
                                            help="title of the plots file(s)",
                                            type=str,
                                            required=False)
 
-        count_and_plot_parser.add_argument("-tf", "-transcript_filter",
+        parser.add_argument("-tf", "-transcript_filter",
                                            help="Name of filter to apply on transcripts",
                                            type=str,
                                            choices=[VizPipeline.FILTER_TOP_POPULATED,
@@ -221,18 +139,22 @@ class FivepseqArguments:
                                                     Annotation.REVERSE_STRAND_FILTER],
                                            required=False)
 
-        count_and_plot_parser.add_argument("-gs", "-genesets",
+        parser.add_argument("-gs", "-genesets",
                                            help="A file with gene-geneset mapping",
                                            type=str,
                                            required=False)
+
 
         ##########################
         #       config setup
         ##########################
 
+
         config.args = parser.parse_args()
         #        if config.args.command == 'count':
         #            config.bam = os.path.abspath(config.args.b)
+        if not hasattr(config.args, "command"):
+            config.args.command = "count_and_plot"
 
         # FIXME this imposes necessity to know the span size with which fivepseq was run for further visualization
         config.span_size = config.args.span
@@ -247,6 +169,8 @@ class FivepseqArguments:
         """
         # NOTE The files are not checked for existence at this stage.
         # NOTE The absolute_path function simply merges the relative paths with the working directory.
+
+
         if config.args.command == 'count':
             print "Call to fivepseq count with arguments:\n"
             print "%s%s" % (pad_spaces("\tAlignment file:"), os.path.abspath(config.args.b))
@@ -638,6 +562,7 @@ def main():
     start_time = time.clock()
 
     # body
+
     if (config.args.command == 'count') | (config.args.command == 'count_and_plot'):
         logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("Fivepseq count started")
 
