@@ -1,5 +1,6 @@
 Welcome to fivepseq readme!
---------
+==========================
+
 This program reports 5'-footprint properties from 5Pseq reads in a given alignment file. 
  
 There are to modes to run fivepseq: 
@@ -79,8 +80,11 @@ fivepseq \\
 [optional arguments] \\
 
 
+Optional arguments:
+-------------------
+**--conflicts**
 
-optional argument: --conflicts
+*default: add*
 
 The conflict mode specifies how to deal with files/folders that alraedy exist. There are three options you may choose from:
 
@@ -91,25 +95,34 @@ The conflict mode specifies how to deal with files/folders that alraedy exist. T
 - alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory
 
 
-optional argument: --op (default = 0)
+**--op**
+
+*default: 0*
 
 This arguments sets the p value threshold for outlier detection: point with less than the --op probability of
 falling into Poisson distribution will be down-sampled. If you want to turn off downsampling, set the --op to -1.
 
 
-optional argument: --ds
+**--ds**
+
+*default: None*
 
 A constant value for down-sampling. Instead of outlier detection, values less than this constant will be down-sampled
 to match --ds.
 
 
-optional argument: -gf/-genefilter
+**-gf/-genefilter**
+
+*default: None*
 
 Supply a text file with newline-separated list of gene ids you'd like to filter/use. The names should correspond to those present under the gene_id tag in the gff file.
 Note, only these genes will be used in all the calculations.
 
 
-optional argument: -gs/-geneset
+**-gs/-geneset**
+
+*default: None*
+
 This option provides a possibility to compared plots for different samples. Supply a tab separated text file, with the following structure:
 Column names: gene_attribute (e.g. Name)->geneset
 Rows: value_of_the_attribute->geneset_name
@@ -119,7 +132,9 @@ With this option, fivepseq will generate a separate plotting directory called ge
 The counts folder will also be divided according to the geneset used. The default folder will be named protein_coding.
 
 
-optional argument: --loci-file
+**--loci-file**
+
+*default: None*
 
 This option requires a file with coordinates of the loci (e.g. RBP binding coordinates), relative to which, the user wants to generate scatter-plots.
 The file should be tab-separated, with the following structure:
