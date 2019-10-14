@@ -21,8 +21,8 @@ class FivePSeqCounts:
     Algorithms able to work with count arrays and dataframes alone are in the algorithms package.
     """
 
-    START = "start"
-    TERM = "termination"
+    START = "TSS"
+    TERM = "TTS"
     FULL_LENGTH = "full_length"
     ALL = "all"
 
@@ -1518,3 +1518,81 @@ class CountManager:
                                                            frame_counts_df_start, frame_counts_df_term)
 
         return fivepseq_counts_filtered
+
+    @staticmethod
+    def combine_count_series(count_series_dict, lib_size_dict=None):
+        """
+        Combines counts in the series dictionary and returns a single count series.
+        If lib_size_dict is not None, than the counts are first weighted based on the library size and then combined.
+        Weighting is done in a way to give higher weight to samples with larger library sizes.
+
+        :param count_series_dict:
+        :param lib_size_dict:
+        :return:
+        """
+        count_series_combined = None
+        start = True
+        for key in count_series_dict.keys():
+            count_series = count_series_dict[key]
+            if lib_size_dict is not None:
+                count_series.C *= float(lib_size_dict[key]) / sum(lib_size_dict.values())
+
+            if start:
+                count_series_combined = count_series.copy()
+                start = False
+            else:
+                count_series_combined.C += count_series.C
+
+        return count_series_combined
+
+    @staticmethod
+    def combine_frame_counts(frame_count_dict, lib_size_dict=None):
+        """
+        Combines counts in the dataframe dictionary and returns a single dataframe.
+        If lib_size_dict is not None, than the counts are first weighted based on the library size and then combined.
+        Weighting is done in a way to give higher weight to samples with larger library sizes.
+
+        :param count_series_dict:
+        :param lib_size_dict:
+        :return:
+        """
+        frame_count_combined = None
+        start = True
+        for key in frame_count_dict.keys():
+            count_df = frame_count_dict[key]
+            if lib_size_dict is not None:
+                count_df.loc[:, ('F0', 'F1', 'F2')] *= float(lib_size_dict[key]) / sum(lib_size_dict.values())
+
+            if start:
+                frame_count_combined = count_df.copy()
+                start = False
+            else:
+                frame_count_combined.loc[:, ('F0', 'F1', 'F2')] += count_df.loc[:, ('F0', 'F1', 'F2')]
+
+        return frame_count_combined
+
+    @staticmethod
+    def combine_amino_acid_dfs(amino_acid_df_dict, lib_size_dict=None):
+        """
+        Combines counts in the dataframe dictionary and returns a single dataframe.
+        If lib_size_dict is not None, than the counts are first weighted based on the library size and then combined.
+        Weighting is done in a way to give higher weight to samples with larger library sizes.
+
+        :param count_series_dict:
+        :param lib_size_dict:
+        :return:
+        """
+        amino_acid_df_combined = None
+        start = True
+        for key in amino_acid_df_dict.keys():
+            count_df = amino_acid_df_dict[key]
+            if lib_size_dict is not None:
+                count_df *= float(lib_size_dict[key]) / sum(lib_size_dict.values())
+
+            if start:
+                amino_acid_df_combined = count_df.copy()
+                start = False
+            else:
+                amino_acid_df_combined += count_df
+
+        return amino_acid_df_combined

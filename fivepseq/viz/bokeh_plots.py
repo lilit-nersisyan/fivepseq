@@ -26,6 +26,7 @@ tools = [PanTool(), BoxZoomTool(), WheelZoomTool(), SaveTool(), ResetTool()]
 
 LEGEND_POSITION = 'above'
 LEGEND_ALIGNMENT = 'bottom_left'
+COMBINED = "combined"
 
 
 def bokeh_composite(title, figure_list, filename, ncols=2):
@@ -76,7 +77,10 @@ def bokeh_table(title, table_df_dict):
 
 
 def bokeh_tabbed_scatter_plot(title, region, group_count_series_dict_dict, color_dict,
-                              scale=False, lib_size_dict_dict = None, png_dir=None, svg_dir=None):
+                              scale=False, lib_size_dict_dict=None,
+                              combine_sum=False, combine_weighted=False,
+                              combine_color=None,
+                              png_dir=None, svg_dir=None):
     if group_count_series_dict_dict is None:
         return None
 
@@ -94,18 +98,58 @@ def bokeh_tabbed_scatter_plot(title, region, group_count_series_dict_dict, color
         else:
             lib_size_dict = None
 
-        p_group = bokeh_scatter_plot(title, region, count_series_dict_gs, color_dict, scale = scale,
-                                     lib_size_dict = lib_size_dict, png_dir=png_dir, svg_dir=svg_dir)
+        p_group = bokeh_scatter_plot(title, region, count_series_dict_gs, color_dict, scale=scale,
+                                     combine_sum=combine_sum, combine_weighted=combine_weighted,
+                                     combine_color=combine_color,
+                                     lib_size_dict=lib_size_dict, png_dir=png_dir, svg_dir=svg_dir)
         tab_list.append(Panel(child=p_group, title=group))
 
     tabs = Tabs(tabs=tab_list)
     return tabs
 
 
-def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False, lib_size_dict = None, png_dir=None, svg_dir=None):
+def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False, lib_size_dict=None,
+                       combine_sum=False,
+                       combine_weighted=False, combine_color=None, png_dir=None, svg_dir=None):
     if count_series_dict is None:
         return None
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot: " + title + ": " + region)
+
+    if combine_weighted and combine_sum:
+        e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
+                % (title + ": " + region, "combine_sum", "combine_weighted")
+        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        return None
+
+    if combine_weighted:
+        suffix = COMBINED + "-weighted"
+        count_series_dict = {suffix: CountManager.combine_count_series(count_series_dict, lib_size_dict)}
+
+    elif combine_sum:
+        suffix = COMBINED + "-sum"
+        count_series_dict = {suffix: CountManager.combine_count_series(count_series_dict)}
+
+    if combine_weighted or combine_sum:
+        if lib_size_dict is None:
+            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+                    % (title + ": " + region, "combine_sum", "combine_weighted")
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            return None
+
+        lib_size_dict = {suffix: sum(lib_size_dict.values())}
+
+        c = combine_color
+        if c is None:
+            c = get_random_color()
+        color_dict = {suffix: c}
+
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot %s with options: scaled(%s), "
+                                                        "combine_sum(%s), comine_weighted(%s): " % (title + ": " +
+                                                                                                    region,
+                                                                                                    str(scale),
+                                                                                                    str(combine_sum),
+                                                                                                    str(
+                                                                                                        combine_weighted)))
+
     output_file(title + ".png")
 
     my_x_label = "position from %s" % region
@@ -129,10 +173,13 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
     legend_items = []
     legend_items_png = []
     legend_items_svg = []
+
     for key in count_series_dict.keys():
         count_series = count_series_dict.get(key)
+
         if count_series is None:
             return None
+
         key_title = get_key_title(title, key)
         p_key_png = None
         p_key_svg = None
@@ -161,33 +208,34 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
                 raw=count_series.C,
                 name=[key] * len(y)
             ))
-            line = p.line('x', 'y', line_color=c, line_width=2, source = source)
+            line = p.line('x', 'y', line_color=c, line_width=2, source=source)
             legend_items.append((key, [line]))
         except Exception as e:
             print "Error at key %s, reason; %s" % (key, str(e))
             return None
         if scale:
-            hover = HoverTool(tooltips=[('name', '@name'),('position', '@x'), ('RPM', '@y'), ('raw count', '@raw')], renderers=[line])
+            hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x'), ('RPM', '@y'), ('raw count', '@raw')],
+                              renderers=[line])
         else:
             hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x'), ('raw count', '@y')], renderers=[line])
         p.add_tools(hover)
 
         # figures for exporting
         if p_key_png is not None:
-            #p_key_png.line(count_series.D, count_series.C, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            # p_key_png.line(count_series.D, count_series.C, line_color=RGB(c[0], c[1], c[2]), line_width=2)
             p_key_png.line(count_series.D, count_series.C, line_color=c, line_width=2)
             export_images(p_key_png, key_title, png_dir=png_dir)
         if p_key_svg is not None:
-            #p_key_svg.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            # p_key_svg.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
             p_key_svg.line(count_series.D, y, line_color=c, line_width=2)
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
         if p_png is not None:
-            #line_png = p_png.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            # line_png = p_png.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
             line_png = p_png.line(count_series.D, y, line_color=c, line_width=2)
             legend_items_png.append((key, [line_png]))
         if p_svg is not None:
-            #line_svg = p_svg.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
+            # line_svg = p_svg.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
             line_svg = p_svg.line(count_series.D, y, line_color=c, line_width=2)
             legend_items_svg.append((key, [line_svg]))
 
@@ -208,7 +256,9 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
     return p
 
 
-def bokeh_tabbed_fft_plot(title, align_region, group_signal_series_dict_dict, color_dict, period_max=50, png_dir=None,
+def bokeh_tabbed_fft_plot(title, align_region, group_signal_series_dict_dict, color_dict, period_max=50,
+                          lib_size_dict_dict=None, combine_sum=False, combine_weighted=False, combine_color=None,
+                          png_dir=None,
                           svg_dir=None):
     if group_signal_series_dict_dict is None:
         return None
@@ -220,7 +270,14 @@ def bokeh_tabbed_fft_plot(title, align_region, group_signal_series_dict_dict, co
     for group in group_signal_series_dict_dict.keys():
         signal_series_dict_gs = group_signal_series_dict_dict[group]
 
+        if lib_size_dict_dict is not None:
+            lib_size_dict = lib_size_dict_dict[group]
+        else:
+            lib_size_dict = None
+
         p_group = bokeh_fft_plot(title, align_region, signal_series_dict_gs, color_dict, period_max=period_max,
+                                 lib_size_dict=lib_size_dict,
+                                 combine_sum=combine_sum, combine_weighted=combine_weighted, combine_color=combine_color,
                                  png_dir=png_dir, svg_dir=svg_dir)
         tab_list.append(Panel(child=p_group, title=group))
 
@@ -228,9 +285,45 @@ def bokeh_tabbed_fft_plot(title, align_region, group_signal_series_dict_dict, co
     return tabs
 
 
-def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_max=50, png_dir=None, svg_dir=None):
+def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_max=50,
+                   lib_size_dict=None, combine_sum=False, combine_weighted=False, combine_color=None,
+                   png_dir=None, svg_dir=None):
     if signal_series_dict is None:
         return None
+
+    if combine_weighted and combine_sum:
+        e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
+                % (title + ": " + align_region, "combine_sum", "combine_weighted")
+        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        return None
+
+    if combine_weighted:
+        suffix = COMBINED + "-weighted"
+        signal_series_dict = {suffix: CountManager.combine_count_series(signal_series_dict, lib_size_dict)}
+
+    elif combine_sum:
+        suffix = COMBINED + "-sum"
+        signal_series_dict = {suffix: CountManager.combine_count_series(signal_series_dict)}
+
+    if combine_weighted or combine_sum:
+        if lib_size_dict is None:
+            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+                    % (title + ": " + align_region, "combine_sum", "combine_weighted")
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            return None
+
+        c = combine_color
+        if c is None:
+            c = get_random_color()
+        color_dict = {suffix: c}
+
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot %s with options: "
+                                                        "combine_sum(%s), comine_weighted(%s): "
+                                                        % (title + ": " +
+                                                           align_region,
+                                                           str(combine_sum),
+                                                           str(combine_weighted)))
+
     logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making FFT signal scatter plot: " + align_region)
     output_file(title + ".html")
 
@@ -265,7 +358,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
             name=[key] * len(count_series.C),
         ))
 
-        line = p.line( 'x', 'y', line_color=c, line_width=2, source = source)
+        line = p.line('x', 'y', line_color=c, line_width=2, source=source)
         hover = HoverTool(tooltips=[('name', '@name'), ('period', '@x'), ('signal', '@y')], renderers=[line])
         p.add_tools(hover)
         legend_items.append((key, [line]))
@@ -281,10 +374,10 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
         if p_png is not None:
-            line_png = p_png.line(count_series.D, count_series.C, line_color=c,line_width=2)
+            line_png = p_png.line(count_series.D, count_series.C, line_color=c, line_width=2)
             legend_items_png.append((key, [line_png]))
         if p_svg is not None:
-            line_svg = p_svg.line(count_series.D, count_series.C, line_color=c,line_width=2)
+            line_svg = p_svg.line(count_series.D, count_series.C, line_color=c, line_width=2)
             legend_items_svg.append((key, [line_svg]))
 
     legend = Legend(items=legend_items, location=LEGEND_ALIGNMENT)
@@ -377,7 +470,7 @@ def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_
                 if c is None:
                     logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
                     c = cl.scales['9']['qual']['Set3'][1]
-                #line = p.line(count_series.index, count_series.values, line_color=RGB(c[0], c[1], c[2]))
+                # line = p.line(count_series.index, count_series.values, line_color=RGB(c[0], c[1], c[2]))
                 line = p.line(count_series.index, count_series.values, line_color=c)
                 legend_items.append((key, [line]))
                 p.add_tools(HoverTool(tooltips=[('position', '@x'), ('count', '@y'),
@@ -394,6 +487,8 @@ def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_
 
 
 def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
+                               lib_size_dict_dict=None,
+                               combine_sum=False, combine_weighted=False, combine_color=None,
                                png_dir=None, svg_dir=None):
     if group_frame_df_dict_dict is None:
         return None
@@ -406,13 +501,24 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
         # TODO filter by geneset
         frame_df_dict = group_frame_df_dict_dict[group]
 
-        p_group = bokeh_triangle_plot(title, frame_df_dict, color_dict, png_dir=png_dir, svg_dir=svg_dir)
+        if lib_size_dict_dict is not None:
+            lib_size_dict = lib_size_dict_dict[group]
+        else:
+            lib_size_dict = None
+
+        p_group = bokeh_triangle_plot(title, frame_df_dict, color_dict,
+                                      lib_size_dict=lib_size_dict,
+                                      combine_sum=combine_sum, combine_weighted=combine_weighted,
+                                      combine_color=combine_color,
+                                      png_dir=png_dir, svg_dir=svg_dir)
         tab_list.append(Panel(child=p_group, title=group))
     tabs = Tabs(tabs=tab_list)
     return tabs
 
 
-def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_index_filter=None, png_dir=None, svg_dir=None):
+def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
+                        combine_sum=False, combine_weighted=False, combine_color=None,
+                        transcript_index_filter=None, png_dir=None, svg_dir=None):
     if color_dict is None:
         return None
     logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting triangle plots")
@@ -420,6 +526,32 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_index_filte
         print("%d filtered indices specified " % len(transcript_index_filter))
 
     output_file(title + ".html")
+
+    if combine_weighted and combine_sum:
+        e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
+                % (title + ": ", "combine_sum", "combine_weighted")
+        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        return None
+
+    if combine_weighted:
+        suffix = COMBINED + "-w"
+        frame_df_dict = {suffix: CountManager.combine_frame_counts(frame_df_dict, lib_size_dict)}
+
+    elif combine_sum:
+        suffix = COMBINED + "-s"
+        frame_df_dict = {suffix: CountManager.combine_frame_counts(frame_df_dict, lib_size_dict)}
+
+    if combine_weighted or combine_sum:
+        if lib_size_dict is None:
+            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+                    % (title, "combine_sum", "combine_weighted")
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            return None
+
+        c = combine_color
+        if c is None:
+            c = get_random_color()
+        color_dict = {suffix: c}
 
     p = get_empty_triangle_canvas(title=title)
 
@@ -462,7 +594,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_index_filte
         for point in range(0, len(frame_df)):
             [a, b, c] = frame_df.iloc[point, :][['F0', 'F1', 'F2']]
             if a == b == c == 0:
-                #TODO why am I passing here (added the == 0 at the end)?
+                # TODO why am I passing here (added the == 0 at the end)?
                 pass
             else:
                 x[counter] = triangle_transform(a, b, c)[0]
@@ -484,21 +616,22 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_index_filte
             F0=f0,
             F1=f1,
             F2=f2,
-            name = name,
+            name=name,
         ))
 
-        #circles = p.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
-        circles = p.circle('x', 'y', color=color_dict.get(key), fill_alpha = 0.5, size = 10, line_color = None, source = source)
+        # circles = p.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
+        circles = p.circle('x', 'y', color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None, source=source)
         legend_items.append((key, [circles]))
-        hover = HoverTool(tooltips=[('name', '@name'),('F0', '@F0'), ('F1', '@F1'), ('F2', '@F2')], renderers=[circles])
+        hover = HoverTool(tooltips=[('name', '@name'), ('F0', '@F0'), ('F1', '@F1'), ('F2', '@F2')],
+                          renderers=[circles])
         p.add_tools(hover)
 
         if p_key_png is not None:
-            circles_png = p_key_png.circle(x, y, color=color_dict.get(key), fill_alpha = 0.5, size = 10, line_color = None)
+            circles_png = p_key_png.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
             legend_items_png.append((key, [circles_png]))
             export_images(p_key_png, key_title, png_dir=png_dir)
         if p_key_svg is not None:
-            circles_svg = p_key_svg.circle(x, y, color=color_dict.get(key), fill_alpha = 0.5, size = 10, line_color = None)
+            circles_svg = p_key_svg.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
             legend_items_svg.append((key, [circles_svg]))
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
@@ -554,7 +687,10 @@ def triangle_transform(a, b, c):
     return x, y
 
 
-def bokeh_tabbed_heatmap_grid(title_prefix, group_amino_acid_df_dict_dict, scale=False, png_dir=None, svg_dir=None):
+def bokeh_tabbed_heatmap_grid(title_prefix, group_amino_acid_df_dict_dict,
+                              lib_size_dict_dict=None,
+                              combine_sum=False, combine_weighted=False,
+                              scale=False, png_dir=None, svg_dir=None):
     if group_amino_acid_df_dict_dict is None:
         return None
 
@@ -564,17 +700,54 @@ def bokeh_tabbed_heatmap_grid(title_prefix, group_amino_acid_df_dict_dict, scale
     for group in group_amino_acid_df_dict_dict.keys():
         amino_acid_df_dict = group_amino_acid_df_dict_dict[group]
 
-        p_group = bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=scale, png_dir=png_dir, svg_dir=svg_dir)
+        if lib_size_dict_dict is not None:
+            lib_size_dict = lib_size_dict_dict[group]
+        else:
+            lib_size_dict = None
+
+        p_group = bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=scale,
+                                     lib_size_dict=lib_size_dict, combine_sum=combine_sum,
+                                     combine_weighted=combine_weighted,
+                                     png_dir=png_dir, svg_dir=svg_dir)
         tab_list.append(Panel(child=p_group, title=group))
     tabs = Tabs(tabs=tab_list)
     return tabs
 
 
-def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, png_dir=None, svg_dir=None):
+def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_dict=None,
+                       combine_sum=False, combine_weighted=False,
+                       png_dir=None, svg_dir=None):
     if amino_acid_df_dict is None:
         return None
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting amino acid pauses: %s" % title_prefix)
+    if combine_weighted and combine_sum:
+        e_msg = "Exception plotting heatmap %s: the options %s and %s cannot be true at the same time: " \
+                % (title_prefix, "combine_sum", "combine_weighted")
+        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        return None
+
+    if combine_weighted:
+        suffix = COMBINED + "-weighted"
+        amino_acid_df_dict = {suffix: CountManager.combine_amino_acid_dfs(amino_acid_df_dict, lib_size_dict)}
+
+    elif combine_sum:
+        suffix = COMBINED + "-sum"
+        amino_acid_df_dict = {suffix: CountManager.combine_amino_acid_dfs(amino_acid_df_dict)}
+
+    if combine_weighted or combine_sum:
+        if lib_size_dict is None:
+            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+                    % (title_prefix, "combine_sum", "combine_weighted")
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            return None
+
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info(
+        "Making heatmaps for amino acid relative counts for %s with options: scaled(%s), "
+        "combine_sum(%s), comine_weighted(%s): " % (title_prefix,
+                                                    str(scale),
+                                                    str(combine_sum),
+                                                    str(combine_weighted)))
+
     mainLayout = row(row(), name=title_prefix + ' amino acid pauses')
 
     if not scale:
@@ -588,7 +761,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, png_dir=No
         if amino_acid_df is not None:
             if scale:
                 for i in range(amino_acid_df.shape[0]):
-                    amino_acid_df.iloc[i, :] /= (10**6)*(sum(amino_acid_df.iloc[i, :]) + 1)
+                    amino_acid_df.iloc[i, :] /= (10 ** 6) * (sum(amino_acid_df.iloc[i, :]) + 1)
 
             colormap = cm.get_cmap("viridis")
             bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
@@ -642,6 +815,8 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, png_dir=No
 
 
 def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_stats_df_dict_dict, color_dict,
+                                lib_size_dict_dict=None, combine_sum=False,
+                                combine_weighted=False, combine_color=None,
                                 png_dir=None, svg_dir=None):
     if group_frame_df_dict_dict is None:
         return None
@@ -660,24 +835,71 @@ def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_sta
             for sample in frame_df_dict.keys():
                 frame_stats_df_dict.update({sample: None})
 
-        p_group = bokeh_frame_barplots(title, frame_df_dict, frame_stats_df_dict, color_dict, png_dir=png_dir,
+        if lib_size_dict_dict is not None:
+            lib_size_dict = lib_size_dict_dict[group]
+        else:
+            lib_size_dict = None
+
+        p_group = bokeh_frame_barplots(title, frame_df_dict, frame_stats_df_dict, color_dict,
+                                       lib_size_dict=lib_size_dict, combine_sum=combine_sum,
+                                       combine_weighted=combine_weighted,
+                                       png_dir=png_dir,
                                        svg_dir=svg_dir)
         tab_list.append(Panel(child=p_group, title=group))
     tabs = Tabs(tabs=tab_list)
     return tabs
 
 
-def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color_dict, png_dir=None, svg_dir=None):
+def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color_dict,
+                         lib_size_dict=None,
+                         combine_sum=False,
+                         combine_weighted=False, combine_color=None,
+                         png_dir=None, svg_dir=None):
     if frame_df_dict is None:
         return None
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting frame barplots")
+
+    if combine_weighted and combine_sum:
+        e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
+                % (title_prefix, "combine_sum", "combine_weighted")
+        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        return None
+
+    if combine_weighted:
+        suffix = COMBINED + "-weighted"
+        frame_df_dict = {suffix: CountManager.combine_frame_counts(frame_df_dict, lib_size_dict)}
+
+    elif combine_sum:
+        suffix = COMBINED + "-sum"
+        frame_df_dict = {suffix: CountManager.combine_frame_counts(frame_df_dict)}
+
+    if combine_weighted or combine_sum:
+        if lib_size_dict is None:
+            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+                    % (title_prefix, "combine_sum", "combine_weighted")
+            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            return None
+
+        c = combine_color
+        if c is None:
+            c = get_random_color()
+        color_dict = {suffix: c}
+
+    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making frame barplot %s with options: "
+                                                        "combine_sum(%s), combine_weighted(%s): " % (title_prefix,
+                                                                                                     str(combine_sum),
+                                                                                                     str(
+                                                                                                         combine_weighted)))
+
     mainLayout = row(row(), name=title_prefix + ' frame histograms')
 
     counts_dict = {}
     count_max = 0
     for key in frame_df_dict.keys():
 
-        frame_stats_df = frame_stats_df_dict.get(key)
+        if frame_stats_df_dict is not None:
+            frame_stats_df = frame_stats_df_dict.get(key)
+        else:
+            frame_stats_df = None
         logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).debug("key: %s\n%s" % (key, str(frame_stats_df)))
         if frame_stats_df is not None:
 
@@ -715,7 +937,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
                                plot_height=500, title=title_prefix)
 
             bars = p.vbar(x=frames, width=0.8, top=counts, bottom=0,
-                              fill_color=color, line_color=None)
+                          fill_color=color, line_color=None)
 
             frame_stats_df = frame_stats_df_dict.get(key)
             if frame_stats_df is None:
@@ -790,7 +1012,7 @@ def bokeh_aa_pause_scatterplot(title, amino_acid_df):
 
     for aa in amino_acid_df.index:
         c = codons.Codons.AMINO_ACID_COLORS.get(aa)
-        #line = p.line(amino_acid_df.columns, amino_acid_df.loc(aa, ), legend=aa, line_color=RGB(c[0], c[1], c[2]))
+        # line = p.line(amino_acid_df.columns, amino_acid_df.loc(aa, ), legend=aa, line_color=RGB(c[0], c[1], c[2]))
         line = p.line(amino_acid_df.columns, amino_acid_df.loc(aa, ), legend=aa, line_color=c)
         hover = HoverTool(tooltips=[('distance', '@x'), ('count', '@y')], renderers=[line])
         p.add_tools(hover)
@@ -824,4 +1046,4 @@ def get_key_title(title, key):
 
 
 def get_random_color():
-    return cl.to_numeric(cl.scales['9']['qual']['Set3'])[random.randint(0, 8)]
+    return cl.scales['9']['qual']['Set3'][random.randint(0, 8)]

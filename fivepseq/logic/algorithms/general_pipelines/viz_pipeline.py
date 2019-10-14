@@ -1,21 +1,20 @@
-import colorlover as cl
 import glob
 import logging
 import os
+
+import colorlover as cl
+import numpy as np
 import pandas as pd
-from bokeh.io import export_svgs, export_png
+from bokeh.io import export_svgs
 from bokeh.plotting import figure
-from sympy.strategies.core import switch
 
 from fivepseq import config
-from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts, FivePSeqCountsContainer
+from fivepseq.logic.structures.codons import Codons
+from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
-    bokeh_composite, bokeh_fft_plot, fivepseq_header, bokeh_tabbed_scatter_plot, bokeh_tabbed_triangle_plot, \
+    bokeh_composite, bokeh_fft_plot, bokeh_tabbed_scatter_plot, bokeh_tabbed_triangle_plot, \
     bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot
-import numpy as np
-
-from fivepseq.logic.structures.codons import Codons
 
 
 class VizPipeline:
@@ -84,64 +83,37 @@ class VizPipeline:
     lib_size_dict = {}
     transcript_index = None
 
-    fivepseq_counts_container_dict = {}
+    # the distance to be used for plotting amino-acid heatmaps
+    dist_for_amino_acid_heatmaps = 20
 
-    combine = False  # do not combine plots until data counts are successfully combined
-
-    COMBINED = "combined"
-    meta_count_start_combined = pd.DataFrame()
-    meta_count_term_combined = pd.DataFrame()
-    frame_count_START_combined = pd.DataFrame()
-    frame_count_TERM_combined = pd.DataFrame()
-    amino_acid_df_combined = pd.DataFrame()
-    amino_acid_df_full_combined = pd.DataFrame()
-    codon_df_combined = pd.DataFrame()
-    codon_basesorted_df_combined = pd.DataFrame()
-    lib_size_combined = None
+    gs_transcriptInd_dict = None
 
     # large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired'][0:6]) +
     #                     cl.to_numeric(cl.scales['8']['qual']['Set1'][3:5]))
-    large_colors_list = (cl.scales['8']['qual']['Paired'][0:6] +
-                         cl.scales['8']['qual']['Set1'][3:5])
+    large_colors_list = ([cl.scales['8']['qual']['Set1'][i] for i in [1, 2, 3, 4, 0]] +
+                         [cl.scales['8']['qual']['Paired'][i] for i in [0, 2, 4]])
     #                     cl.to_numeric(cl.scales['5']['qual']['Set3']))
     gs_colors_list = ("#AA4488", "#4477AA", "#AAAA44", "#AA7744", "#AA4455", "#44AAAA",
                       "#771155", "#114477", "#777711", "#774411", "#771122", "#117777")
 
     colors_dict = None
     # combined_color_dict = {COMBINED: cl.to_numeric(cl.scales['9']['qual']['Set3'])[3]}
-    combined_color_dict = {COMBINED: cl.scales['9']['qual']['Set3'][3]}
+    COMBINED = "combined"
+
+    combine_sum_color = cl.scales['3']['div']['RdGy'][0]
+    combine_weighted_color = cl.scales['3']['div']['BrBG'][0]
+
+    combined_color_dict = {COMBINED: combine_sum_color}
+    combined_weighted_color_dict = {COMBINED: combine_weighted_color}
 
     phantomjs_installed = None
 
-    p_scatter_start = None
-    p_triangle_term = None
-    p_scatter_start_scaled = None
-    p_triangle_term_scaled = None
-    p_triangle_start = None
-    p_aa_heatmap = None
-    p_aa_heatmap_scaled = None
-    p_frame_barplots_term = None
-    p_frame_barplots_start = None
-    p_loci_meta_counts = None
-    p_loci_meta_counts_ALL = None
-    p_loci_meta_counts_3UTR = None
-    p_loci_meta_counts_5UTR = None
-    p_loci_meta_counts_CDS = None
-    p_fft_plot_start = None
-    p_fft_plot_term = None
+    fivepseq_counts_container_dict = {}
 
-    p_scatter_term_combined = None
-    p_scatter_start_combined = None
-    p_scatter_term_scaled_combined = None
-    p_scatter_start_scaled_combined = None
-    p_triangle_term_combined = None
-    p_triangle_start_combined = None
-    p_aa_heatmaps_combined = None
+    combine = False  # do not combine plots until data counts are successfully combined
 
-    # the distance to be used for plotting amino-acid heatmaps
-    dist_for_amino_acid_heatmaps = 20
-
-    gs_transcriptInd_dict = None
+    figure_list = None
+    figure_list_combined = None
 
     def __init__(self, args, count_folders=None, gs_transcriptInd_dict=None):
         """
@@ -186,7 +158,7 @@ class VizPipeline:
             raise e
 
         try:
-            self.plot_multiple_samples()
+            self.plot_main()
         except Exception as e:
             err_msg = "Exception while plotting data: %s" % str(e)
             self.logger.error(err_msg)
@@ -324,8 +296,6 @@ class VizPipeline:
     def initialize_data(self):
         self.logger.info("Reading data counts.")
         for d in self.count_folders:
-            sample = os.path.basename(d)
-            # TODO check this line below: it should work with the new implementation
             sample = os.path.basename(os.path.dirname(d))
             self.samples.append(sample)
             self.sample_folders_dict.update({sample: os.path.dirname(d)})
@@ -339,7 +309,6 @@ class VizPipeline:
 
         if len(self.count_folders) > 1:
             try:
-                self.combine_counts()
                 self.combine = True
             except Exception as e:
                 err_msg = "Could not combine data counts: %s. Combined plots will not be generated" % str(e)
@@ -368,16 +337,6 @@ class VizPipeline:
 
         self.count_vector_list_start_dict.update({sample: self.read_count_vector_list_start(fivepseq_out)})
         self.count_vector_list_term_dict.update({sample: self.read_count_vector_list_term(fivepseq_out)})
-
-        self.fivepseq_counts_container_dict.update({sample: FivePSeqCountsContainer(
-            self.count_vector_list_start_dict[sample],
-            self.count_vector_list_term_dict[sample],
-            None,
-            self.meta_count_start_dict[sample],
-            self.meta_count_term_dict[sample],
-            self.frame_count_start_dict[sample],
-            self.frame_count_term_dict[sample]
-        )})
 
         self.loci_meta_counts_dict_ALL.update({sample: self.read_loci_meta_counts(
             fivepseq_out, file=fivepseq_out.get_file_path(
@@ -422,121 +381,77 @@ class VizPipeline:
 
             # TODO amino acids pauses not subsettable
 
-    def combine_meta_counts(self, meta_counts_dict):
-        meta_counts_combined = None
-        start = True
-        for key in meta_counts_dict.keys():
-            if start:
-                meta_counts_combined = meta_counts_dict[key].copy()
-                start = False
-            else:
-                meta_counts_combined.C += meta_counts_dict[key].C
-
-        return meta_counts_combined
-
-    def combine_frame_counts(self, frame_counts_dict):
-        frame_counts_combined = None
-        start = True
-
-        for key in frame_counts_dict.keys():
-            if start:
-                frame_counts_combined = frame_counts_dict[key].copy()
-                start = False
-            else:
-                frame_counts_combined.loc[:, ('F0', 'F1', 'F2')] += frame_counts_dict[key].loc[:, ('F0', 'F1', 'F2')]
-
-        return frame_counts_combined
-
-    def combine_amino_acid_df(self, amino_acid_df_dict):
-        amino_acid_df_combined = None
-        start = True
-
-        for key in amino_acid_df_dict.keys():
-            if start:
-                amino_acid_df_combined = amino_acid_df_dict[key].copy()
-            else:
-                amino_acid_df_combined += amino_acid_df_dict[key]
-
-        return amino_acid_df_combined
-
-    def combine_counts(self):
-        self.logger.info("Combining data counts.")
-        self.lib_size_combined = 0
-        for key in self.meta_count_start_dict.keys():
-            self.lib_size_combined += self.lib_size_dict.get(key)
-            df_start = self.meta_count_start_dict.get(key)
-            df_term = self.meta_count_term_dict.get(key)
-            frame_start = self.frame_count_start_dict.get(key)
-            frame_term = self.frame_count_term_dict.get(key)
-            amino_acid_df = self.amino_acid_df_dict.get(key)
-            amino_acid_df_full = self.amino_acid_df_full_dict.get(key)
-            codon_df = self.codon_df_dict.get(key)
-            codon_basesorted_df = self.codon_basesorted_df_dict.get(key)
-
-            if len(self.meta_count_start_combined) == 0:
-                self.meta_count_start_combined = df_start.copy()
-                self.meta_count_term_combined = df_term.copy()
-                self.frame_count_START_combined = frame_start.copy()
-                self.frame_count_TERM_combined = frame_term.copy()
-                self.amino_acid_df_combined = amino_acid_df.copy()
-                self.amino_acid_df_full_combined = amino_acid_df_full.copy()
-                self.codon_df_combined = codon_df.copy()
-                self.codon_basesorted_df_combined = codon_basesorted_df.copy()
-            else:
-                self.meta_count_start_combined.C += df_start.C
-                self.meta_count_term_combined.C += df_term.C
-                self.frame_count_START_combined.loc[:, ('F0', 'F1', 'F2')] += frame_start.loc[:, ('F0', 'F1', 'F2')]
-                self.frame_count_TERM_combined.loc[:, ('F0', 'F1', 'F2')] += frame_term.loc[:, ('F0', 'F1', 'F2')]
-                if amino_acid_df is not None:
-                    self.amino_acid_df_combined += amino_acid_df
-                if amino_acid_df_full is not None:
-                    self.amino_acid_df_full_combined += amino_acid_df_full
-                if codon_df is not None:
-                    self.codon_df_combined += codon_df
-                if codon_basesorted_df is not None:
-                    self.codon_basesorted_df_combined += codon_basesorted_df
-
-    def plot_multiple_samples(self):
+    def plot_main(self):
         self.logger.info("Generating plots")
 
-        self.make_single_sample_plots(self.title)
-
         # figure_list = [fivepseq_header()]
-        figure_list = []
-        figure_list += [self.p_scatter_start, self.p_scatter_term]
-        figure_list += [self.p_scatter_start_scaled, self.p_scatter_term_scaled]
-        figure_list += [self.p_triangle_term, self.p_triangle_start]
-        figure_list += [self.p_aa_heatmap, None]
-        figure_list += [self.p_aa_heatmap_scaled, None]
-        figure_list += [self.p_frame_barplots_term, None]
-        figure_list += [self.p_frame_barplots_start, None]
-        figure_list += [self.p_fft_plot_start, self.p_fft_plot_term]
+        self.figure_list = []
+        self.figure_list += [self.get_scatter_plot(region=FivePSeqCounts.START),
+                             self.get_scatter_plot(region=FivePSeqCounts.TERM)]
+        self.figure_list += [self.get_scatter_plot(region=FivePSeqCounts.START, scale=True),
+                             self.get_scatter_plot(region=FivePSeqCounts.TERM, scale=True)]
+        self.figure_list += [self.get_frame_barplot(), None]
+        self.figure_list += [self.get_triangle_plot(), None]  # self.p_triangle_start]
+        self.figure_list += [self.get_fft_plot(region=FivePSeqCounts.START),
+                             self.get_fft_plot(region=FivePSeqCounts.TERM)]
+        self.figure_list += [self.get_heatmap_plot(), None]
+        self.figure_list += [self.get_heatmap_plot(scale=True), None]
 
-        if self.p_loci_meta_counts_ALL is not None:
-            figure_list += [self.p_loci_meta_counts_ALL]
-        if self.p_loci_meta_counts_3UTR is not None:
-            figure_list += [self.p_loci_meta_counts_3UTR]
-        if self.p_loci_meta_counts_5UTR is not None:
-            figure_list += [self.p_loci_meta_counts_5UTR]
-        if self.p_loci_meta_counts_CDS is not None:
-            figure_list += [self.p_loci_meta_counts_CDS]
-
-
-        if self.combine:
-            self.make_combined_plots(self.title)
-
-            figure_list += [self.p_scatter_start_combined, self.p_scatter_term_combined]
-            figure_list += [self.p_scatter_start_scaled_combined, self.p_scatter_term_scaled_combined]
-            figure_list += [self.p_triangle_term_combined, self.p_triangle_start_combined]
-            figure_list += [self.p_aa_heatmaps_combined, None]
+        if self.loci_meta_counts_dict_ALL is not None:
+            self.figure_list += [self.get_scatter_plot(plot_name="ALL_metacounts_relative_to", region="loci",
+                                                       count_dict=self.loci_meta_counts_dict_ALL, scale=True)]
+        if self.loci_meta_counts_dict_3UTR is not None:
+            self.figure_list += [self.get_scatter_plot(plot_name="ALL_metacounts_relative_to", region="loci",
+                                                       count_dict=self.loci_meta_counts_dict_3UTR, scale=True)]
+        if self.loci_meta_counts_dict_5UTR is not None:
+            self.figure_list += [self.get_scatter_plot(plot_name="5UTR_metacounts_relative_to", region="loci",
+                                                       count_dict=self.loci_meta_counts_dict_5UTR, scale=True)]
+        if self.loci_meta_counts_dict_CDS is not None:
+            self.figure_list += [self.get_scatter_plot(plot_name="CDS_metacounts_relative_to", region="loci",
+                                                       count_dict=self.loci_meta_counts_dict_CDS, scale=True)]
 
         bokeh_composite(self.title,
-                        figure_list,
+                        self.figure_list,
                         os.path.join(self.args.o, self.title + ".html"), 2)
+
+        if self.combine:
+            self.figure_list_combined = [self.get_scatter_plot(region=FivePSeqCounts.START,
+                                                               combine_sum=True,
+                                                               combine_color=self.combine_sum_color),
+                                         self.get_scatter_plot(region=FivePSeqCounts.TERM,
+                                                               combine_sum=True,
+                                                               combine_color=self.combine_sum_color)]
+            self.figure_list_combined += [self.get_scatter_plot(region=FivePSeqCounts.START,
+                                                                combine_weighted=True,
+                                                                combine_color=self.combine_weighted_color),
+                                          self.get_scatter_plot(region=FivePSeqCounts.TERM,
+                                                                combine_weighted=True,
+                                                                combine_color=self.combine_weighted_color)]
+            self.figure_list_combined += [
+                self.get_scatter_plot(region=FivePSeqCounts.START, combine_sum=True,
+                                      combine_color=self.combine_sum_color, scale=True),
+                self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_sum=True,
+                                      combine_color=self.combine_sum_color, scale=True)]
+            self.figure_list_combined += [
+                self.get_scatter_plot(region=FivePSeqCounts.START, combine_weighted=True,
+                                      combine_color=self.combine_weighted_color, scale=True),
+                self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_weighted=True,
+                                      combine_color=self.combine_weighted_color, scale=True)]
+            self.figure_list_combined += [
+                self.get_triangle_plot(combine_sum=True, combine_color=self.combine_sum_color), None]
+            self.figure_list_combined += [
+                self.get_triangle_plot(combine_weighted=True, combine_color=self.combine_weighted_color), None]
+            self.figure_list_combined += [self.get_heatmap_plot(scale=True, combine_sum=True), None]
+            self.figure_list_combined += [self.get_heatmap_plot(scale=True, combine_weighted=True), None]
+
+            bokeh_composite(self.title + "_" + self.COMBINED,
+                            self.figure_list_combined,
+                            os.path.join(self.args.o, self.title + "_" + self.COMBINED + ".html"), 2)
 
     def write_genesets(self):
 
         self.logger.info("Generating geneset-specific plots")
+
         # tabs = genesets, overlay = samples
         geneset_title = self.title + "_samples_per_geneset"
 
@@ -549,37 +464,35 @@ class VizPipeline:
         sample_gs_tabbed_plots = self.sample_geneset_tabbed_plots(sample_geneset_title)
         bokeh_composite(sample_geneset_title, sample_gs_tabbed_plots,
                         os.path.join(self.geneset_dir, sample_geneset_title + ".html"), 1)
+
         self.logger.info("Wrote geneset-specific plots")
 
     def write_supplement(self):
         # codon pauses
         self.logger.info("Generating supplement plots: codon pauses")
-        codon_title = self.title + "_codon_pauses"
+        codon_title = self.title + "_codon_relative_counts"
 
         if self.combine:
             bokeh_composite(codon_title,
-                            [bokeh_heatmap_grid(codon_title, self.codon_df_dict, scale=False),
-                             bokeh_heatmap_grid(codon_title + "_scaled", self.codon_df_dict, scale=True),
-                             bokeh_heatmap_grid(codon_title + "_combined", {"combined:": self.codon_df_combined},
-                                                scale=False),
-                             bokeh_heatmap_grid(codon_title + "_combined_scaled", {"combined:": self.codon_df_combined},
-                                                scale=True),
-                             bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict,
-                                                scale=False),
-                             bokeh_heatmap_grid(codon_title + "_basesorted_scaled", self.codon_basesorted_df_dict,
-                                                scale=True),
-                             bokeh_heatmap_grid(codon_title + "_basesorted_combined",
-                                                {"basesored_combined": self.codon_basesorted_df_combined}, scale=False),
-                             bokeh_heatmap_grid(codon_title + "_basesorted_combined_scaled",
-                                                {"basesored_combined": self.codon_basesorted_df_combined}, scale=True)],
+                            [self.get_heatmap_plot(codon_title, self.codon_df_dict, scale=False),
+                             self.get_heatmap_plot(codon_title, self.codon_df_dict, scale=True),
+                             self.get_heatmap_plot(codon_title, self.codon_df_dict, scale=True, combine_weighted=True),
+
+                             self.get_heatmap_plot(codon_title + "_basesorted", self.codon_basesorted_df_dict,
+                                                   scale=False),
+                             self.get_heatmap_plot(codon_title + "_basesorted", self.codon_basesorted_df_dict,
+                                                   scale=True),
+                             self.get_heatmap_plot(codon_title + "_basesorted", self.codon_basesorted_df_dict,
+                                                   scale=True, combine_weighted=True),
+                             ],
                             os.path.join(self.supplement_dir, codon_title + ".html"), 1)
         else:
             bokeh_composite(codon_title,
-                            [bokeh_heatmap_grid(codon_title, self.codon_df_dict, scale=False),
-                             bokeh_heatmap_grid(codon_title + "_scaled", self.codon_df_dict, scale=True),
+                            [self.get_heatmap_plot(codon_title, self.codon_df_dict, scale=False),
+                             self.get_heatmap_plot(codon_title, self.codon_df_dict, scale=True),
+                             self.get_heatmap_plot(codon_title + "_basesorted", self.codon_basesorted_df_dict,
+                                                   scale=False),
                              bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict,
-                                                scale=False),
-                             bokeh_heatmap_grid(codon_title + "_basesorted_scaled", self.codon_basesorted_df_dict,
                                                 scale=True)],
                             os.path.join(self.supplement_dir, codon_title + ".html"), 1)
         # amino acid scatter-plots
@@ -596,22 +509,19 @@ class VizPipeline:
                     data={'D': map(int, amino_acid_df_full.columns), 'C': amino_acid_df_full.loc[aa, :]})
                 aa_df = aa_df.reset_index(drop=True)
                 aa_count_dict.update({sample: aa_df})
-            aa_sp = bokeh_scatter_plot(aa, FivePSeqCounts.TERM, aa_count_dict, self.colors_dict, scale=True,
-                                       lib_size_dict=self.lib_size_dict,
-                                       png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
-            aa_scatterplots.append(aa_sp)
+
+            aa_scatterplots.append(self.get_scatter_plot(plot_name=aa, region="codon", count_dict=aa_count_dict,
+                                                         scale=True,
+                                                         png_dir=self.supplement_png_dir,
+                                                         svg_dir=self.supplement_svg_dir))
 
             if self.combine:
-                aa_df = pd.DataFrame(data={'D': map(int, self.amino_acid_df_full_combined.columns),
-                                           'C': self.amino_acid_df_full_combined.loc[aa, :]})
-                aa_df = aa_df.reset_index(drop=True)
-                aa_sp = bokeh_scatter_plot(aa + "_combined", FivePSeqCounts.TERM, {"combined": aa_df},
-                                           self.combined_color_dict,
-                                           scale=True,
-                                           lib_size_dict={self.COMBINED: self.lib_size_combined},
-                                           png_dir=self.supplement_png_dir, svg_dir=self.supplement_svg_dir)
-
-                aa_scatterplots.append(aa_sp)
+                aa_scatterplots.append(self.get_scatter_plot(plot_name=aa, region="codon", count_dict=aa_count_dict,
+                                                             scale=True,
+                                                             combine_weighted=True,
+                                                             combine_color=self.combine_weighted_color,
+                                                             png_dir=self.supplement_png_dir,
+                                                             svg_dir=self.supplement_svg_dir))
 
         bokeh_composite(self.title + "_amino_acid_scatterplots", aa_scatterplots,
                         os.path.join(self.supplement_dir, self.title + "_amino_acid_scatterplots.html"), 2)
@@ -891,88 +801,85 @@ class VizPipeline:
         gs_fft_term_dict = self.generate_gs_sample_dict(FivePSeqOut.FFT_SIGNALS_TERM, self.DATA_TYPE_FFT_SIGNALS)
         gs_lib_size_dict = self.generate_gs_sample_dict(None, self.DATA_TYPE_LIB_SIZE)
 
-        plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_START_SCALED, FivePSeqCounts.START,
-                                               gs_meta_count_start_dict,
-                                               self.colors_dict, scale=True, lib_size_dict_dict=gs_lib_size_dict,
-                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_start_dict,
+                                                  region=FivePSeqCounts.START,
+                                                  scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_TERM_SCALED, FivePSeqCounts.TERM,
-                                               gs_meta_count_term_dict,
-                                               self.colors_dict, scale=True, lib_size_dict_dict=gs_lib_size_dict,
-                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_start_dict,
+                                                  region=FivePSeqCounts.TERM,
+                                                  scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(bokeh_tabbed_triangle_plot(title + self.TRIANGLE_TERM,
-                                                gs_frame_count_term_dict,
-                                                self.colors_dict,
-                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_frame_barplots(group_count_dict=gs_frame_count_term_dict,
+                                                    group_frame_stats_df_dict=gs_frame_stats_dict,
+                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(bokeh_tabbed_frame_barplots(title + self.FRAME_TERM,
-                                                 gs_frame_count_term_dict,
-                                                 gs_frame_stats_dict,
-                                                 self.colors_dict,
-                                                 png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_triangle_plot(group_count_dict=gs_frame_count_term_dict,
+                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(bokeh_tabbed_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED, gs_amino_acid_df_dict, scale=True,
-                                               png_dir=self.geneset_png_dir,
-                                               svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_fft_plot(group_count_dict=gs_fft_start_dict,
+                                              region=FivePSeqCounts.START,
+                                              png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(
-            bokeh_tabbed_fft_plot(title + self.FFT_START, FivePSeqCounts.START, gs_fft_start_dict, self.colors_dict,
-                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
-        plots.append(
-            bokeh_tabbed_fft_plot(title + self.FFT_TERM, FivePSeqCounts.TERM, gs_fft_term_dict, self.colors_dict,
-                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_fft_plot(group_count_dict=gs_fft_start_dict,
+                                              region=FivePSeqCounts.TERM,
+                                              png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(self.get_tabbed_heatmap_plot(group_count_dict=gs_amino_acid_df_dict, scale=True,
+                                                  png_dir=self.geneset_png_dir,
+                                                  svg_dir=self.geneset_svg_dir))
 
         # combined dicts
         if self.combine:
             gs_meta_counts_start_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
                 gs_meta_counts_start_combined.update(
-                    {gs: {self.COMBINED: self.combine_meta_counts(gs_meta_count_start_dict[gs])}})
+                    {gs: {self.COMBINED: CountManager.combine_count_series(gs_meta_count_start_dict[gs])}})
 
             gs_meta_counts_term_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
                 gs_meta_counts_term_combined.update(
-                    {gs: {self.COMBINED: self.combine_meta_counts(gs_meta_count_term_dict[gs])}})
+                    {gs: {self.COMBINED: CountManager.combine_count_series(gs_meta_count_term_dict[gs])}})
 
             gs_frame_counts_term_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
                 gs_frame_counts_term_combined.update(
-                    {gs: {self.COMBINED: self.combine_frame_counts(gs_frame_count_term_dict[gs])}})
+                    # {gs: {self.COMBINED: self.combine_frame_counts(gs_frame_count_term_dict[gs])}})
+                    {gs: {self.COMBINED: CountManager.combine_frame_counts(gs_frame_count_term_dict[gs],
+                                                                           gs_lib_size_dict[gs])}})
 
             gs_amino_acid_counts_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
                 gs_amino_acid_counts_combined.update(
-                    {gs: {self.COMBINED: self.combine_amino_acid_df(gs_amino_acid_df_dict[gs])}})
+                    {gs: {self.COMBINED: CountManager.combine_amino_acid_dfs(gs_amino_acid_df_dict[gs],
+                                                                             gs_lib_size_dict[gs])}})
 
             gs_lib_size_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
-                gs_lib_size_combined.update({gs: {self.COMBINED: self.lib_size_combined}})
+                gs_lib_size_combined.update({gs: {self.COMBINED: sum(self.lib_size_dict.values())}})
 
-            plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_TERM_SCALED + "_" + self.COMBINED,
-                                                   FivePSeqCounts.START,
-                                                   gs_meta_counts_start_combined,
-                                                   self.combined_color_dict, scale=True,
-                                                   lib_size_dict_dict=gs_lib_size_combined,
-                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+            plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_start_dict,
+                                                      region=FivePSeqCounts.START,
+                                                      scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                                      combine_weighted=True, combine_color=self.combine_weighted_color,
+                                                      png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-            plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_TERM_SCALED + "_" + self.COMBINED,
-                                                   FivePSeqCounts.TERM,
-                                                   gs_meta_counts_term_combined,
-                                                   self.combined_color_dict, scale=True,
-                                                   lib_size_dict_dict=gs_lib_size_combined,
-                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+            plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_term_dict,
+                                                      region=FivePSeqCounts.TERM,
+                                                      scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                                      combine_weighted=True, combine_color=self.combine_weighted_color,
+                                                      png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-            plots.append(bokeh_tabbed_triangle_plot(title + self.TRIANGLE_TERM + "_" + self.COMBINED,
-                                                    gs_frame_counts_term_combined,
-                                                    self.combined_color_dict,
-                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+            plots.append(self.get_tabbed_triangle_plot(group_count_dict=gs_frame_count_term_dict,
+                                                       combine_weighted=True, combine_color=self.combine_weighted_color,
+                                                       lib_size_dict_dict=gs_lib_size_dict,
+                                                       png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
             plots.append(
-                bokeh_tabbed_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED + "_" + self.COMBINED,
-                                          gs_amino_acid_counts_combined, scale=True,
-                                          png_dir=self.geneset_png_dir,
-                                          svg_dir=self.geneset_svg_dir))
+                self.get_tabbed_heatmap_plot(group_count_dict=gs_amino_acid_counts_combined, scale=True,
+                                             png_dir=self.geneset_png_dir,
+                                             svg_dir=self.geneset_svg_dir))
 
         return plots
 
@@ -1000,38 +907,39 @@ class VizPipeline:
             zip(self.gs_transcriptInd_dict.keys(),
                 self.gs_colors_list[0:len(self.gs_transcriptInd_dict.keys())]))
 
-        plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_START, FivePSeqCounts.START,
-                                               sample_gs_meta_count_start_dict,
-                                               gs_colors_dict, scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
-                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_scatter_plot(group_count_dict=sample_gs_meta_count_start_dict,
+                                                  region=FivePSeqCounts.START, color_dict=gs_colors_dict,
+                                                  scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
+                                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(bokeh_tabbed_scatter_plot(title + self.METACOUNTS_TERM, FivePSeqCounts.TERM,
-                                               sample_gs_meta_count_term_dict,
-                                               gs_colors_dict, scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
-                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_scatter_plot(group_count_dict=sample_gs_meta_count_term_dict,
+                                                  region=FivePSeqCounts.TERM, color_dict=gs_colors_dict,
+                                                  scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
+                                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(bokeh_tabbed_triangle_plot(title + self.TRIANGLE_TERM,
-                                                sample_gs_frame_count_term_dict,
-                                                gs_colors_dict,
-                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_frame_barplots(group_count_dict=sample_gs_frame_count_term_dict,
+                                                    group_frame_stats_df_dict=sample_gs_frame_stats_dict,
+                                                    color_dict=gs_colors_dict,
+                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(bokeh_tabbed_frame_barplots(title + self.FRAME_TERM,
-                                                 sample_gs_frame_count_term_dict,
-                                                 sample_gs_frame_stats_dict,
-                                                 gs_colors_dict,
-                                                 png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_triangle_plot(group_count_dict=sample_gs_frame_count_term_dict,
+                                                   color_dict=gs_colors_dict,
+                                                   lib_size_dict_dict=sample_gs_lib_size_dict,
+                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(
-            bokeh_tabbed_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED, sample_gs_amino_acid_df_dict, scale=True,
-                                      png_dir=self.geneset_png_dir,
-                                      svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_fft_plot(region=FivePSeqCounts.START,
+                                              group_count_dict=sample_gs_fft_start_dict,
+                                              color_dict=gs_colors_dict,
+                                              png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(bokeh_tabbed_fft_plot(title + self.FFT_START, FivePSeqCounts.START, sample_gs_fft_start_dict,
-                                           gs_colors_dict,
-                                           png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
-        plots.append(
-            bokeh_tabbed_fft_plot(title + self.FFT_TERM, FivePSeqCounts.TERM, sample_gs_fft_term_dict, gs_colors_dict,
-                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+        plots.append(self.get_tabbed_fft_plot(region=FivePSeqCounts.TERM,
+                                              group_count_dict=sample_gs_fft_start_dict,
+                                              color_dict=gs_colors_dict,
+                                              png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(self.get_tabbed_heatmap_plot(group_count_dict=sample_gs_amino_acid_df_dict, scale=True,
+                                                  png_dir=self.geneset_png_dir,
+                                                  svg_dir=self.geneset_svg_dir))
 
         # combined plots
         if self.combine:
@@ -1042,7 +950,7 @@ class VizPipeline:
                 for sample in self.samples:
                     sample_temp_dict.update({sample: sample_gs_meta_count_start_dict[sample][gs]})
                 sample_gs_meta_counts_start_combined.update(
-                    {gs: self.combine_meta_counts(sample_temp_dict)})
+                    {gs: CountManager.combine_count_series(sample_temp_dict, self.lib_size_dict)})
 
             sample_gs_meta_counts_term_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
@@ -1050,7 +958,7 @@ class VizPipeline:
                 for sample in self.samples:
                     sample_temp_dict.update({sample: sample_gs_meta_count_term_dict[sample][gs]})
                 sample_gs_meta_counts_term_combined.update(
-                    {gs: self.combine_meta_counts(sample_temp_dict)})
+                    {gs: CountManager.combine_count_series(sample_temp_dict, self.lib_size_dict)})
 
             sample_gs_frame_counts_term_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
@@ -1058,7 +966,7 @@ class VizPipeline:
                 for sample in self.samples:
                     sample_temp_dict.update({sample: sample_gs_frame_count_term_dict[sample][gs]})
                 sample_gs_frame_counts_term_combined.update(
-                    {gs: self.combine_frame_counts(sample_temp_dict)})
+                    {gs: CountManager.combine_frame_counts(sample_temp_dict, self.lib_size_dict)})
 
             sample_gs_amino_acid_counts_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
@@ -1066,162 +974,390 @@ class VizPipeline:
                 for sample in self.samples:
                     sample_temp_dict.update({sample: sample_gs_amino_acid_df_dict[sample][gs]})
                 sample_gs_amino_acid_counts_combined.update(
-                    {gs: self.combine_amino_acid_df(sample_temp_dict)})
+                    {gs: CountManager.combine_amino_acid_dfs(sample_temp_dict, self.lib_size_dict)})
 
             sample_gs_lib_size_combined = {}
             for gs in self.gs_transcriptInd_dict.keys():
-                sample_gs_lib_size_combined.update({gs: self.lib_size_combined})
+                sample_gs_lib_size_combined.update({gs: sum(self.lib_size_dict.values())})
 
-            plots.append(bokeh_scatter_plot(title + self.METACOUNTS_TERM + "_" + self.COMBINED, FivePSeqCounts.START,
-                                            sample_gs_meta_counts_start_combined,
-                                            gs_colors_dict, scale=True, lib_size_dict=sample_gs_lib_size_combined,
-                                            png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+            plots.append(self.get_scatter_plot(region=FivePSeqCounts.START,
+                                               count_dict=sample_gs_meta_counts_start_combined,
+                                               color_dict=gs_colors_dict,
+                                               scale=True, lib_size_dict=sample_gs_lib_size_combined,
+                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-            plots.append(bokeh_scatter_plot(title + self.METACOUNTS_TERM + "_" + self.COMBINED, FivePSeqCounts.TERM,
-                                            sample_gs_meta_counts_term_combined,
-                                            gs_colors_dict, scale=True, lib_size_dict=sample_gs_lib_size_combined,
-                                            png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+            plots.append(self.get_scatter_plot(region=FivePSeqCounts.TERM,
+                                               count_dict=sample_gs_meta_counts_term_combined,
+                                               color_dict=gs_colors_dict,
+                                               scale=True, lib_size_dict=sample_gs_lib_size_combined,
+                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+            plots.append(self.get_triangle_plot(count_dict=sample_gs_frame_counts_term_combined,
+                                                color_dict=gs_colors_dict,
+                                                lib_size_dict=sample_gs_lib_size_combined,
+                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-            plots.append(bokeh_triangle_plot(title + self.TRIANGLE_TERM + "_" + self.COMBINED,
-                                             sample_gs_frame_counts_term_combined,
-                                             gs_colors_dict,
-                                             png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
-
-            plots.append(bokeh_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED + "_" + self.COMBINED,
-                                            sample_gs_amino_acid_counts_combined, scale=True,
-                                            png_dir=self.geneset_png_dir,
-                                            svg_dir=self.geneset_svg_dir))
+            plots.append(self.get_heatmap_plot(count_dict=sample_gs_amino_acid_counts_combined, scale=True,
+                                               png_dir=self.geneset_png_dir,
+                                               svg_dir=self.geneset_svg_dir))
 
         return plots
 
-    def make_single_sample_plots(self, title):
-        self.p_scatter_term = bokeh_scatter_plot(title + self.METACOUNTS_TERM, FivePSeqCounts.TERM,
-                                                 self.meta_count_term_dict,
-                                                 self.colors_dict,
-                                                 png_dir=self.png_dir, svg_dir=self.svg_dir)
+    def get_scatter_plot(self, plot_name="metagene_counts", region="", count_dict=None,
+                         color_dict=colors_dict,
+                         scale=False, lib_size_dict=None,
+                         combine_sum=False, combine_weighted=False, combine_color=None,
+                         png_dir=png_dir, svg_dir=svg_dir):
 
-        self.p_scatter_start = bokeh_scatter_plot(title + self.METACOUNTS_START, FivePSeqCounts.START,
-                                                  self.meta_count_start_dict,
-                                                  self.colors_dict,
-                                                  png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if count_dict is None:
+            if region == FivePSeqCounts.TERM:
+                count_dict = self.meta_count_term_dict
+            else:
+                count_dict = self.meta_count_start_dict
 
-        self.p_scatter_term_scaled = bokeh_scatter_plot(title + self.METACOUNTS_TERM_SCALED, FivePSeqCounts.TERM,
-                                                        self.meta_count_term_dict,
-                                                        self.colors_dict,
-                                                        scale=True, lib_size_dict=self.lib_size_dict,
-                                                        png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if color_dict is None:
+            color_dict = self.colors_dict
 
-        self.p_scatter_start_scaled = bokeh_scatter_plot(title + self.METACOUNTS_START_SCALED, FivePSeqCounts.START,
-                                                         self.meta_count_start_dict,
-                                                         self.colors_dict,
-                                                         scale=True, lib_size_dict=self.lib_size_dict,
-                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if lib_size_dict is None:
+            lib_size_dict = self.lib_size_dict
 
-        self.p_triangle_term = bokeh_triangle_plot(title + self.TRIANGLE_TERM,
-                                                   self.frame_count_term_dict,
-                                                   self.colors_dict,
-                                                   png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
 
-        self.p_triangle_start = bokeh_triangle_plot(title + self.TRIANGLE_START,
-                                                    self.frame_count_start_dict,
-                                                    self.colors_dict,
-                                                    png_dir=self.png_dir, svg_dir=self.svg_dir)
+        title = plot_name + "-" + region
 
-        self.p_aa_heatmap = bokeh_heatmap_grid(title + self.AMINO_ACID_PAUSES,
-                                               self.amino_acid_df_dict,
-                                               png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
 
-        self.p_aa_heatmap_scaled = bokeh_heatmap_grid(title + self.AMINO_ACID_PAUSES_SCALED,
-                                                      self.amino_acid_df_dict, scale=True,
-                                                      png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if scale:
+            title += "_" + "scaled"
+        else:
+            title += "_" + "raw"
 
-        self.p_frame_barplots_term = bokeh_frame_barplots(title + self.FRAME_TERM,
-                                                          self.frame_count_term_dict,
-                                                          self.frame_stats_df_dict,
-                                                          self.colors_dict,
-                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
+        p = bokeh_scatter_plot(title=title,
+                               region=region,
+                               count_series_dict=count_dict,
+                               color_dict=color_dict,
+                               scale=scale, lib_size_dict=lib_size_dict,
+                               combine_sum=combine_sum,
+                               combine_weighted=combine_weighted,
+                               combine_color=combine_color,
+                               png_dir=png_dir, svg_dir=svg_dir)
+        return p
 
-        self.p_frame_barplots_start = bokeh_frame_barplots(title + self.FRAME_START,
-                                                           self.frame_count_start_dict,
-                                                           self.frame_stats_df_dict,
-                                                           self.colors_dict,
-                                                           png_dir=self.png_dir, svg_dir=self.svg_dir)
+    def get_tabbed_scatter_plot(self, group_count_dict,
+                                plot_name="metagene_counts", region="",
+                                color_dict=colors_dict,
+                                scale=False, lib_size_dict_dict=None,
+                                combine_sum=False, combine_weighted=False, combine_color=None,
+                                png_dir=png_dir, svg_dir=svg_dir):
 
-        self.p_loci_meta_counts_ALL = bokeh_scatter_plot(title + "_loci_meta_counts",
-                                                         "loci_ALL",
-                                                         self.loci_meta_counts_dict_ALL,
-                                                         self.colors_dict, scale=True, lib_size_dict=self.lib_size_dict,
-                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
-        self.p_loci_meta_counts_3UTR = bokeh_scatter_plot(title + "_loci_meta_counts",
-                                                          "loci_3UTR",
-                                                          self.loci_meta_counts_dict_3UTR,
-                                                          self.colors_dict, scale=True,
-                                                          lib_size_dict=self.lib_size_dict,
-                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
-        self.p_loci_meta_counts_5UTR = bokeh_scatter_plot(title + "_loci_meta_counts",
-                                                         "loci_5UTR",
-                                                         self.loci_meta_counts_dict_5UTR,
-                                                         self.colors_dict, scale=True, lib_size_dict=self.lib_size_dict,
-                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
-        self.p_loci_meta_counts_CDS = bokeh_scatter_plot(title + "_loci_meta_counts",
-                                                          "loci_CDS",
-                                                          self.loci_meta_counts_dict_CDS,
-                                                          self.colors_dict, scale=True,
-                                                          lib_size_dict=self.lib_size_dict,
-                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if color_dict is None:
+            color_dict = self.colors_dict
 
-        # fft plots
-        self.p_fft_plot_start = bokeh_fft_plot(title + self.FFT_START, "start",
-                                               self.fft_signal_start_dict,
-                                               self.colors_dict,
-                                               png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
 
-        self.p_fft_plot_term = bokeh_fft_plot(title + self.FFT_TERM, "term",
-                                              self.fft_signal_term_dict,
-                                              self.colors_dict,
-                                              png_dir=self.png_dir, svg_dir=self.svg_dir)
+        title = plot_name + "-" + region
+        if scale:
+            title += "_" + "scaled"
+        else:
+            title += "_" + "raw"
 
-    def make_combined_plots(self, title):
-        # Combined plots
-        self.p_scatter_term_combined = bokeh_scatter_plot(title + self.METACOUNTS_TERM + "_combined",
-                                                          FivePSeqCounts.TERM,
-                                                          {"combined": self.meta_count_term_combined},
-                                                          self.combined_color_dict,
-                                                          png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
 
-        self.p_scatter_start_combined = bokeh_scatter_plot(title + self.METACOUNTS_START + "_combined",
-                                                           FivePSeqCounts.START,
-                                                           {self.COMBINED: self.meta_count_start_combined},
-                                                           self.combined_color_dict,
-                                                           png_dir=self.png_dir, svg_dir=self.svg_dir)
+        p = bokeh_tabbed_scatter_plot(title=title,
+                                      region=region,
+                                      group_count_series_dict_dict=group_count_dict,
+                                      color_dict=color_dict,
+                                      scale=scale, lib_size_dict_dict=lib_size_dict_dict,
+                                      combine_sum=combine_sum,
+                                      combine_weighted=combine_weighted,
+                                      combine_color=combine_color,
+                                      png_dir=png_dir, svg_dir=svg_dir)
+        return p
 
-        # Combined plots
-        self.p_scatter_term_scaled_combined = bokeh_scatter_plot(title + self.METACOUNTS_TERM_SCALED + "_combined",
-                                                                 FivePSeqCounts.TERM,
-                                                                 {"combined": self.meta_count_term_combined},
-                                                                 self.combined_color_dict,
-                                                                 scale=True,
-                                                                 lib_size_dict={self.COMBINED: self.lib_size_combined},
-                                                                 png_dir=self.png_dir, svg_dir=self.svg_dir)
+    def get_triangle_plot(self, plot_name="gene_frame_preferences",
+                          count_dict=None,
+                          color_dict=None, lib_size_dict=None,
+                          combine_sum=False, combine_weighted=False, combine_color=None,
+                          png_dir=png_dir, svg_dir=svg_dir):
 
-        self.p_scatter_start_scaled_combined = bokeh_scatter_plot(title + self.METACOUNTS_START_SCALED + "_combined",
-                                                                  FivePSeqCounts.START,
-                                                                  {self.COMBINED: self.meta_count_start_combined},
-                                                                  self.combined_color_dict,
-                                                                  scale=True,
-                                                                  lib_size_dict={self.COMBINED: self.lib_size_combined},
-                                                                  png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if count_dict is None:
+            count_dict = self.frame_count_start_dict
 
-        self.p_triangle_term_combined = bokeh_triangle_plot(title + self.TRIANGLE_TERM + "_combined",
-                                                            {self.COMBINED: self.frame_count_TERM_combined},
-                                                            self.combined_color_dict,
-                                                            png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if color_dict is None:
+            color_dict = self.colors_dict
 
-        self.p_triangle_start_combined = bokeh_triangle_plot(title + self.TRIANGLE_START + "_combined",
-                                                             {self.COMBINED: self.frame_count_START_combined},
-                                                             self.combined_color_dict,
-                                                             png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if lib_size_dict is None:
+            lib_size_dict = self.lib_size_dict
 
-        self.p_aa_heatmaps_combined = bokeh_heatmap_grid(title + self.AMINO_ACID_PAUSES + "_combined",
-                                                         {self.COMBINED: self.amino_acid_df_combined},
-                                                         png_dir=self.png_dir, svg_dir=self.svg_dir)
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        title = plot_name
+
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
+
+        p = bokeh_triangle_plot(title=title,
+                                frame_df_dict=count_dict,
+                                lib_size_dict=lib_size_dict,
+                                color_dict=color_dict,
+                                combine_sum=combine_sum,
+                                combine_weighted=combine_weighted,
+                                combine_color=combine_color,
+                                png_dir=png_dir, svg_dir=svg_dir)
+        return p
+
+    def get_tabbed_triangle_plot(self, group_count_dict,
+                                 plot_name="gene_frame_preferences",
+                                 color_dict=None, lib_size_dict_dict=None,
+                                 combine_sum=False, combine_weighted=False, combine_color=None,
+                                 png_dir=png_dir, svg_dir=svg_dir):
+
+        if color_dict is None:
+            color_dict = self.colors_dict
+
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        title = plot_name
+
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
+
+        p = bokeh_tabbed_triangle_plot(title=title,
+                                       group_frame_df_dict_dict=group_count_dict,
+                                       color_dict=color_dict,
+                                       lib_size_dict_dict=lib_size_dict_dict,
+                                       combine_sum=combine_sum,
+                                       combine_weighted=combine_weighted,
+                                       combine_color=combine_color,
+                                       png_dir=png_dir, svg_dir=svg_dir)
+        return p
+
+    def get_heatmap_plot(self, plot_name="amino_acid_relative_counts",
+                         count_dict=None,
+                         scale=False,
+                         lib_size_dict=None,
+                         combine_sum=False, combine_weighted=False,
+                         png_dir=png_dir, svg_dir=svg_dir):
+
+        if count_dict is None:
+            count_dict = self.amino_acid_df_dict
+
+        if lib_size_dict is None:
+            lib_size_dict = self.lib_size_dict
+
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        title = plot_name
+
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
+
+        p = bokeh_heatmap_grid(title_prefix=title,
+                               amino_acid_df_dict=count_dict,
+                               scale=scale,
+                               lib_size_dict=lib_size_dict,
+                               combine_sum=combine_sum,
+                               combine_weighted=combine_weighted,
+                               png_dir=png_dir, svg_dir=svg_dir)
+        return p
+
+    def get_tabbed_heatmap_plot(self, group_count_dict,
+                                plot_name="amino_acid_relative_counts",
+                                scale=False, lib_size_dict_dict=None,
+                                combine_sum=False, combine_weighted=False,
+                                png_dir=png_dir, svg_dir=svg_dir):
+
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        title = plot_name
+
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
+
+        p = bokeh_tabbed_heatmap_grid(title_prefix=title,
+                                      group_amino_acid_df_dict_dict=group_count_dict,
+                                      scale=scale,
+                                      lib_size_dict_dict=lib_size_dict_dict,
+                                      combine_sum=combine_sum,
+                                      combine_weighted=combine_weighted,
+                                      png_dir=png_dir, svg_dir=svg_dir)
+        return p
+
+    def get_frame_barplot(self, plot_name="global_frame_preference",
+                          count_dict=None, frame_stats_df_dict=None,
+                          color_dict=None, lib_size_dict=None,
+                          combine_sum=False, combine_weighted=False, combine_color=None,
+                          png_dir=png_dir, svg_dir=svg_dir):
+
+        if count_dict is None:
+            count_dict = self.frame_count_start_dict
+
+        if color_dict is None:
+            color_dict = self.colors_dict
+
+        if frame_stats_df_dict is None and not combine_sum and not combine_weighted:
+            frame_stats_df_dict = self.frame_stats_df_dict
+
+        if lib_size_dict is None:
+            lib_size_dict = self.lib_size_dict
+
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        title = plot_name
+
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
+
+        p = bokeh_frame_barplots(title_prefix=title,
+                                 frame_df_dict=count_dict,
+                                 frame_stats_df_dict=frame_stats_df_dict,
+                                 lib_size_dict=lib_size_dict,
+                                 color_dict=color_dict,
+                                 combine_sum=combine_sum,
+                                 combine_weighted=combine_weighted,
+                                 combine_color=combine_color,
+                                 png_dir=png_dir, svg_dir=svg_dir)
+        return p
+
+    def get_tabbed_frame_barplots(self, group_count_dict, group_frame_stats_df_dict,
+                                  plot_name="global_frame_preference",
+                                  color_dict=None, lib_size_dict_dict=None,
+                                  combine_sum=False, combine_weighted=False, combine_color=None,
+                                  png_dir=png_dir, svg_dir=svg_dir):
+
+        if color_dict is None:
+            color_dict = self.colors_dict
+
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        title = plot_name
+
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
+
+        p = bokeh_tabbed_frame_barplots(title=title,
+                                        group_frame_df_dict_dict=group_count_dict,
+                                        group_frame_stats_df_dict_dict=group_frame_stats_df_dict,
+                                        color_dict=color_dict,
+                                        lib_size_dict_dict=lib_size_dict_dict,
+                                        combine_sum=combine_sum,
+                                        combine_weighted=combine_weighted,
+                                        combine_color=combine_color,
+                                        png_dir=png_dir, svg_dir=svg_dir)
+        return p
+
+    def get_fft_plot(self, plot_name="Periodicity-fast_Fourier_transform", region="",
+                     count_dict=None,
+                     color_dict=colors_dict,
+                     lib_size_dict=None,
+                     combine_sum=False, combine_weighted=False, combine_color=None,
+                     png_dir=png_dir, svg_dir=svg_dir):
+
+        if count_dict is None:
+            if region == FivePSeqCounts.TERM:
+                count_dict = self.fft_signal_term_dict
+            else:
+                count_dict = self.fft_signal_start_dict
+
+        if lib_size_dict is None:
+            lib_size_dict = self.lib_size_dict
+
+        if color_dict is None:
+            color_dict = self.colors_dict
+
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        title = plot_name + "-" + region
+
+        p = bokeh_fft_plot(title=title,
+                           align_region=region,
+                           signal_series_dict=count_dict,
+                           color_dict=color_dict,
+                           lib_size_dict=lib_size_dict,
+                           combine_sum=combine_sum,
+                           combine_weighted=combine_weighted,
+                           combine_color=combine_color,
+                           png_dir=png_dir, svg_dir=svg_dir)
+        return p
+
+    def get_tabbed_fft_plot(self, group_count_dict,
+                            plot_name="Periodicity-fast_Fourier_transform",
+                            region="",
+                            color_dict=colors_dict,
+                            scale=False, lib_size_dict_dict=None,
+                            combine_sum=False, combine_weighted=False, combine_color=None,
+                            png_dir=png_dir, svg_dir=svg_dir):
+
+        if color_dict is None:
+            color_dict = self.colors_dict
+
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        title = plot_name + "-" + region
+        if scale:
+            title += "_" + "scaled"
+        else:
+            title += "_" + "raw"
+
+        if combine_weighted:
+            title += "_" + "combined_weighted"
+        elif combine_sum:
+            title += "_" + "combined_summed"
+
+        p = bokeh_tabbed_fft_plot(title=title,
+                                  align_region=region,
+                                  group_signal_series_dict_dict=group_count_dict,
+                                  color_dict=color_dict,
+                                  lib_size_dict_dict=lib_size_dict_dict,
+                                  combine_sum=combine_sum,
+                                  combine_weighted=combine_weighted,
+                                  combine_color=combine_color,
+                                  png_dir=png_dir, svg_dir=svg_dir)
+        return p
