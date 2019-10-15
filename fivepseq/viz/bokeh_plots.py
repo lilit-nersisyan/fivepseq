@@ -12,7 +12,7 @@ from bokeh.io import output_file, save, export_svgs, export_png
 from bokeh.io import show
 from bokeh.layouts import gridplot, row, widgetbox
 from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearColorMapper, FactorRange, TableColumn, \
-    DataTable, PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div, Legend, Panel, Tabs
+    DataTable, PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div, Legend, Panel, Tabs, LabelSet
 from bokeh.plotting import figure
 from bokeh.transform import transform
 from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
@@ -277,7 +277,8 @@ def bokeh_tabbed_fft_plot(title, align_region, group_signal_series_dict_dict, co
 
         p_group = bokeh_fft_plot(title, align_region, signal_series_dict_gs, color_dict, period_max=period_max,
                                  lib_size_dict=lib_size_dict,
-                                 combine_sum=combine_sum, combine_weighted=combine_weighted, combine_color=combine_color,
+                                 combine_sum=combine_sum, combine_weighted=combine_weighted,
+                                 combine_color=combine_color,
                                  png_dir=png_dir, svg_dir=svg_dir)
         tab_list.append(Panel(child=p_group, title=group))
 
@@ -674,6 +675,14 @@ def get_empty_triangle_canvas(title):
                        x_start=triangle_transform(*f2)[0], y_start=triangle_transform(*f2)[1],
                        x_end=triangle_transform(*f0)[0], y_end=triangle_transform(*f0)[1]))  # F2
 
+    source = ColumnDataSource(
+        data=dict(x=[triangle_transform(*f1)[0], triangle_transform(*f2)[0], triangle_transform(*f0)[0]],
+                  y=[triangle_transform(*f1)[1], triangle_transform(*f2)[1], triangle_transform(*f0)[1]],
+                  text=['F1', 'F2', 'F0'],
+                  x_offset=[0,0,-20]))
+    p.add_layout(LabelSet(x='x', y = 'y', text = 'text',
+                          x_offset='x_offset',
+                          source=source, level = 'glyph', render_mode='canvas'))
     return p
 
 
@@ -924,7 +933,8 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
             frames = ["F0", "F1", "F2"]
             key_title = get_key_title(title_prefix, key)
             p = figure(x_range=frames, y_range=(0, count_max),
-                       plot_height=500, title=key_title)
+                       plot_height=500, title=key_title,
+                       y_axis_label="Genome-wide total counts on the frame")
 
             # figures for export
             p_png = None
