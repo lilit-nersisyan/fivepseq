@@ -47,7 +47,7 @@ class FivePSeqOut:
     FAILED_COUNT_FILES_LIST = "failed_count_files_list.txt"
     BAM_SUCCESS_SUMMARY = "count_run_summary.txt"
 
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
     count_success = None
 
     def __init__(self, output_dir, conflict_mode=config.ADD_FILES):
@@ -282,7 +282,7 @@ class FivePSeqOut:
             try:
                 os.remove(self.get_file_path(self.FAILED_COUNT_FILES_LIST))
             except Exception as e:
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error \
+                logging.getLogger(config.FIVEPSEQ_LOGGER).error \
                     ("Problem removing existing failed files report: %s" % str(e))
 
         failed_files = []

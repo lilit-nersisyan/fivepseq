@@ -11,7 +11,7 @@ from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
 class CountPipeline:
     fivepseq_counts = None
     fivepseq_out = None
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     def __init__(self, fivepseq_counts, fivepseq_out):
         self.fivepseq_counts = fivepseq_counts

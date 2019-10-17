@@ -16,7 +16,7 @@ class Alignment:
     alignment_file = None
     bam_array = None
     num_chromosomes = None
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     @preconditions(lambda alignment_file: isinstance(alignment_file, AlignmentFile))
     def __init__(self, alignment_file, bam_file):

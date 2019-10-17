@@ -29,7 +29,7 @@ class Annotation:
     gs_geneID_attribute = None
     span_size = 0
 
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     @preconditions(lambda file_path: isinstance(file_path, str),
                    lambda transcript_assembly: isinstance(transcript_assembly, list))

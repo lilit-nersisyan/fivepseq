@@ -22,7 +22,7 @@ COMPRESSION_GZ = ".gz"
 COMPRESSION_BZ = ".bz"
 COMPRESSION_None = ""
 
-logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
 class TopReader:
     valid_extensions = None
@@ -30,7 +30,7 @@ class TopReader:
     extension = None
     compression = None
     file = None
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     @preconditions(lambda file_path: isinstance(file_path, str))
     def __init__(self, file_path):

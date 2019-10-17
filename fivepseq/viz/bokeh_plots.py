@@ -30,13 +30,13 @@ COMBINED = "combined"
 
 
 def bokeh_composite(title, figure_list, filename, ncols=2):
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making composite plot")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making composite plot")
 
     output_file(title + ".html")
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Title provided as: %s" % title)
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Number of figures: %d" % len(figure_list))
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Number of columns: %d" % ncols)
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Title provided as: %s" % title)
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of figures: %d" % len(figure_list))
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of columns: %d" % ncols)
 
     p = gridplot(figure_list, ncols=ncols)
     print filename
@@ -84,7 +84,7 @@ def bokeh_tabbed_scatter_plot(title, region, group_count_series_dict_dict, color
     if group_count_series_dict_dict is None:
         return None
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info(
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info(
         "Making count scatter plots with geneset-tabs: " + title + ": " + region)
 
     tab_list = []
@@ -117,7 +117,7 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
     if combine_weighted and combine_sum:
         e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
                 % (title + ": " + region, "combine_sum", "combine_weighted")
-        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
 
     if combine_weighted:
@@ -132,7 +132,7 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
         if lib_size_dict is None:
             e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title + ": " + region, "combine_sum", "combine_weighted")
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
 
         lib_size_dict = {suffix: sum(lib_size_dict.values())}
@@ -142,7 +142,7 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
             c = get_random_color()
         color_dict = {suffix: c}
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot %s with options: scaled(%s), "
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count scatter plot %s with options: scaled(%s), "
                                                         "combine_sum(%s), comine_weighted(%s): " % (title + ": " +
                                                                                                     region,
                                                                                                     str(scale),
@@ -189,12 +189,12 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
             p_key_svg = figure(title=key_title, x_axis_label=my_x_label, y_axis_label=my_y_label)
         c = color_dict.get(key)
         if c is None:
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Color not set for sample %s" % key)
             c = get_random_color()
         try:
             if scale:
                 if lib_size_dict is None:
-                    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Lib size not specified: local counts will "
+                    logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Lib size not specified: local counts will "
                                                                            "be used instead")
                     lib_size = sum(count_series.C) + 1
                 else:
@@ -263,7 +263,7 @@ def bokeh_tabbed_fft_plot(title, align_region, group_signal_series_dict_dict, co
     if group_signal_series_dict_dict is None:
         return None
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info(
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info(
         "Making fft plots with geneset-tabs: " + title + ": " + align_region)
 
     tab_list = []
@@ -295,7 +295,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
     if combine_weighted and combine_sum:
         e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
                 % (title + ": " + align_region, "combine_sum", "combine_weighted")
-        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
 
     if combine_weighted:
@@ -310,7 +310,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
         if lib_size_dict is None:
             e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title + ": " + align_region, "combine_sum", "combine_weighted")
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
 
         c = combine_color
@@ -318,14 +318,14 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
             c = get_random_color()
         color_dict = {suffix: c}
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making count scatter plot %s with options: "
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count scatter plot %s with options: "
                                                         "combine_sum(%s), comine_weighted(%s): "
                                                         % (title + ": " +
                                                            align_region,
                                                            str(combine_sum),
                                                            str(combine_weighted)))
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making FFT signal scatter plot: " + align_region)
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making FFT signal scatter plot: " + align_region)
     output_file(title + ".html")
 
     my_x_label = "Periodicity"
@@ -350,7 +350,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
         key_title = get_key_title(title, key)
         c = color_dict.get(key)
         if c is None:
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Color not set for sample %s" % key)
             c = get_random_color()
 
         source = ColumnDataSource(data=dict(
@@ -400,7 +400,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
 
 def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_dict,
                                        x_max, show_plot=False, png_dir=None, svg_dir=None):
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting normalized full-length meta counts. ")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Plotting normalized full-length meta counts. ")
     output_file(title + ".html", mode="cdn")
 
     p = figure(title=title,
@@ -427,7 +427,7 @@ def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_
         c = color_dict.get(key)
 
         if c is None:
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Color not set for sample %s" % key)
             c = get_random_color()
 
         line = p.line(list(range(0, x_max)), normalized_meta_counts, line_color=RGB(c[0], c[1], c[2]))
@@ -446,7 +446,7 @@ def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_
 
 def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_assembly, color_dict,
                                   align_to, span_size, index_filter, min_count=0, max_count=1000, save_plot=True):
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info(
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info(
         "Plotting transcript specific counts. %d filtered transcript indices specified" % len(index_filter))
     output_file(title + "_minCount-" + str(min_count) + "_maxCount-" + str(max_count) + ".html", mode="cdn")
 
@@ -469,7 +469,7 @@ def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_
 
                 c = color_dict.get(key)
                 if c is None:
-                    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Color not set for sample %s" % key)
+                    logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Color not set for sample %s" % key)
                     c = cl.scales['9']['qual']['Set3'][1]
                 # line = p.line(count_series.index, count_series.values, line_color=RGB(c[0], c[1], c[2]))
                 line = p.line(count_series.index, count_series.values, line_color=c)
@@ -494,7 +494,7 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
     if group_frame_df_dict_dict is None:
         return None
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making tabbed triangle plots: " + title)
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making tabbed triangle plots: " + title)
 
     tab_list = []
     for group in group_frame_df_dict_dict.keys():
@@ -522,7 +522,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
                         transcript_index_filter=None, png_dir=None, svg_dir=None):
     if color_dict is None:
         return None
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Plotting triangle plots")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Plotting triangle plots")
     if transcript_index_filter is not None:
         print("%d filtered indices specified " % len(transcript_index_filter))
 
@@ -531,7 +531,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
     if combine_weighted and combine_sum:
         e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
                 % (title + ": ", "combine_sum", "combine_weighted")
-        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
 
     if combine_weighted:
@@ -546,7 +546,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
         if lib_size_dict is None:
             e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title, "combine_sum", "combine_weighted")
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
 
         c = combine_color
@@ -703,7 +703,7 @@ def bokeh_tabbed_heatmap_grid(title_prefix, group_amino_acid_df_dict_dict,
     if group_amino_acid_df_dict_dict is None:
         return None
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making tabbed heatmap: " + title_prefix)
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making tabbed heatmap: " + title_prefix)
 
     tab_list = []
     for group in group_amino_acid_df_dict_dict.keys():
@@ -732,7 +732,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
     if combine_weighted and combine_sum:
         e_msg = "Exception plotting heatmap %s: the options %s and %s cannot be true at the same time: " \
                 % (title_prefix, "combine_sum", "combine_weighted")
-        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
 
     if combine_weighted:
@@ -747,10 +747,10 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
         if lib_size_dict is None:
             e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title_prefix, "combine_sum", "combine_weighted")
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info(
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info(
         "Making heatmaps for amino acid relative counts for %s with options: scaled(%s), "
         "combine_sum(%s), comine_weighted(%s): " % (title_prefix,
                                                     str(scale),
@@ -765,7 +765,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
         y_axis_label = "5'seq RPM"
 
     for key in amino_acid_df_dict.keys():
-        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info(key)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).info(key)
         amino_acid_df = amino_acid_df_dict.get(key)
         if amino_acid_df is not None:
             if scale:
@@ -830,7 +830,7 @@ def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_sta
     if group_frame_df_dict_dict is None:
         return None
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making tabbed triangle plots: " + title)
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making tabbed triangle plots: " + title)
 
     tab_list = []
     for group in group_frame_df_dict_dict.keys():
@@ -870,7 +870,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
     if combine_weighted and combine_sum:
         e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
                 % (title_prefix, "combine_sum", "combine_weighted")
-        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
 
     if combine_weighted:
@@ -885,7 +885,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
         if lib_size_dict is None:
             e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title_prefix, "combine_sum", "combine_weighted")
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(e_msg)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
 
         c = combine_color
@@ -893,7 +893,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
             c = get_random_color()
         color_dict = {suffix: c}
 
-    logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).info("Making frame barplot %s with options: "
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making frame barplot %s with options: "
                                                         "combine_sum(%s), combine_weighted(%s): " % (title_prefix,
                                                                                                      str(combine_sum),
                                                                                                      str(
@@ -909,7 +909,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
             frame_stats_df = frame_stats_df_dict.get(key)
         else:
             frame_stats_df = None
-        logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).debug("key: %s\n%s" % (key, str(frame_stats_df)))
+        logging.getLogger(config.FIVEPSEQ_LOGGER).debug("key: %s\n%s" % (key, str(frame_stats_df)))
         if frame_stats_df is not None:
 
             counts = [frame_stats_df.loc[CountStats.FRAME_COUNT, CountStats.F0],
@@ -928,7 +928,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
         counts = counts_dict.get(key)
         if counts is None:
             # mainLayout.children[0].children.append(None)
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warn("Frame counts stats not found for sample %s" % key)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).warn("Frame counts stats not found for sample %s" % key)
         else:
             frames = ["F0", "F1", "F2"]
             key_title = get_key_title(title_prefix, key)
@@ -1039,7 +1039,7 @@ def export_images(p, title, png_dir=None, svg_dir=None):
             p.border_fill_color = None
             export_png(p, filename=png_f)
         except Exception as e:
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Problem exporting figure %s. Reason: %s"
+            logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Problem exporting figure %s. Reason: %s"
                                                                    % (title, str(e)))
     if svg_dir is not None:
         try:
@@ -1047,7 +1047,7 @@ def export_images(p, title, png_dir=None, svg_dir=None):
             p.output_backend = "svg"
             export_svgs(p, filename=svg_f)
         except Exception as e:
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning("Problem exporting figure %s. Reason: %s"
+            logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Problem exporting figure %s. Reason: %s"
                                                                    % (title, str(e)))
 
 

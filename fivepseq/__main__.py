@@ -314,7 +314,7 @@ def setup_output_dir():
                 os.mkdir(os.path.join(config.out_dir, FIVEPSEQ_COUNTS_DIR))
             except Exception as e:
                 err_msg = "Problem making directory for counts: %s" % str(e)
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(err_msg)
+                logging.getLogger(config.FIVEPSEQ_LOGGER).error(err_msg)
                 raise Exception(err_msg)
 
         if not os.path.exists(os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR)):
@@ -322,7 +322,7 @@ def setup_output_dir():
                 os.mkdir(os.path.join(config.out_dir, FIVEPSEQ_PLOTS_DIR))
             except Exception as e:
                 err_msg = "Problem making directory for counts: %s" % str(e)
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(err_msg)
+                logging.getLogger(config.FIVEPSEQ_LOGGER).error(err_msg)
                 raise Exception(err_msg)
 
 
@@ -347,50 +347,31 @@ def setup_logger():
                         format='%(levelname)s:%(asctime)s\t [%(filename)s:%(lineno)s - %(funcName)s]\t%(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S')
 
-    count_logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
-    plot_logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
+    fivepseq_logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
-    count_log_file = os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR, "fivepseq_count.log")
-    plot_log_file = os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR, "fivepseq_plot.log")
+    log_file = os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR, "fivepseq.log")
     log_level = getattr(logging, config.args.log.upper(), None)
     if not isinstance(log_level, int):
         raise ValueError('Invalid log level: %s' % config.args.log)
 
     # INFO level file handler
-    count_file_handler = logging.FileHandler(count_log_file)
-    plot_file_handler = logging.FileHandler(plot_log_file)
-    count_logger.addHandler(count_file_handler)
-    plot_logger.addHandler(plot_file_handler)
-    count_file_handler.setLevel(logging.INFO)
-    plot_file_handler.setLevel(logging.INFO)
-
-    if not os.path.exists(count_log_file):
-        raise Exception("Could not instantiate the count logger. Exiting.")
-    print "\tSETUP:\t%s%s" % (pad_spaces("Log file:"), count_log_file)
-    if not os.path.exists(plot_log_file):
-        raise Exception("Could not instantiate the plot logger. Exiting.")
-    print "\tSETUP:\t%s%s" % (pad_spaces("Log file:"), plot_log_file)
+    log_file_handler = logging.FileHandler(log_file)
+    fivepseq_logger.addHandler(log_file_handler)
 
     if log_level == logging.DEBUG:
-        count_debug_file = os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR, "fivepseq_count_debug.log")
-        plot_debug_file = os.path.join(config.out_dir, FIVEPSEQ_LOG_DIR, "fivepseq_plot_debug.log")
-        count_debug_handler = logging.FileHandler(count_debug_file)
-        plot_debug_handler = logging.FileHandler(plot_debug_file)
-        count_debug_handler.setLevel(logging.DEBUG)
-        plot_debug_handler.setLevel(logging.DEBUG)
-        count_logger.addHandler(count_debug_handler)
-        plot_logger.addHandler(plot_debug_handler)
-        if not os.path.exists(count_debug_file):
-            raise Exception("Could not instantiate count debug logger. Exiting")
-        print "\tSETUP:\t%s%s" % (pad_spaces("Debug file:"), count_debug_file)
-        if not os.path.exists(plot_debug_file):
-            raise Exception("Could not instantiate plot debug logger. Exiting")
-        print "\tSETUP:\t%s%s" % (pad_spaces("Debug file:"), plot_debug_file)
+        log_file_handler.setLevel(logging.DEBUG)
+    else:
+        log_file_handler.setLevel(logging.INFO)
+
+    if not os.path.exists(log_file):
+        raise Exception("Could not instantiate the logger. Exiting.")
+    print "\tSETUP:\t%s%s" % (pad_spaces("Log file:"), log_file)
 
 
 def generate_and_store_fivepseq_counts(plot=False):
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
-    logger.info("Fivepseq count started")
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
+    logger.info("FIVEPSEQ STARTED")
+    logger.info("________________")
 
     # process bam input
 
@@ -405,7 +386,7 @@ def generate_and_store_fivepseq_counts(plot=False):
 
     if len(bam_files) == 0:
         err_msg = "No bam files found at %s" % config.args.b
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(err_msg)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).error(err_msg)
         return None
 
     # set up annotation
@@ -471,14 +452,14 @@ def generate_and_store_fivepseq_counts(plot=False):
 
     fivepseq_out.write_dict(success_values, FivePSeqOut.BAM_SUCCESS_SUMMARY)
 
-    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
-    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n# Finished counting successfully! Proceeding to plotting")
-    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n##################")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("\n##################")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("\n# Finished counting successfully! Proceeding to plotting")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("\n##################")
 
     if plot:
         if len(count_folders) == 0:
             err_msg = "None of the count directories succeeded. Plots will not be generated."
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).error(err_msg)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(err_msg)
         else:
             # set up job title if none is provided
             if not hasattr(config.args, 't') or config.args.t is None:
@@ -498,7 +479,7 @@ def generate_and_store_fivepseq_counts(plot=False):
 def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
                       count_folders, success_values, downsample_constant = None,
                       filter_name="protein_coding", filter=None, loci_file = None):
-    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+    logging.getLogger(config.FIVEPSEQ_LOGGER). \
         info("\n##################\nCounting for sample %s and gene set %s\n##################\n"
              % (bam_name, filter_name))
 
@@ -535,9 +516,9 @@ def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
 
 
 def generate_plots(count_folders, gs_transcriptInd_dict=None):
-    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#########################")
-    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#  Fivepseq plot called #")
-    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("\n#########################")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("\n#########################")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("\n#  Fivepseq plot called #")
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("\n#########################")
 
     viz_pipeline = VizPipeline(config.args, count_folders=count_folders, gs_transcriptInd_dict=gs_transcriptInd_dict)
     viz_pipeline.run()
@@ -564,7 +545,6 @@ def main():
     # body
 
     if (config.args.command == 'count') | (config.args.command == 'count_and_plot'):
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("Fivepseq count started")
 
         if config.args.command == 'count_and_plot':
             generate_and_store_fivepseq_counts(plot=True)
@@ -572,12 +552,12 @@ def main():
             generate_and_store_fivepseq_counts(plot=False)
         elapsed_time = time.clock() - start_time
 
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("SUCCESS! Fivepseq count finished in\t%s\tseconds. "
+        logging.getLogger(config.FIVEPSEQ_LOGGER).info("SUCCESS! Fivepseq count finished in\t%s\tseconds. "
                                                              "The report files maybe accessed at:\t\t%s "
-                                                             % (elapsed_time, config.out_dir))
+                                                       % (elapsed_time, config.out_dir))
 
     elif config.args.command == 'plot':
-        plot_logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
+        plot_logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
         plot_logger.info("Fivepseq plot started")
         generate_plots(config.args.count_folders)
         elapsed_time = time.clock() - start_time

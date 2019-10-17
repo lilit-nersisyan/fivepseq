@@ -5,8 +5,7 @@ import logging
 import os
 import sys
 
-FIVEPSEQ_COUNT_LOGGER = "fivepseq_count_logger"
-FIVEPSEQ_PLOT_LOGGER = "fivepseq_plot_logger"
+FIVEPSEQ_LOGGER = "fivepseq_logger"
 
 args = None
 bam = None

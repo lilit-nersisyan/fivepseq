@@ -63,7 +63,7 @@ class FivePSeqCounts:
     READ_LOCATIONS_5UTR = "_5UTR"
     READ_LOCATIONS_CDS = "_CDS"
 
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     def __init__(self, alignment, annotation, genome, outlier_probability, downsample_constant, transcript_filter=None):
         """
@@ -252,12 +252,12 @@ class FivePSeqCounts:
 
         # if counts are already computed, return the existing ones
 
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).info("Generating count vectors")
+        logging.getLogger(config.FIVEPSEQ_LOGGER).info("Generating count vectors")
 
         if self.count_vector_list_full_length is not None:
             if self.count_vector_list_term is not None:
                 if self.count_vector_list_start is not None:
-                    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).warning("All count vectors are already generated")
+                    logging.getLogger(config.FIVEPSEQ_LOGGER).warning("All count vectors are already generated")
 
         # otherwise, retrieve the counts from the alignment file, referencing the transcript assembly
         self.logger.info("Retrieving counts (span size :%d)..."
@@ -409,7 +409,7 @@ class FivePSeqCounts:
                 subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
                 count_vector = [0] * diff + subchain_counts
 
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                logging.getLogger(config.FIVEPSEQ_LOGGER). \
                     debug("Transcript %s at the beginning of the genome padded with %d zeros"
                           % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
 
@@ -421,7 +421,7 @@ class FivePSeqCounts:
                     # NOTE wrongly annotated transcripts go outside genome boundaries,
                     # NOTE return an empty vector spanned by span size as a safe way of discarding such transcripts
                     count_vector = [0] * t_len
-                    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                    logging.getLogger(config.FIVEPSEQ_LOGGER). \
                         debug("Transcript %s exceeds genome dimensions by %d bases"
                               % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
 
@@ -431,7 +431,7 @@ class FivePSeqCounts:
                     subchain_counts = list(t_subchain.get_counts(self.alignment.bam_array))
                     count_vector = subchain_counts + [0] * diff
 
-                    logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                    logging.getLogger(config.FIVEPSEQ_LOGGER). \
                         debug("Transcript %s at the end of the genome padded with %d zeros"
                               % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
 
@@ -453,7 +453,7 @@ class FivePSeqCounts:
                 else:  # TODO I don't know how to get sequence in this case: need debugging
                     cds_sequence = sequence[transcript.cds_start + span_size - diff: transcript.cds_end + span_size]
 
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER). \
+                logging.getLogger(config.FIVEPSEQ_LOGGER). \
                     debug("Transcript %s at the beginning of the genome padded with %d N's"
                           % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
 
@@ -1143,7 +1143,7 @@ class CountManager:
         else:
             error_message = "Invalid region %s specified: should be either %s or %s" \
                             % (region, FivePSeqCounts.START, FivePSeqCounts.TERM)
-            logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+            logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
             logger.error(error_message)
             raise Exception(error_message)
 
@@ -1198,7 +1198,7 @@ class CountManager:
         else:
             error_message = "Invalid region %s specified: should be either %s or %s" \
                             % (region, FivePSeqCounts.START, FivePSeqCounts.TERM)
-            logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+            logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
             logger.error(error_message)
             raise Exception(error_message)
 
@@ -1255,7 +1255,7 @@ class CountManager:
         else:
             error_message = "Invalid region %s specified: should be either %s or %s" \
                             % (region, FivePSeqCounts.START, FivePSeqCounts.TERM)
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(error_message)
             raise Exception(error_message)
 
         counts_df = pd.DataFrame({'D': d, 'C': count_vector})
@@ -1278,7 +1278,7 @@ class CountManager:
         :return: a dataframe with frame-based count-sums for each transcript
         """
 
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug(
+        logging.getLogger(config.FIVEPSEQ_LOGGER).debug(
             "Retrieving count-sums per frame relative to %s ..." % region)
 
         # Create an empty dataframe
@@ -1315,9 +1315,9 @@ class CountManager:
 
         if not os.path.exists(file_path):
             error_message = "Problem reading counts: the file %s does not exist" % file_path
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(error_message)
             raise IOError(error_message)
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading count file %s" % file_path)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).debug("Reading count file %s" % file_path)
         df = pd.read_csv(file_path, header=None, sep="|")
         count_vector_list = [[]] * len(df)
         for i in range(0, len(df)):
@@ -1342,9 +1342,9 @@ class CountManager:
         """
         if not os.path.exists(file):
             error_message = "Problem reading meta counts: the file %s does not exist" % file
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(error_message)
             raise IOError(error_message)
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading meta count file %s" % file)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).debug("Reading meta count file %s" % file)
         meta_count = pd.read_csv(file, sep="\t", header=None, names=["D", "C"])
         return meta_count
 
@@ -1364,9 +1364,9 @@ class CountManager:
         """
         if not os.path.exists(file):
             error_message = "Problem reading frame counts: the file %s does not exist" % file
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(error_message)
             raise IOError(error_message)
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading frame counts file %s" % file)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).debug("Reading frame counts file %s" % file)
 
         frame_counts = pd.read_csv(file, sep="\t")
         return frame_counts
@@ -1386,9 +1386,9 @@ class CountManager:
         """
         if not os.path.exists(file):
             error_message = "Problem reading amino acid pauses: the file %s does not exist" % file
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(error_message)
             raise IOError(error_message)
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading amino acids pauses file %s" % file)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).debug("Reading amino acids pauses file %s" % file)
 
         amino_acid_df = pd.read_csv(file, sep="\t", header=0, index_col=0)
 
@@ -1429,7 +1429,7 @@ class CountManager:
             transcript_index = list(pd.read_csv(canonical_index_file, header=None).iloc[:, 0])
             return transcript_index
         else:
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug(
+            logging.getLogger(config.FIVEPSEQ_LOGGER).debug(
                 "Problem retrieving canonical transcript indices. No file %s exists. "
                 "The filter will return None." % canonical_index_file)
             return None
@@ -1447,9 +1447,9 @@ class CountManager:
 
         if not os.path.exists(file_path):
             error_message = "Problem reading counts: the file %s does not exist" % file_path
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).error(error_message)
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(error_message)
             raise IOError(error_message)
-        logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).debug("Reading count file %s" % file_path)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).debug("Reading count file %s" % file_path)
         if os.stat(file_path).st_size == 0:
             counts = []
         else:

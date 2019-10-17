@@ -54,7 +54,7 @@ class VizPipeline:
     geneset_png_dir = None
     geneset_svg_dir = None
 
-    logger = logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER)
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     fivepseq_counts = None
     args = None
@@ -552,7 +552,7 @@ class VizPipeline:
         except:
             self.phantomjs_installed = False
             # TODO in the future fivepseq should attempt to install phantomjs from the very beginning
-            logging.getLogger(config.FIVEPSEQ_PLOT_LOGGER).warning(
+            logging.getLogger(config.FIVEPSEQ_LOGGER).warning(
                 "It seems like phantomjs is not installed no your system. "
                 "Files may not be exported in svg and png formats, while html will still be available for viewing."
                 "To install phantomjs, run 'conda install phantomjs selenium pillow'")

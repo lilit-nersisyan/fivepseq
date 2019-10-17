@@ -12,7 +12,7 @@ from fivepseq import config
 class Genome:
     fasta_file = None
     genome_dict = None
-    logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     def __init__(self, fasta_file):
         """

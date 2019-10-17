@@ -60,7 +60,7 @@ class CountStats:
         self.fivepseq_counts = fivepseq_counts
         self.fivepseq_out = fivepseq_out
         self.config = config
-        self.logger = logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER)
+        self.logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     def count_stats(self):
         """
@@ -71,7 +71,7 @@ class CountStats:
         self.summarize_transcript_stats()
 
         if self.data_summary_series[self.TOTAL_NUM_READS] == 0:
-            logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).warning(
+            logging.getLogger(config.FIVEPSEQ_LOGGER).warning(
                 "Zero reads in coding regions: frame and fft stats will not be calculated")
         else:
             self.compute_frame_preference_stats()
@@ -219,7 +219,7 @@ class CountStats:
                                           columns=frame_names)
 
             if total_counts == 0:
-                logging.getLogger(config.FIVEPSEQ_COUNT_LOGGER).warning("Total counts on frames equal to 0")
+                logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Total counts on frames equal to 0")
             else:
 
                 for i in range(3):
