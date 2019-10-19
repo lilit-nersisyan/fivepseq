@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+    <title>yeast_test</title>
+</head>
+<body>
+{svg}
+&nbsp;
+&nbsp;
+&nbsp;
+<h2>Fivepseq input and run configurations</h2>
+<h4>Main input:</h4>
+<table>
+    <tr>
+        <td>Bam directory:</td>
+        <td>{bam_dir}</td>
+    </tr>
+    <tr>
+        <td>Bam files:</td>
+        <td>{bam}</td>
+    </tr>
+    <tr>
+        <td>Genome file:</td>
+        <td>{fa}</td>
+    </tr>
+    <tr>
+        <td>Annotation file:</td>
+        <td>{gff}</td>
+    </tr>
+</table>
+<h4>Auxiliary files</h4>
+<table>
+    <tr>
+        <td>Gene set file:</td>
+        <td>{gene_set}</td>
+    </tr>
+    <tr>
+        <td>Gene filter file:</td>
+        <td>{gene_filter}</td>
+    </tr>
+</table>
+<h4>Other options</h4>
+<table>
+    <tr>
+        <td>Output directory:</td>
+        <td>{out_dir}</td>
+    </tr>
+    <tr>
+        <td>Conflict mode:</td>
+        <td>{conflicts}</td>
+    </tr>
+    <tr>
+        <td>Span size:</td>
+        <td>{span_size}</td>
+    </tr>
+    <tr>
+        <td>Outlier detection p value [--op]:</td>
+        <td>{op}</td>
+    </tr>
+    <tr>
+        <td>Down-sampling constant [--ds]</td>
+        <td>{ds}</td>
+    </tr>
+</table>
+&nbsp;
+&nbsp;
+
+<h2>Summary statistics</h2>
+{lib_size_table}
+&nbsp;
+&nbsp;
+<h2>Report files</h2>
+<h4>Main</h4>
+<table>
+    <tr>
+        <td>Main report</td>
+        <td><a href={main_report}>{main_report}</a></td>
+    </tr>
+    <tr>
+        <td>Combined samples</td>
+        <td><a href={combined_report}>{combined_report}</a></td>
+    </tr>
+</table>
+<h4>Supplement</h4>
+<table>
+    <tr>
+        <td>Amino acid scatter-plots</td>
+        <td><a href={suppl_amino_acid_scatter_report}>{suppl_amino_acid_scatter_report}</a></td>
+    </tr>
+    <tr>
+        <td>Codon-relative counts: heatmaps</td>
+        <td><a href={suppl_codon_report}>{suppl_codon_report}</a></td>
+    </tr>
+</table>
+<h4>Gene sets</h4>
+<table>
+    <tr>
+        <td>Compare samples in each gene-set</td>
+        <td><a href={geneset_sample_per_gs_report}>{geneset_sample_per_gs_report}</a></td>
+    </tr>
+    <tr>
+        <td>Compare gene-sets in each sample</td>
+        <td><a href={geneset_genesets_per_sample_report}>{geneset_genesets_per_sample_report}</a></td>
+    </tr>
+</table>
+
+&nbsp;
+
+<footer>
+    {footer}
+</footer>
+
+</body>
+</html>

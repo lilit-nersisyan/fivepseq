@@ -14,7 +14,8 @@ from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCoun
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
     bokeh_composite, bokeh_fft_plot, bokeh_tabbed_scatter_plot, bokeh_tabbed_triangle_plot, \
-    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot
+    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot, fivepseq_header
+from viz.header_html import write_fivepseq_header
 
 
 class VizPipeline:
@@ -44,6 +45,7 @@ class VizPipeline:
     count_folders = None
     sample_folders_dict = {}
     title = "fivepseq_plot_canvas"
+    main_dir = None
     png_dir = None
     svg_dir = None
     supplement_dir = "supplement"
@@ -233,15 +235,22 @@ class VizPipeline:
             except Exception as e:
                 raise Exception("Output directory %s could not be created: %s" % (self.args.o, str(e)))
 
+        self.main_dir = os.path.join(self.args.o, "main")
+        if not os.path.exists(self.main_dir):
+            try:
+                os.mkdir(self.main_dir)
+            except Exception as e:
+                raise Exception("Output directory %s could not be created: %s" % (self.args.o, str(e)))
+
         if self.is_phantomjs_installed():
-            self.png_dir = os.path.join(self.args.o, "png")
+            self.png_dir = os.path.join(self.main_dir, "png")
             if not os.path.exists(self.png_dir):
                 try:
                     os.mkdir(self.png_dir)
                 except Exception as e:
                     raise Exception("Output directory %s could not be created: %s" % (self.png_dir, str(e)))
 
-            self.svg_dir = os.path.join(self.args.o, "svg")
+            self.svg_dir = os.path.join(self.main_dir, "svg")
             if not os.path.exists(self.svg_dir):
                 try:
                     os.mkdir(self.svg_dir)
@@ -383,6 +392,13 @@ class VizPipeline:
 
     def plot_main(self):
         self.logger.info("Generating plots")
+        # plots header page
+        #header = fivepseq_header()
+        #bokeh_composite(self.title + "_main",
+        #                header,
+        #                os.path.join(self.args.o, self.title + ".html"), 1)
+        write_fivepseq_header(self)
+
 
         # figure_list = [fivepseq_header()]
         self.figure_list = []
@@ -410,9 +426,9 @@ class VizPipeline:
             self.figure_list += [self.get_scatter_plot(plot_name="CDS_metacounts_relative_to", region="loci",
                                                        count_dict=self.loci_meta_counts_dict_CDS, scale=True)]
 
-        bokeh_composite(self.title,
+        bokeh_composite(self.title + "_main",
                         self.figure_list,
-                        os.path.join(self.args.o, self.title + ".html"), 2)
+                        os.path.join(self.main_dir, self.title + "_main.html"), 2)
 
         if self.combine:
             self.figure_list_combined = [self.get_scatter_plot(region=FivePSeqCounts.START,
@@ -446,7 +462,7 @@ class VizPipeline:
 
             bokeh_composite(self.title + "_" + self.COMBINED,
                             self.figure_list_combined,
-                            os.path.join(self.args.o, self.title + "_" + self.COMBINED + ".html"), 2)
+                            os.path.join(self.main_dir, self.title + "_" + self.COMBINED + ".html"), 2)
 
     def write_genesets(self):
 

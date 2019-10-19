@@ -92,7 +92,6 @@ class Annotation:
         if len(gene_filtered_assembly) == 0:
             raise Exception("None of the genes in the geneset filter were present in the annotation file")
 
-        # TODO check if the following line suits: if transcript filters were applied prior, those will be preserved
         self.transcript_assembly_dict.update({self.transcript_filter: {0: gene_filtered_assembly}})
 
     def read_gene_filter_file(self, gene_filter_file):

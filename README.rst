@@ -100,7 +100,7 @@ The conflict mode specifies how to deal with files/folders that alraedy exist. T
 *default: 0*
 
 This arguments sets the p value threshold for outlier detection: point with less than the --op probability of
-falling into Poisson distribution will be down-sampled. If you want to turn off downsampling, set the --op to -1.
+falling into Poisson distribution will be down-sampled. If you want to turn downsampling off, set the --op to -1.
 
 
 **--ds**

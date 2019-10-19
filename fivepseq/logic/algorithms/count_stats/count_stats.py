@@ -137,7 +137,6 @@ class CountStats:
                 lengths[i] = len(count_vector)
 
             # align start
-            #NOTE I've wrapped lengths around tuple() to supress futurewarning
             size = int(stats.scoreatpercentile(tuple(lengths), per=25)) # determine the length that 75% of vectors will stretch to
             num = int(np.ceil((3. / 4) * len(count_vector_list))) # only those 75% of vectors will be computed
             start_array = np.zeros((num, size))

@@ -2,12 +2,14 @@ import copy
 import logging
 import os
 import random
+import urllib
 
 import matplotlib as mpl
 import matplotlib.cm as cm
 import numpy as np
 import bokeh
 from bokeh.colors import RGB
+from bokeh.embed import file_html
 from bokeh.io import output_file, save, export_svgs, export_png
 from bokeh.io import show
 from bokeh.layouts import gridplot, row, widgetbox
@@ -21,6 +23,8 @@ from fivepseq import config
 from fivepseq.logic.structures import codons
 from fivepseq.logic.structures.fivepseq_counts import CountManager
 import colorlover as cl
+
+from viz.header_html import get_div_logo, get_div_footer
 
 tools = [PanTool(), BoxZoomTool(), WheelZoomTool(), SaveTool(), ResetTool()]
 
@@ -39,20 +43,32 @@ def bokeh_composite(title, figure_list, filename, ncols=2):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of columns: %d" % ncols)
 
     p = gridplot(figure_list, ncols=ncols)
-    print filename
-    save(p, filename=filename)
-
+    div_logo = Div(text=get_div_logo())
+    div_footer = Div(text=get_div_footer())
+    save([div_logo,p,div_footer], filename=filename)
 
 def fivepseq_header():
-    version = '0.1.5'
+    version = '1.0'
+    url = "https://github.com/lilit-nersisyan/fivepseq/blob/master/fivepseq_logo.jpg"
+
+    image=urllib.URLopener()
+    image.retrieve(url)
+
+    try:
+        f = open('fivepseq_logo.jpg', 'wb')
+        f.write(urllib.urlopen(url).read())
+        f.close()
+    except:
+        logging.getLogger(config.FIVEPSEQ_LOGGER).warn("Could not download fivepseq logo")
+
+    logo_path = os.getcwd() + "/fivepseq_logo.jpg"
     header = []
     header += [
-        Div(text="""<img src='ftp://data.pelechanolab.com/software/fivepseq/logo/fivepseq_logo.jpg'>""", height=100),
-        None]
-    header += [Div(text="""These plots are generated with fivepseq version """ + version
-                        + """. Please, follow <a href="https://github.com/lilit-nersisyan/fivepseq">this link </a> to 
-                      cite us.""",
-                   width=400), None]
+        Div(text="""<img src=""" + logo_path + """>""")]
+#    header += [Div(text="""These plots are generated with fivepseq version """ + version
+#                        + """. Please, follow <a href="https://github.com/lilit-nersisyan/fivepseq">this link </a> to
+#                      cite us.""",
+#                   width=400), None]
     return header
 
 
