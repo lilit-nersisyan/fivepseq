@@ -15,7 +15,7 @@ from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
     bokeh_composite, bokeh_fft_plot, bokeh_tabbed_scatter_plot, bokeh_tabbed_triangle_plot, \
     bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot, fivepseq_header
-from viz.header_html import write_fivepseq_header
+from fivepseq.viz.header_html import write_fivepseq_header
 
 
 class VizPipeline:

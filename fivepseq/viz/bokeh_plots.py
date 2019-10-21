@@ -24,7 +24,7 @@ from fivepseq.logic.structures import codons
 from fivepseq.logic.structures.fivepseq_counts import CountManager
 import colorlover as cl
 
-from viz.header_html import get_div_logo, get_div_footer
+from fivepseq.viz.header_html import get_div_logo, get_div_footer
 
 tools = [PanTool(), BoxZoomTool(), WheelZoomTool(), SaveTool(), ResetTool()]
 

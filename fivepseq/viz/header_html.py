@@ -1,7 +1,6 @@
 import os
 import sys
 
-from util.formatting import pad_spaces
 
 VERSION = "0.5.2"
 
