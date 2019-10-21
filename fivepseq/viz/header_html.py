@@ -61,8 +61,13 @@ def get_html_body(viz_pipeline):
 
         if hasattr(args, "gs") and args.gs is not None:
             input_gene_set = os.path.abspath(args.gs)
+            input_geneset_sample_per_gs_report = os.path.join("genesets", viz_pipeline.title + "_samples_per_geneset.html"),
+            input_geneset_genesets_per_sample_report = os.path.join("genesets", viz_pipeline.title + "_genesets_per_sample.html")
         else:
             input_gene_set = "None"
+            input_geneset_sample_per_gs_report = "None"
+            input_geneset_genesets_per_sample_report = "None"
+
 
         if hasattr(args, "gf") and args.gf is not None:
             input_gene_filter = os.path.abspath(args.gf)
@@ -90,10 +95,8 @@ def get_html_body(viz_pipeline):
                                                                               viz_pipeline.title + "_amino_acid_scatterplots.html"),
                                  suppl_codon_report=os.path.join("supplement",
                                                                  viz_pipeline.title + "_codon_relative_counts.html"),
-                                 geneset_sample_per_gs_report=os.path.join("genesets",
-                                                                           viz_pipeline.title + "_samples_per_geneset.html"),
-                                 geneset_genesets_per_sample_report=os.path.join("genesets",
-                                                                                 viz_pipeline.title + "_genesets_per_sample.html"))
+                                 geneset_sample_per_gs_report=input_geneset_sample_per_gs_report,
+                                 geneset_genesets_per_sample_report=input_geneset_genesets_per_sample_report)
 
         return (result)
 
