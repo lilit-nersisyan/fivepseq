@@ -46,8 +46,8 @@ def get_libsize_table(viz_pipeline):
 def get_html_body(viz_pipeline):
 
     args = viz_pipeline.args
-    curr_dir = sys.path[0]
-    with open(os.path.join(curr_dir, "viz", "template.html"), "r") as f:
+    curr_dir = os.path.dirname(__file__)
+    with open(os.path.join(curr_dir, "template.html"), "r") as f:
         template = f.read()
 
         bam_list = ""
@@ -59,6 +59,16 @@ def get_html_body(viz_pipeline):
             else:
                 bam_list += "<br>" + s
 
+        if hasattr(args, "gs") and args.gs is not None:
+            input_gene_set = os.path.abspath(args.gs)
+        else:
+            input_gene_set = "None"
+
+        if hasattr(args, "gf") and args.gf is not None:
+            input_gene_filter = os.path.abspath(args.gf)
+        else:
+            input_gene_filter = "None"
+
         result = template.format(svg=get_div_logo(),
                                  version=VERSION,
                                  footer = get_div_footer(),
@@ -68,8 +78,8 @@ def get_html_body(viz_pipeline):
                                  gff=os.path.abspath(args.a),
                                  out_dir=args.o,
                                  conflicts=args.conflicts,
-                                 gene_set=os.path.abspath(args.gs),
-                                 gene_filter=os.path.abspath(args.gf),
+                                 gene_set=input_gene_set,
+                                 gene_filter=input_gene_filter,
                                  span_size=str(args.span),
                                  op=args.op,
                                  ds=args.ds,

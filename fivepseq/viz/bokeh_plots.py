@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import print_function
 import copy
 import logging
 import os
@@ -219,15 +221,15 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
             else:
                 y = count_series.C
             source = ColumnDataSource(data=dict(
-                x=count_series.D,
-                y=y,
-                raw=count_series.C,
+                x=list(count_series.D),
+                y=list(y),
+                raw=list(count_series.C),
                 name=[key] * len(y)
             ))
             line = p.line('x', 'y', line_color=c, line_width=2, source=source)
             legend_items.append((key, [line]))
         except Exception as e:
-            print "Error at key %s, reason; %s" % (key, str(e))
+            print("Error at key %s, reason; %s" % (key, str(e)))
             return None
         if scale:
             hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x'), ('RPM', '@y'), ('raw count', '@raw')],
@@ -1021,7 +1023,6 @@ def bokeh_aa_scatter_grid(title_prefix, amino_acid_df_dict, png_dir=None, svg_di
             c = codons.Codons.AMINO_ACID_COLORS.get(aa)
             line = p.line(amino_acid_df.columns, amino_acid_df.loc[aa,], legend=aa,
                           line_color=c)
-            print line
             hover = HoverTool(tooltips=[('distance', '@x'), ('count', '@y')], renderers=[line])
             p.add_tools(hover)
 

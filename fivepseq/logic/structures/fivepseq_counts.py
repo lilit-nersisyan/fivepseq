@@ -657,7 +657,7 @@ class FivePSeqCounts:
         transcript_assembly = self.annotation.get_transcript_assembly_default_filter(0)
         transcript_count = len(transcript_assembly)
         for transcript in transcript_assembly:
-            if counter % np.floor(transcript_count / 10) == 0:
+            if counter % floor(transcript_count / 10) == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / transcript_count), '%',), )
                 self.logger.info("Amount of cds not multiple of 3 is %.2f %s"
