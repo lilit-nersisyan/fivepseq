@@ -49,31 +49,6 @@ def bokeh_composite(title, figure_list, filename, ncols=2):
     div_footer = Div(text=get_div_footer())
     save([div_logo,p,div_footer], filename=filename)
 
-def fivepseq_header():
-    version = '1.0'
-    url = "https://github.com/lilit-nersisyan/fivepseq/blob/master/fivepseq_logo.jpg"
-
-    image=urllib.URLopener()
-    image.retrieve(url)
-
-    try:
-        f = open('fivepseq_logo.jpg', 'wb')
-        f.write(urllib.urlopen(url).read())
-        f.close()
-    except:
-        logging.getLogger(config.FIVEPSEQ_LOGGER).warn("Could not download fivepseq logo")
-
-    logo_path = os.getcwd() + "/fivepseq_logo.jpg"
-    header = []
-    header += [
-        Div(text="""<img src=""" + logo_path + """>""")]
-#    header += [Div(text="""These plots are generated with fivepseq version """ + version
-#                        + """. Please, follow <a href="https://github.com/lilit-nersisyan/fivepseq">this link </a> to
-#                      cite us.""",
-#                   width=400), None]
-    return header
-
-
 def bokeh_table(title, table_df_dict):
     output_file(title + ".html")
     mainLayout = row(row(), name=title)
@@ -372,8 +347,8 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
             c = get_random_color()
 
         source = ColumnDataSource(data=dict(
-            x=count_series.D,
-            y=count_series.C,
+            x=list(count_series.D),
+            y=list(count_series.C),
             name=[key] * len(count_series.C),
         ))
 

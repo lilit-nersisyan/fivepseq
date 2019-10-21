@@ -6,6 +6,7 @@ import colorlover as cl
 import numpy as np
 import pandas as pd
 from bokeh.io import export_svgs
+from bokeh.models import Div
 from bokeh.plotting import figure
 
 from fivepseq import config
@@ -14,7 +15,7 @@ from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCoun
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
     bokeh_composite, bokeh_fft_plot, bokeh_tabbed_scatter_plot, bokeh_tabbed_triangle_plot, \
-    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot, fivepseq_header
+    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot
 from fivepseq.viz.header_html import write_fivepseq_header
 
 
@@ -89,6 +90,8 @@ class VizPipeline:
     dist_for_amino_acid_heatmaps = 20
 
     gs_transcriptInd_dict = None
+    gs_shortGS_dict = {}
+    shortGS_gs_dict = {}
 
     # large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired'][0:6]) +
     #                     cl.to_numeric(cl.scales['8']['qual']['Set1'][3:5]))
@@ -393,14 +396,11 @@ class VizPipeline:
     def plot_main(self):
         self.logger.info("Generating plots")
         # plots header page
-        #header = fivepseq_header()
-        #bokeh_composite(self.title + "_main",
+        # bokeh_composite(self.title + "_main",
         #                header,
         #                os.path.join(self.args.o, self.title + ".html"), 1)
         write_fivepseq_header(self)
 
-
-        # figure_list = [fivepseq_header()]
         self.figure_list = []
         self.figure_list += [self.get_scatter_plot(region=FivePSeqCounts.START),
                              self.get_scatter_plot(region=FivePSeqCounts.TERM)]
@@ -464,9 +464,21 @@ class VizPipeline:
                             self.figure_list_combined,
                             os.path.join(self.main_dir, self.title + "_" + self.COMBINED + ".html"), 2)
 
+    GS_COUNTER = 1
+
+    def generate_shortGS(self):
+        shortGS = "GS" + str(self.GS_COUNTER)
+        self.GS_COUNTER += 1
+        return shortGS
+
     def write_genesets(self):
 
         self.logger.info("Generating geneset-specific plots")
+
+        for gs in self.gs_transcriptInd_dict.keys():
+            shortGS = self.generate_shortGS()
+            self.gs_shortGS_dict.update({gs: shortGS})
+            self.shortGS_gs_dict.update({shortGS: gs})
 
         # tabs = genesets, overlay = samples
         geneset_title = self.title + "_samples_per_geneset"
@@ -753,25 +765,26 @@ class VizPipeline:
     def generate_gs_sample_dict(self, filename, data_type):
         gs_sample_dict = {}
         for gs in self.gs_transcriptInd_dict.keys():
-            gs_sample_dict.update({gs: {}})
+            shortGS = self.gs_shortGS_dict[gs]
+            gs_sample_dict.update({shortGS: {}})
             for sample in self.samples:
                 if data_type == self.DATA_TYPE_META_COUNTS:
-                    gs_sample_dict[gs].update({sample: self.read_meta_count_term(
+                    gs_sample_dict[shortGS].update({sample: self.read_meta_count_term(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_FRAME_COUNTS:
-                    gs_sample_dict[gs].update({sample: self.read_frame_count_term(
+                    gs_sample_dict[shortGS].update({sample: self.read_frame_count_term(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_FRAME_STATS:
-                    gs_sample_dict[gs].update({sample: self.read_frame_stats_df(
+                    gs_sample_dict[shortGS].update({sample: self.read_frame_stats_df(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_AMINO_ACID_DF:
-                    gs_sample_dict[gs].update({sample: self.read_amino_acid_df(
+                    gs_sample_dict[shortGS].update({sample: self.read_amino_acid_df(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_FFT_SIGNALS:
-                    gs_sample_dict[gs].update({sample: self.read_fft_signal_term(
+                    gs_sample_dict[shortGS].update({sample: self.read_fft_signal_term(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_LIB_SIZE:
-                    gs_sample_dict[gs].update({sample: self.lib_size_dict.get(sample)})
+                    gs_sample_dict[shortGS].update({sample: self.lib_size_dict.get(sample)})
 
         return gs_sample_dict
 
@@ -780,23 +793,24 @@ class VizPipeline:
         for sample in self.samples:
             sample_gs_dict.update({sample: {}})
             for gs in self.gs_transcriptInd_dict.keys():
+                shortGS = self.gs_shortGS_dict[gs]
                 if data_type == self.DATA_TYPE_META_COUNTS:
-                    sample_gs_dict[sample].update({gs: self.read_meta_count_term(
+                    sample_gs_dict[sample].update({shortGS: self.read_meta_count_term(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_FRAME_COUNTS:
-                    sample_gs_dict[sample].update({gs: self.read_frame_count_term(
+                    sample_gs_dict[sample].update({shortGS: self.read_frame_count_term(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_FRAME_STATS:
-                    sample_gs_dict[sample].update({gs: self.read_frame_stats_df(
+                    sample_gs_dict[sample].update({shortGS: self.read_frame_stats_df(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_AMINO_ACID_DF:
-                    sample_gs_dict[sample].update({gs: self.read_amino_acid_df(
+                    sample_gs_dict[sample].update({shortGS: self.read_amino_acid_df(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_FFT_SIGNALS:
-                    sample_gs_dict[sample].update({gs: self.read_fft_signal_term(
+                    sample_gs_dict[sample].update({shortGS: self.read_fft_signal_term(
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_LIB_SIZE:
-                    sample_gs_dict[sample].update({gs: self.lib_size_dict.get(sample)})
+                    sample_gs_dict[sample].update({shortGS: self.lib_size_dict.get(sample)})
         return sample_gs_dict
 
     def gs_tabbed_plots(self, title):
@@ -817,6 +831,7 @@ class VizPipeline:
         gs_fft_term_dict = self.generate_gs_sample_dict(FivePSeqOut.FFT_SIGNALS_TERM, self.DATA_TYPE_FFT_SIGNALS)
         gs_lib_size_dict = self.generate_gs_sample_dict(None, self.DATA_TYPE_LIB_SIZE)
 
+        plots.append(self.get_gs_mapping_div())
         plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_start_dict,
                                                   region=FivePSeqCounts.START,
                                                   scale=True, lib_size_dict_dict=gs_lib_size_dict,
@@ -849,30 +864,27 @@ class VizPipeline:
         # combined dicts
         if self.combine:
             gs_meta_counts_start_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
+            gs_meta_counts_term_combined = {}
+            gs_frame_counts_term_combined = {}
+            gs_amino_acid_counts_combined = {}
+            gs_lib_size_combined = {}
+
+            for gs in self.shortGS_gs_dict.keys():
                 gs_meta_counts_start_combined.update(
                     {gs: {self.COMBINED: CountManager.combine_count_series(gs_meta_count_start_dict[gs])}})
 
-            gs_meta_counts_term_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
                 gs_meta_counts_term_combined.update(
                     {gs: {self.COMBINED: CountManager.combine_count_series(gs_meta_count_term_dict[gs])}})
 
-            gs_frame_counts_term_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
                 gs_frame_counts_term_combined.update(
                     # {gs: {self.COMBINED: self.combine_frame_counts(gs_frame_count_term_dict[gs])}})
                     {gs: {self.COMBINED: CountManager.combine_frame_counts(gs_frame_count_term_dict[gs],
                                                                            gs_lib_size_dict[gs])}})
 
-            gs_amino_acid_counts_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
                 gs_amino_acid_counts_combined.update(
                     {gs: {self.COMBINED: CountManager.combine_amino_acid_dfs(gs_amino_acid_df_dict[gs],
                                                                              gs_lib_size_dict[gs])}})
 
-            gs_lib_size_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
                 gs_lib_size_combined.update({gs: {self.COMBINED: sum(self.lib_size_dict.values())}})
 
             plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_start_dict,
@@ -899,6 +911,25 @@ class VizPipeline:
 
         return plots
 
+    def get_gs_mapping_div(self):
+        table = "<table>" \
+                "<tr>" \
+                "<th>Gene-set actual name</th>" \
+                "<th>Gene-set short name</th>" \
+                "</tr>"
+
+        for gs in self.gs_shortGS_dict.keys():
+            table += "<tr><td>%s</td><td>%s</td></tr>" \
+                     % (gs, self.gs_shortGS_dict[gs])
+        table += "</table>"
+
+        div_text = """<hr><div>
+            <h4>Gene-set name mapping</h4>
+            %s
+            </div>""" % table
+        div = Div(text=div_text)
+        return div
+
     def sample_geneset_tabbed_plots(self, title):
         plots = []
 
@@ -920,9 +951,10 @@ class VizPipeline:
         sample_gs_lib_size_dict = self.generate_sample_gs_dict(None, self.DATA_TYPE_LIB_SIZE)
 
         gs_colors_dict = dict(
-            zip(self.gs_transcriptInd_dict.keys(),
-                self.gs_colors_list[0:len(self.gs_transcriptInd_dict.keys())]))
+            zip(self.shortGS_gs_dict.keys(),
+                self.gs_colors_list[0:len(self.shortGS_gs_dict.keys())]))
 
+        plots.append(self.get_gs_mapping_div())
         plots.append(self.get_tabbed_scatter_plot(group_count_dict=sample_gs_meta_count_start_dict,
                                                   region=FivePSeqCounts.START, color_dict=gs_colors_dict,
                                                   scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
@@ -961,39 +993,36 @@ class VizPipeline:
         if self.combine:
             # combined dicts
             sample_gs_meta_counts_start_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
+            sample_gs_meta_counts_term_combined = {}
+            sample_gs_frame_counts_term_combined = {}
+            sample_gs_amino_acid_counts_combined = {}
+            sample_gs_lib_size_combined = {}
+
+            for gs in self.shortGS_gs_dict.keys():
                 sample_temp_dict = {}
                 for sample in self.samples:
                     sample_temp_dict.update({sample: sample_gs_meta_count_start_dict[sample][gs]})
                 sample_gs_meta_counts_start_combined.update(
                     {gs: CountManager.combine_count_series(sample_temp_dict, self.lib_size_dict)})
 
-            sample_gs_meta_counts_term_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
                 sample_temp_dict = {}
                 for sample in self.samples:
                     sample_temp_dict.update({sample: sample_gs_meta_count_term_dict[sample][gs]})
                 sample_gs_meta_counts_term_combined.update(
                     {gs: CountManager.combine_count_series(sample_temp_dict, self.lib_size_dict)})
 
-            sample_gs_frame_counts_term_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
                 sample_temp_dict = {}
                 for sample in self.samples:
                     sample_temp_dict.update({sample: sample_gs_frame_count_term_dict[sample][gs]})
                 sample_gs_frame_counts_term_combined.update(
                     {gs: CountManager.combine_frame_counts(sample_temp_dict, self.lib_size_dict)})
 
-            sample_gs_amino_acid_counts_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
                 sample_temp_dict = {}
                 for sample in self.samples:
                     sample_temp_dict.update({sample: sample_gs_amino_acid_df_dict[sample][gs]})
                 sample_gs_amino_acid_counts_combined.update(
                     {gs: CountManager.combine_amino_acid_dfs(sample_temp_dict, self.lib_size_dict)})
 
-            sample_gs_lib_size_combined = {}
-            for gs in self.gs_transcriptInd_dict.keys():
                 sample_gs_lib_size_combined.update({gs: sum(self.lib_size_dict.values())})
 
             plots.append(self.get_scatter_plot(region=FivePSeqCounts.START,

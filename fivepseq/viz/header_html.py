@@ -61,7 +61,7 @@ def get_html_body(viz_pipeline):
 
         if hasattr(args, "gs") and args.gs is not None:
             input_gene_set = os.path.abspath(args.gs)
-            input_geneset_sample_per_gs_report = os.path.join("genesets", viz_pipeline.title + "_samples_per_geneset.html"),
+            input_geneset_sample_per_gs_report = os.path.join("genesets", viz_pipeline.title + "_samples_per_geneset.html")
             input_geneset_genesets_per_sample_report = os.path.join("genesets", viz_pipeline.title + "_genesets_per_sample.html")
         else:
             input_gene_set = "None"

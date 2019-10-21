@@ -105,9 +105,9 @@ class Annotation:
             count = 1
             while line:
                 #TODO check if this can work with spaces, as they are common
-                if " " in line or "\t" in line:
-                    raise Exception("The gene set file %s should not contain spaces or tabs. Found one in line %d"
-                                    % (gene_filter_file, count))
+                #if " " in line or "\t" in line:
+                #    raise Exception("The gene set file %s should not contain spaces or tabs. Found one in line %d"
+                #                    % (gene_filter_file, count))
 
                 gene_filter.append(line.rstrip("\n\r"))
                 line = file.readline()
@@ -291,9 +291,9 @@ class Annotation:
             line = file.readline()
             count = 1
             while line:
-                if " " in line:
-                    raise Exception("The geneset file %s should not contain spaces. Found one in line %d"
-                                    % (geneset_file, count))
+                #if " " in line:
+                #    raise Exception("The geneset file %s should not contain spaces. Found one in line %d"
+                #                    % (geneset_file, count))
                 tokens = line.split('\t')
                 if len(tokens) != 2:
                     raise Exception(
