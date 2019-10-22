@@ -15,15 +15,14 @@ class Annotation:
     file_path = None
     gene_filter = None
 
-    transcript_assembly_default = None
+    # the transcript_assembly_dict is a two-level dictionary.
+    # the first level provides keys to gene-filters;
+    # the second level provides keys to span-sizes
     transcript_assembly_dict = {}
 
+    PROTEIN_CODING = "protein_coding"
+    default_filter = PROTEIN_CODING
 
-    FORWARD_STRAND_FILTER = "fwd"
-    REVERSE_STRAND_FILTER = "rev"
-    NO_FILTER = "none"
-
-    transcript_filter = NO_FILTER
     gs_transcript_dict = None
     gs_transcriptInd_dict = None
     gs_geneID_attribute = None
@@ -49,19 +48,14 @@ class Annotation:
             raise ValueError(error_message)
         self.transcript_count = len(transcript_assembly)
 
-        self.transcript_assembly_dict.update({self.NO_FILTER: {
-            0: transcript_assembly}})  # the trnascript assembly returned by the reader is set for 0 span size and no filter
+        self.transcript_assembly_dict.update({
+            self.default_filter: {
+                0: transcript_assembly
+            }})  # the trnascript assembly returned by the reader is set for 0 span size and no filter
 
         self.logger.debug("Annotation object successfully created from file %s" % file_path)
 
-    def set_default_transcript_filter(self, transcript_filter):
-        """
-        Sets the default transcript filter to be used with transcript assembly retrieval with no filter specifications.
-        """
-
-        self.transcript_filter = transcript_filter
-
-    def set_gene_filter(self, gene_filter_file, attribute="gene_id"):
+    def set_permanent_gene_filter(self, gene_filter_file, attribute="gene_id"):
         """
         Provide the file where the names of genes to be filtered are present.
         The genes should be named according to the attribute in the gff file.
@@ -73,16 +67,17 @@ class Annotation:
         """
 
         self.gene_filter = self.read_gene_filter_file(gene_filter_file)
-        self.apply_gene_filter(self.gene_filter, attribute)
+        self.apply_permanent_gene_filter(self.gene_filter, attribute)
 
-    def apply_gene_filter(self, gene_filter, attribute):
+    def apply_permanent_gene_filter(self, gene_filter, attribute):
         gene_filtered_assembly = []
-        for transcript in self.get_transcript_assembly_default_filter():
+        for transcript in self.get_transcript_assembly(span_size=0):
             attr_value = FivePSeqOut.get_transcript_attr(transcript, attribute)
             if attr_value in gene_filter:
                 gene_filtered_assembly.append(transcript)
             # TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
-            elif len(attr_value.split(":")) > 1 and attr_value.split(":")[1] in gene_filter:  # gene_id filtering results in IDs in the form gene:xxx
+            elif len(attr_value.split(":")) > 1 and attr_value.split(":")[
+                1] in gene_filter:  # gene_id filtering results in IDs in the form gene:xxx
                 gene_filtered_assembly.append(transcript)
             elif attr_value.split("-")[0] in gene_filter:
                 gene_filtered_assembly.append(transcript)
@@ -92,7 +87,9 @@ class Annotation:
         if len(gene_filtered_assembly) == 0:
             raise Exception("None of the genes in the geneset filter were present in the annotation file")
 
-        self.transcript_assembly_dict.update({self.transcript_filter: {0: gene_filtered_assembly}})
+        #NOTE the gene filter is permanently applied in the beginning,
+        # thus span sizes other than 0 are not taken into consideration
+        self.transcript_assembly_dict.update({self.default_filter: {0: gene_filtered_assembly}})
 
     def read_gene_filter_file(self, gene_filter_file):
 
@@ -104,8 +101,8 @@ class Annotation:
             line = file.readline()
             count = 1
             while line:
-                #TODO check if this can work with spaces, as they are common
-                #if " " in line or "\t" in line:
+                # TODO check if this can work with spaces, as they are common
+                # if " " in line or "\t" in line:
                 #    raise Exception("The gene set file %s should not contain spaces or tabs. Found one in line %d"
                 #                    % (gene_filter_file, count))
 
@@ -122,66 +119,46 @@ class Annotation:
 
         self.span_size = span_size
 
-    def get_default_transcript_assembly(self):
-        """
-        Returns the transcript assembly with default span size and transcript filter.
-
-        :return: list[Transcript] list of transcripts spanned and filtered according to default settings
-        """
-
-        return self.get_transcript_assembly(self.span_size, self.transcript_filter)
-
-    def get_transcript_assembly_default_filter(self, span_size=0):
-        """
-        Returns the transcript assembly with default filters and specified span size.
-
-        :return: list[Transcript] list of transcripts spanned and filtered according to default settings
-        """
-
-        return self.get_transcript_assembly(span_size=span_size, transcript_filter=self.transcript_filter)
-
-    def get_clean_transcript_assembly(self):
-        """
-        Returns the transcript assembly as found in the gff file - with no spanning and no transcript filter.
-
-        :return: list[Transcript] list of transcripts spanned and filtered according to default settings
-        """
-
-        return self.get_transcript_assembly(span_size=0, transcript_filter=self.NO_FILTER)
-
-    @preconditions(lambda span_size: isinstance(span_size, int))
-    def get_transcript_assembly(self, span_size, transcript_filter=None):
+    def get_transcript_assembly(self, span_size=None, geneset_filter=None):
         """
         Returns transcripts if a transcript assembly already exists with provided span_size and filter.
         Creates and returns a new transcript assembly otherwise.
 
         :param span_size:  int span_size - defines the number of nucleotides to span
-        :param transcript_filter: filter to be applied on transcripts
+        :param geneset_filter: filter name to be applied on transcripts
         :return: a vector of transcript or an iterable of type Transcript
         """
 
-        if transcript_filter is None:
-            transcript_filter = self.NO_FILTER
+        if span_size is None:
+            span_size = self.span_size
 
-        if transcript_filter in self.transcript_assembly_dict and \
-                span_size in self.transcript_assembly_dict[transcript_filter]:
-            return self.transcript_assembly_dict[transcript_filter][span_size]
+        if geneset_filter is None:
+            geneset_filter = self.default_filter
 
-        return self.generate_transcript_assembly(span_size, transcript_filter)
+        if geneset_filter not in self.transcript_assembly_dict:
+            raise Exception("Provided geneset filter %s is not processed yet" % geneset_filter)
+
+        if span_size in self.transcript_assembly_dict[geneset_filter]:
+            return self.transcript_assembly_dict[geneset_filter][span_size]
+
+        return self.generate_transcript_assembly(span_size, geneset_filter)
 
     @preconditions(lambda span_size: isinstance(span_size, int))
-    def generate_transcript_assembly(self, span_size, transcript_filter=None):
+    def generate_transcript_assembly(self, span_size, geneset_filter=None):
         """
         Adds spanning regions to the start and the end of the transcript and yields the transcripts one-by-one.
         The original transcript assembly is left intact.
 
         :param span_size:  int span_size - defines the number of nucleotides to span
-        :param transcript_filter: filter to apply on transcripts
+        :param geneset_filter: filter to apply on transcripts
 
         :return: transcript vector
         """
 
         # error check
+        if geneset_filter is None:
+            transcript_filter = self.default_filter
+
         if span_size < 0:
             error_message = "Negative span_size of %d provided: cannot span the transcripts with negative or " \
                             "zero values" % span_size
@@ -192,19 +169,19 @@ class Annotation:
         # info 
         self.logger.info(
             "Generating transcript assembly under filter: %s and span size: %d"
-            % (transcript_filter, span_size))
+            % (geneset_filter, span_size))
 
         # generation
         this_transcript_assembly = []
-        for transcript in self.get_transcript_assembly_default_filter():
+        for transcript in self.get_transcript_assembly(span_size=0, geneset_filter=geneset_filter):
             # apply filter
-            if transcript_filter == self.FORWARD_STRAND_FILTER:
-                if transcript.strand != '+':
-                    continue
+#            if transcript_filter == self.FORWARD_STRAND_FILTER:
+#                if transcript.strand != '+':
+#                    continue
 
-            elif transcript_filter == self.REVERSE_STRAND_FILTER:
-                if transcript.strand != '-':
-                    continue
+#            elif transcript_filter == self.REVERSE_STRAND_FILTER:
+#                if transcript.strand != '-':
+#                    continue
 
             # span
             spanned_transcript = self.span_transcript(transcript, span_size)
@@ -213,16 +190,10 @@ class Annotation:
             this_transcript_assembly.append(spanned_transcript)
 
         # add assembly to dictionary
-        if transcript_filter in self.transcript_assembly_dict:
-            self.transcript_assembly_dict[transcript_filter].update({span_size: this_transcript_assembly})
-        else:
-            self.transcript_assembly_dict.update({transcript_filter: {span_size: this_transcript_assembly}})
+        self.transcript_assembly_dict[geneset_filter].update({span_size: this_transcript_assembly})
 
         # info
         self.logger.info("Transcript assembly generated")
-
-        if self.transcript_assembly_default is None:
-            self.transcript_assembly_default = this_transcript_assembly
 
         return this_transcript_assembly
 
@@ -291,7 +262,7 @@ class Annotation:
             line = file.readline()
             count = 1
             while line:
-                #if " " in line:
+                # if " " in line:
                 #    raise Exception("The geneset file %s should not contain spaces. Found one in line %d"
                 #                    % (geneset_file, count))
                 tokens = line.split('\t')
@@ -317,7 +288,7 @@ class Annotation:
         geneID_transcript_dict = {}
         geneID_transcriptInd_dict = {}
         transcript_ind = 0
-        for transcript in self.get_transcript_assembly_default_filter():
+        for transcript in self.get_transcript_assembly(span_size=0):
             attr_value = FivePSeqOut.get_transcript_attr(transcript, attribute)
             # TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
             geneID = None
@@ -338,35 +309,45 @@ class Annotation:
 
         # with those geneIDs that mapped to actual transcripts,
         # store a {GS: [transcripts]} dictionary
-        gs_transcript_dict = {}
+        #TODO remove if fine
+        #gs_transcript_dict = {}
         gs_transcriptInd_dict = {}
         for gs in gs_dict.keys():
-            gs_transcript_dict.update({gs: []})
+            #gs_transcript_dict.update({gs: []})
+            self.transcript_assembly_dict.update({gs:{0:[]}})
             gs_transcriptInd_dict.update({gs: []})
             for geneID in gs_dict[gs]:
                 if geneID_transcript_dict.has_key(geneID):
-                    gs_transcript_dict[gs].append(geneID_transcript_dict[geneID])
+                    #TODO remove if fine
+                    #gs_transcript_dict[gs].append(geneID_transcript_dict[geneID])
+                    self.transcript_assembly_dict[gs][0].append(geneID_transcript_dict[geneID])
                     gs_transcriptInd_dict[gs].append(geneID_transcriptInd_dict[geneID])
 
-        self.gs_transcript_dict = gs_transcript_dict
+        #TODO remove if fine
+        #self.gs_transcript_dict = gs_transcript_dict
         self.gs_transcriptInd_dict = gs_transcriptInd_dict
-
 
         self.logger.info("Genesets processed. %d out of %d unique geneIDs matched corresponding transcripts"
                          % (len(set(geneID_transcript_dict.keys())), len(set(geneIDs))))
 
-        return gs_transcript_dict
-
     def remove_geneset_filter(self):
-        self.transcript_assembly_dict.update({self.transcript_filter: {0: self.transcript_assembly_default}})
+        #TODO remove if fine
+        #self.transcript_assembly_dict.update({self.protein_coding_filter: {0: self.transcript_assembly_default}})
+        self.default_filter = self.PROTEIN_CODING
 
     def apply_geneset_filter(self, gs):
         if not self.gs_transcript_dict.has_key(gs):
             raise Exception("The annotation does not have a filter named %s" % gs)
 
+        self.default_filter = gs
+
+        #TODO remove if fine
+        """
         gene_filtered_assembly = self.gs_transcript_dict[gs]
 
         if len(gene_filtered_assembly) == 0:
             raise Exception("No genes remain after applying the geneset filter %s " % gs)
-
-        self.transcript_assembly_dict.update({self.transcript_filter: {0: gene_filtered_assembly}})
+        self.transcript_assembly_default = self.transcript_assembly_dict.get(self.protein_coding_filter). \
+            get(0)
+        self.transcript_assembly_dict.update({self.protein_coding_filter: {0: gene_filtered_assembly}})
+        """

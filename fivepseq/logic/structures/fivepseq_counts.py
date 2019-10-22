@@ -128,7 +128,7 @@ class FivePSeqCounts:
         # info
         self.logger.info("Generating transcript descriptors")
 
-        transcript_assembly = self.annotation.get_transcript_assembly_default_filter(0)
+        transcript_assembly = self.annotation.get_transcript_assembly(span_size=0)
         transcript_count = len(transcript_assembly)
         self.transcript_descriptors = pd.DataFrame(data=None,
                                                    index=range(transcript_count),
@@ -264,7 +264,7 @@ class FivePSeqCounts:
                          % self.annotation.span_size)
 
         # initialize empty vectors
-        transcript_count = len(self.annotation.get_default_transcript_assembly())
+        transcript_count = len(self.annotation.get_transcript_assembly())
         self.count_vector_list_full_length = [None] * transcript_count
         self.count_vector_list_term = [None] * transcript_count
         self.count_vector_list_start = [None] * transcript_count
@@ -272,7 +272,7 @@ class FivePSeqCounts:
         # setup the the counter
         counter = 1
 
-        for transcript in self.annotation.get_default_transcript_assembly():
+        for transcript in self.annotation.get_transcript_assembly():
 
             # update to console
             if counter % 10000 == 0:
@@ -654,7 +654,7 @@ class FivePSeqCounts:
 
         # FIXME why on earth am I setting a span_size and then suffering to remove them from the ends?
         # FIXME have set all span_sizes to 0. Hope it won't crush
-        transcript_assembly = self.annotation.get_transcript_assembly_default_filter(0)
+        transcript_assembly = self.annotation.get_transcript_assembly(span_size=0)
         transcript_count = len(transcript_assembly)
         for transcript in transcript_assembly:
             if counter % np.floor(transcript_count / 10) == 0:
@@ -673,7 +673,7 @@ class FivePSeqCounts:
             # cds_sequence = sequence[0: len(sequence) - 0]
             # cds_sequence = cds_sequence[transcript.cds_start: transcript.cds_end]
             # count_vector = count_vector[0:len(count_vector) - 0]
-            cds_sequence = self.get_cds_sequence_safe(transcript, 0)
+            cds_sequence = self.get_cds_sequence_safe(transcript, span_size=0)
 
             if sum(count_vector) == 0:
                 continue
@@ -711,7 +711,7 @@ class FivePSeqCounts:
                     if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
                         aa = Codons.CODON_TABLE[codon]
                         if codon in Codons.stop_codons:
-                            num_stops += 1
+                            #num_stops += 1
                             if j not in stop_pos:
                                 stop_pos.append(j)
                         for p in range(0, 3):
@@ -792,7 +792,7 @@ class FivePSeqCounts:
 
         counter = 1
 
-        transcript_assembly = self.annotation.get_transcript_assembly_default_filter(span_size=dist_to)
+        transcript_assembly = self.annotation.get_transcript_assembly(span_size=dist_to)
         transcript_count = len(transcript_assembly)
         for transcript in transcript_assembly:
             if counter % np.floor(transcript_count / 10) == 0:
@@ -880,7 +880,7 @@ class FivePSeqCounts:
         done = False
         move_transcript = True
         move_locus = False
-        tg = self.annotation.get_transcript_assembly_default_filter(span_size)
+        tg = self.annotation.get_transcript_assembly(span_size)
         transcript = None
 
         while True:

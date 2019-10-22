@@ -27,7 +27,7 @@ class CountPipeline:
         #   transcript assembly
         if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TRANSCRIPT_ASSEMBLY_FILE)):
             self.fivepseq_out.write_transcript_assembly_to_file(
-                self.fivepseq_counts.annotation.get_transcript_assembly_default_filter(0),
+                self.fivepseq_counts.annotation.get_transcript_assembly(span_size=0),
                 self.fivepseq_out.TRANSCRIPT_ASSEMBLY_FILE)
 
         #   gene sets: always re-write gene sets, because those can change at each run

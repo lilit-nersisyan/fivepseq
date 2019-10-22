@@ -364,7 +364,7 @@ class VizPipeline:
                 FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_CDS + ".txt"))})
 
         # TODO remove transcript filter
-        if self.args.tf is not None:
+        if hasattr(self.args, "tf") and self.args.tf is not None:
             filter = self.args.tf
             if filter == self.FILTER_TOP_POPULATED:
                 self.logger.info("Applying filter %s" % filter)
@@ -837,7 +837,7 @@ class VizPipeline:
                                                   scale=True, lib_size_dict_dict=gs_lib_size_dict,
                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_start_dict,
+        plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_term_dict,
                                                   region=FivePSeqCounts.TERM,
                                                   scale=True, lib_size_dict_dict=gs_lib_size_dict,
                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))

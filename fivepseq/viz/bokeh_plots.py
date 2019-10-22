@@ -44,7 +44,7 @@ def bokeh_composite(title, figure_list, filename, ncols=2):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of figures: %d" % len(figure_list))
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of columns: %d" % ncols)
 
-    p = gridplot(figure_list, ncols=ncols)
+    p = gridplot(figure_list, ncols=ncols, toolbar_location="left")
     div_logo = Div(text=get_div_logo())
     div_footer = Div(text=get_div_footer())
     save([div_logo,p,div_footer], filename=filename)
@@ -755,7 +755,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
     if not scale:
         y_axis_label = "5'seq raw read counts"
     else:
-        y_axis_label = "5'seq RPM"
+        y_axis_label = "5'seq scaled counts"
 
     for key in amino_acid_df_dict.keys():
         logging.getLogger(config.FIVEPSEQ_LOGGER).info(key)

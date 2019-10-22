@@ -2,7 +2,7 @@ import os
 import sys
 
 
-VERSION = "0.5.2"
+VERSION = "0.7.0"
 
 def write_fivepseq_header(viz_pipeline):
     html_file_path = os.path.join(viz_pipeline.args.o, viz_pipeline.title + ".html")
@@ -17,7 +17,9 @@ def get_div_logo(w = 300, h = 100):
     <a href="https://github.com/lilit-nersisyan/fivepseq">
     <svg width="%d" height="%d" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 389.27 130.51"><defs><style>.cls-1,.cls-3{fill:#e96656;}.cls-1{fill-rule:evenodd;}.cls-2,.cls-3{font-size:80px;font-family:BookmanOldStyle, Bookman Old Style;}.cls-2{fill:#404040;}</style></defs><title>fivepseq</title><g id="Layer_2" data-name="Layer 2"><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M51.78,89.51l32-13.81A31,31,0,0,0,58,61.46c-17.42,0-31.54,15.09-31.54,33.69s14.12,33.7,31.54,33.7c12.55,0,23.38-7.83,28.46-19.17Z"/><text class="cls-2" transform="translate(58.5 61.76) rotate(-60.46)">f</text><text class="cls-2" transform="translate(89.53 96.21) rotate(-21.2)">i</text><text class="cls-2" transform="translate(115.15 105.08)">v</text><text class="cls-2" transform="translate(159.03 105.08)">e</text><text class="cls-2" transform="translate(202.85 105.08)">p</text><text class="cls-3" transform="translate(254.68 105.08)">s</text><text class="cls-3" transform="translate(298.49 105.08)">e</text><text class="cls-3" transform="translate(342.31 105.08)">q</text></g></g></svg> 
     </a>
-    </div>""" % (w,h)
+    </div>
+    &nbsp;
+    &nbsp;""" % (w,h)
     return div
 
 def get_div_footer():

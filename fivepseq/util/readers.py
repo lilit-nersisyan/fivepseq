@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """This module contains classes that are specialized for opening specific types of files.
 They also retrieve and store the file properties (e.g. compression, extension) for further reference.
 """
@@ -236,7 +238,7 @@ class AnnotationReader(TopReader):
 
                 if transcript_biotype not in unique_biotypes:
                     unique_biotypes.append(transcript_biotype)
-                    print transcript_biotype + "\tValid: %s" % valid_type
+                    print(transcript_biotype + "\tValid: %s" % valid_type)
 
             i += 1
 
