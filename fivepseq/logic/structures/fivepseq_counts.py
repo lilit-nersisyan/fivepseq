@@ -1520,7 +1520,7 @@ class CountManager:
         return fivepseq_counts_filtered
 
     @staticmethod
-    def combine_count_series(count_series_dict, lib_size_dict=None):
+    def combine_count_series(count_series_dict, lib_size_dict=None, scale = False):
         """
         Combines counts in the series dictionary and returns a single count series.
         If lib_size_dict is not None, than the counts are first weighted based on the library size and then combined.
@@ -1533,9 +1533,12 @@ class CountManager:
         count_series_combined = None
         start = True
         for key in count_series_dict.keys():
-            count_series = count_series_dict[key]
+            count_series = count_series_dict[key].copy()
             if lib_size_dict is not None:
-                count_series.C *= float(lib_size_dict[key]) / sum(lib_size_dict.values())
+                if scale:
+                    count_series.C /= (float(lib_size_dict[key])/(10**6))* len(lib_size_dict)
+                else:
+                    count_series.C *= float(lib_size_dict[key]) / sum(lib_size_dict.values())
 
             if start:
                 count_series_combined = count_series.copy()

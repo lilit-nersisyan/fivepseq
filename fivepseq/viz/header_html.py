@@ -2,7 +2,7 @@ import os
 import sys
 
 
-VERSION = "0.7.0"
+VERSION = "0.9.0"
 
 def write_fivepseq_header(viz_pipeline):
     html_file_path = os.path.join(viz_pipeline.args.o, viz_pipeline.title + ".html")

@@ -115,7 +115,9 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
 
     if combine_weighted:
         suffix = COMBINED + "-weighted"
-        count_series_dict = {suffix: CountManager.combine_count_series(count_series_dict, lib_size_dict)}
+        count_series_dict = {suffix: CountManager.combine_count_series(count_series_dict,
+                                                                       lib_size_dict= lib_size_dict,
+                                                                       scale=scale)}
 
     elif combine_sum:
         suffix = COMBINED + "-sum"
@@ -185,7 +187,7 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
             logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Color not set for sample %s" % key)
             c = get_random_color()
         try:
-            if scale:
+            if scale and not combine_weighted:
                 if lib_size_dict is None:
                     logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Lib size not specified: local counts will "
                                                                            "be used instead")
