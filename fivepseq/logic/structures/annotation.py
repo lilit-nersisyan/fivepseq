@@ -14,6 +14,7 @@ from fivepseq import config
 class Annotation:
     file_path = None
     gene_filter = None
+    gene_filter_attribute = "gene_id"
 
     # the transcript_assembly_dict is a two-level dictionary.
     # the first level provides keys to gene-filters;
@@ -55,7 +56,7 @@ class Annotation:
 
         self.logger.debug("Annotation object successfully created from file %s" % file_path)
 
-    def set_permanent_gene_filter(self, gene_filter_file, attribute="gene_id"):
+    def set_permanent_gene_filter(self, gene_filter_file):
         """
         Provide the file where the names of genes to be filtered are present.
         The genes should be named according to the attribute in the gff file.
@@ -67,7 +68,7 @@ class Annotation:
         """
 
         self.gene_filter = self.read_gene_filter_file(gene_filter_file)
-        self.apply_permanent_gene_filter(self.gene_filter, attribute)
+        self.apply_permanent_gene_filter(self.gene_filter, self.gene_filter_attribute)
 
     def apply_permanent_gene_filter(self, gene_filter, attribute):
         gene_filtered_assembly = []
@@ -98,6 +99,9 @@ class Annotation:
 
         gene_filter = []
         with open(gene_filter_file) as file:
+            self.gene_filter_attribute = file.readline().rstrip("\n\r")
+            self.logger.info("Gene filter attribute set as: %s" % self.gene_filter_attribute)
+
             line = file.readline()
             count = 1
             while line:
@@ -327,8 +331,14 @@ class Annotation:
         #self.gs_transcript_dict = gs_transcript_dict
         self.gs_transcriptInd_dict = gs_transcriptInd_dict
 
-        self.logger.info("Genesets processed. %d out of %d unique geneIDs matched corresponding transcripts"
+        geneset_summary = ""
+        for gs in gs_transcriptInd_dict.keys():
+            geneset_summary += gs + "\n"
+
+        self.logger.info("Genesets processed. %d out of %d unique geneIDs matched corresponding transcripts."
                          % (len(set(geneID_transcript_dict.keys())), len(set(geneIDs))))
+        self.logger.info("Found genesets:\n%s\n" % geneset_summary)
+
 
     def remove_geneset_filter(self):
         #TODO remove if fine
@@ -336,7 +346,7 @@ class Annotation:
         self.default_filter = self.PROTEIN_CODING
 
     def apply_geneset_filter(self, gs):
-        if not self.gs_transcript_dict.has_key(gs):
+        if not self.gs_transcriptInd_dict.has_key(gs):
             raise Exception("The annotation does not have a filter named %s" % gs)
 
         self.default_filter = gs

@@ -21,8 +21,8 @@ class FivePSeqCounts:
     Algorithms able to work with count arrays and dataframes alone are in the algorithms package.
     """
 
-    START = "TSS"
-    TERM = "TTS"
+    START = "START"
+    TERM = "STOP"
     FULL_LENGTH = "full_length"
     ALL = "all"
 

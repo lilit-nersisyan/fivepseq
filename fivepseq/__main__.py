@@ -434,9 +434,9 @@ def generate_and_store_fivepseq_counts(plot=False):
         # fivepseq_counts_dict.update({bam: fivepseq_counts})
 
         # run on genesets
-        if annotation.gs_transcript_dict is not None:
+        if annotation.gs_transcriptInd_dict is not None:
             outlier_lower = protein_coding_counts.get_outlier_lower()
-            for gs in annotation.gs_transcript_dict.keys():
+            for gs in annotation.gs_transcriptInd_dict.keys():
                 bam_filter_counts(bam_name, bam_reader.alignment, annotation, fasta_reader.genome,
                                   bam_out_dir, count_folders_gs, success_values,
                                   downsample_constant=outlier_lower,

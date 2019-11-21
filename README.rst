@@ -115,7 +115,7 @@ to match --ds.
 
 *default: None*
 
-Supply a text file with newline-separated list of gene ids you'd like to filter/use. The names should correspond to those present under the gene_id tag in the gff file.
+Supply a text file with newline-separated list of genes you'd like to filter/use. The first line should contain the attribute tag name of the annotation file (e.g. gene_id), and the genes - to the values of that attribute.
 Note, only these genes will be used in all the calculations.
 
 

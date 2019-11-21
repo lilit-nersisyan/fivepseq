@@ -95,9 +95,14 @@ class VizPipeline:
 
     # large_colors_list = (cl.to_numeric(cl.scales['8']['qual']['Paired'][0:6]) +
     #                     cl.to_numeric(cl.scales['8']['qual']['Set1'][3:5]))
-    large_colors_list = ([cl.scales['8']['qual']['Set1'][i] for i in [1, 2, 3, 4, 0]] +
-                         [cl.scales['8']['qual']['Paired'][i] for i in [0, 2, 4]])
+    # large_colors_list = ([cl.scales['8']['qual']['Set1'][i] for i in [1, 2, 3, 4, 0]] +
+    #                     [cl.scales['8']['qual']['Paired'][i] for i in [0, 2, 4]])
     #                     cl.to_numeric(cl.scales['5']['qual']['Set3']))
+    MAX_NUM_SAMPLES = 12
+
+    large_colors_list = ("#1F78B4", "#33A02C", "#C51B7D", "#542788",
+                         "#A6CEE3", "#B2DF8A", "#F1B6DA", "#B2ABD2",
+                         "#B2182B", "#F4A582", "#BDBDBD", "#525252")
     gs_colors_list = ("#AA4488", "#4477AA", "#AAAA44", "#AA7744", "#AA4455", "#44AAAA",
                       "#771155", "#114477", "#777711", "#774411", "#771122", "#117777")
 
@@ -213,10 +218,10 @@ class VizPipeline:
             self.logger.error(err_msg)
             raise Exception(err_msg)
 
-        if len(self.count_folders) > 8:
-            self.logger.info("The number of samples exceeds 8 (found %d). Only the first 8 will be plotted" % len(
-                self.count_folders))
-            self.count_folders = self.count_folders[0:8]
+        if len(self.count_folders) > self.MAX_NUM_SAMPLES:
+            self.logger.info("The number of samples exceeds %d (found %d). Only the first %d will be plotted" % \
+                             (self.MAX_NUM_SAMPLES, len(self.count_folders), self.MAX_NUM_SAMPLES))
+            self.count_folders = self.count_folders[0:self.MAX_NUM_SAMPLES]
 
         self.logger.info("The following folders will be used for plotting")
         for d in self.count_folders:
@@ -431,34 +436,47 @@ class VizPipeline:
                         os.path.join(self.main_dir, self.title + "_main.html"), 2)
 
         if self.combine:
-            self.figure_list_combined = [self.get_scatter_plot(region=FivePSeqCounts.START,
-                                                               combine_sum=True,
-                                                               combine_color=self.combine_sum_color),
-                                         self.get_scatter_plot(region=FivePSeqCounts.TERM,
-                                                               combine_sum=True,
-                                                               combine_color=self.combine_sum_color)]
-            self.figure_list_combined += [self.get_scatter_plot(region=FivePSeqCounts.START,
-                                                                combine_weighted=True,
-                                                                combine_color=self.combine_weighted_color),
-                                          self.get_scatter_plot(region=FivePSeqCounts.TERM,
-                                                                combine_weighted=True,
-                                                                combine_color=self.combine_weighted_color)]
+            self.figure_list_combined = [
+                self.get_scatter_plot(region=FivePSeqCounts.START, combine_sum=True,
+                                      combine_color=self.combine_sum_color),
+                self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_sum=True,
+                                      combine_color=self.combine_sum_color)
+            ]
+            self.figure_list_combined += [
+                self.get_scatter_plot(region=FivePSeqCounts.START, combine_weighted=True,
+                                      combine_color=self.combine_weighted_color),
+                self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_weighted=True,
+                                      combine_color=self.combine_weighted_color)
+            ]
             self.figure_list_combined += [
                 self.get_scatter_plot(region=FivePSeqCounts.START, combine_sum=True,
                                       combine_color=self.combine_sum_color, scale=True),
                 self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_sum=True,
-                                      combine_color=self.combine_sum_color, scale=True)]
+                                      combine_color=self.combine_sum_color, scale=True)
+            ]
             self.figure_list_combined += [
                 self.get_scatter_plot(region=FivePSeqCounts.START, combine_weighted=True,
                                       combine_color=self.combine_weighted_color, scale=True),
                 self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_weighted=True,
-                                      combine_color=self.combine_weighted_color, scale=True)]
+                                      combine_color=self.combine_weighted_color, scale=True)
+            ]
+
             self.figure_list_combined += [
-                self.get_triangle_plot(combine_sum=True, combine_color=self.combine_sum_color), None]
+                self.get_triangle_plot(combine_sum=True, combine_color=self.combine_sum_color),
+                None
+            ]
             self.figure_list_combined += [
-                self.get_triangle_plot(combine_weighted=True, combine_color=self.combine_weighted_color), None]
-            self.figure_list_combined += [self.get_heatmap_plot(scale=True, combine_sum=True), None]
-            self.figure_list_combined += [self.get_heatmap_plot(scale=True, combine_weighted=True), None]
+                self.get_triangle_plot(combine_weighted=True, combine_color=self.combine_weighted_color),
+                None
+            ]
+            self.figure_list_combined += [
+                self.get_heatmap_plot(scale=True, combine_sum=True),
+                None
+            ]
+            self.figure_list_combined += [
+                self.get_heatmap_plot(scale=True, combine_weighted=True),
+                None
+            ]
 
             bokeh_composite(self.title + "_" + self.COMBINED,
                             self.figure_list_combined,
@@ -498,7 +516,7 @@ class VizPipeline:
     def write_supplement(self):
         # codon pauses
         self.logger.info("Generating supplement plots: codon pauses")
-        codon_title = self.title + "_codon_relative_counts"
+        codon_title = self.title + "_codon_heatmaps"
 
         if self.combine:
             bokeh_composite(codon_title,
@@ -553,6 +571,44 @@ class VizPipeline:
 
         bokeh_composite(self.title + "_amino_acid_scatterplots", aa_scatterplots,
                         os.path.join(self.supplement_dir, self.title + "_amino_acid_scatterplots.html"), 2)
+
+        # codon scatter-plots
+        self.logger.info("Generating supplement plots: codon scatter-plots")
+        codon_scatterplots = []
+        for aa in Codons.AMINO_ACID_TABLE.keys():
+            for codon in Codons.AMINO_ACID_TABLE[aa]:
+                self.logger.info("Plotting scatter for %s counts" % codon)
+
+                codon_count_dict = {}
+
+                for sample in self.samples:
+                    codon_df_full = self.codon_df_dict[sample]
+                    codon_df = pd.DataFrame(
+                        data={'D': map(int, codon_df_full.columns),
+                              'C': codon_df_full.loc[Codons.CODON_TABLE[codon]+"_"+codon, :]})
+                    codon_df = codon_df.reset_index(drop=True)
+                    codon_count_dict.update({sample: codon_df})
+
+                codon_name = codon + "(" + Codons.CODON_TABLE[codon] + ")"
+                codon_scatterplots.append(
+                    self.get_scatter_plot(plot_name=codon_name,
+                                          region="codon", count_dict=codon_count_dict,
+                                          scale=True,
+                                          png_dir=self.supplement_png_dir,
+                                          svg_dir=self.supplement_svg_dir))
+
+                if self.combine:
+                    codon_scatterplots.append(
+                        self.get_scatter_plot(plot_name=codon_name,
+                                              region="codon", count_dict=codon_count_dict,
+                                              scale=True,
+                                              combine_weighted=True,
+                                              combine_color=self.combine_weighted_color,
+                                              png_dir=self.supplement_png_dir,
+                                              svg_dir=self.supplement_svg_dir))
+
+        bokeh_composite(self.title + "_codon_scatterplots", codon_scatterplots,
+                        os.path.join(self.supplement_dir, self.title + "_codon_scatterplots.html"), 2)
 
     def is_phantomjs_installed(self):
         if self.phantomjs_installed is not None:

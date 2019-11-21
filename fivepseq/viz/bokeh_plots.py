@@ -26,7 +26,7 @@ from fivepseq.logic.structures import codons
 from fivepseq.logic.structures.fivepseq_counts import CountManager
 import colorlover as cl
 
-from fivepseq.viz.header_html import get_div_logo, get_div_footer
+from fivepseq.viz.header_html import get_div_logo, get_div_footer, get_div_title
 
 tools = [PanTool(), BoxZoomTool(), WheelZoomTool(), SaveTool(), ResetTool()]
 
@@ -46,8 +46,9 @@ def bokeh_composite(title, figure_list, filename, ncols=2):
 
     p = gridplot(figure_list, ncols=ncols, toolbar_location="left")
     div_logo = Div(text=get_div_logo())
+    div_title = Div(text = get_div_title(title))
     div_footer = Div(text=get_div_footer())
-    save([div_logo,p,div_footer], filename=filename)
+    save([div_logo,div_title,p,div_footer], filename=filename)
 
 def bokeh_table(title, table_df_dict):
     output_file(title + ".html")
@@ -673,7 +674,7 @@ def get_empty_triangle_canvas(title):
     source = ColumnDataSource(
         data=dict(x=[triangle_transform(*f1)[0], triangle_transform(*f2)[0], triangle_transform(*f0)[0]],
                   y=[triangle_transform(*f1)[1], triangle_transform(*f2)[1], triangle_transform(*f0)[1]],
-                  text=['F1', 'F2', 'F0'],
+                  text=['F1', 'F0', 'F2'],
                   x_offset=[0,0,-20]))
     p.add_layout(LabelSet(x='x', y = 'y', text = 'text',
                           x_offset='x_offset',
