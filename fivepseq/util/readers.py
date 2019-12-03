@@ -8,7 +8,6 @@ import os
 
 # PORT: pathlib2 is for python version 2.7, use pathlib in version 3  <>
 import dill
-import pandas as pd
 import pathlib2
 import plastid
 import pysam
@@ -18,7 +17,6 @@ from fivepseq import config
 from fivepseq.logic.structures.alignment import Alignment
 from fivepseq.logic.structures.annotation import Annotation
 from fivepseq.logic.structures.genome import Genome
-from fivepseq.util.writers import FivePSeqOut
 
 COMPRESSION_GZ = ".gz"
 COMPRESSION_BZ = ".bz"

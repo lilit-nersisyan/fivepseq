@@ -115,7 +115,7 @@ to match --ds.
 
 *default: None*
 
-Supply a text file with newline-separated list of genes you'd like to filter/use. The first line should contain the attribute tag name of the annotation file (e.g. gene_id), and the genes - to the values of that attribute.
+Supply a text file with newline-separated list of genes you'd like to filter/use. The first line should contain the attribute tag name of the annotation file (e.g. gene_id), while the other lines should describe the genes - the values of that attribute, separated by new lines.
 Note, only these genes will be used in all the calculations.
 
 

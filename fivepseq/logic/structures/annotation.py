@@ -72,8 +72,17 @@ class Annotation:
 
     def apply_permanent_gene_filter(self, gene_filter, attribute):
         gene_filtered_assembly = []
+        attr_values = []
         for transcript in self.get_transcript_assembly(span_size=0):
             attr_value = FivePSeqOut.get_transcript_attr(transcript, attribute)
+            if attribute not in transcript.attr:
+                attrs = ""
+                for a in transcript.attr:
+                    attrs += a + ';'
+                raise Exception(
+                    "The genefilter attribute %s is not present in the annotation file. Try any of the following: %s" % (
+                    attribute, attrs))
+            attr_values.append(attr_value)
             if attr_value in gene_filter:
                 gene_filtered_assembly.append(transcript)
             # TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
@@ -292,8 +301,16 @@ class Annotation:
         geneID_transcript_dict = {}
         geneID_transcriptInd_dict = {}
         transcript_ind = 0
+        attr_values = []
         for transcript in self.get_transcript_assembly(span_size=0):
             attr_value = FivePSeqOut.get_transcript_attr(transcript, attribute)
+            if attribute not in transcript.attr:
+                attrs = ""
+                for a in transcript.attr:
+                    attrs += a + ';'
+                raise Exception("The geneset attribute %s is not present in the annotation file. Try any of the following: %s" % (attribute, attrs))
+
+            attr_values.append(attr_value)
             # TODO this is not a universal solution, but when the transcripts have names with -1 in the end this works
             geneID = None
             if attr_value in geneIDs:
@@ -309,7 +326,9 @@ class Annotation:
             transcript_ind = transcript_ind + 1
 
         if len(geneID_transcript_dict) == 0:
-            raise Exception("None of the genes in the geneset file were present in the annotation file")
+            raise Exception("None of the genes in the geneset file were present in the annotation file. The attribure "
+                            "%s should contain values like this: %s, %s, %s, etc." %(attribute, attr_values[0], attr_values[1], attr_values[2]))
+
 
         # with those geneIDs that mapped to actual transcripts,
         # store a {GS: [transcripts]} dictionary

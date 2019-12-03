@@ -1,7 +1,16 @@
 import os
 import sys
 
-VERSION = "1.0b"
+VERSION = "1.0beta0"
+
+def get_version():
+    #version_path = os.path.abspath(os.path.join(os.curdir, "version.txt"))
+    #if not os.path.exists(version_path):
+    #    version_path = os.path.abspath(os.path.join(os.curdir, "fivepseq", "version.txt"))
+    #f = open(version_path, 'r')
+    #version = f.read()
+    #TODO the working directory is changing all the time. I don't want to struggle with this right now
+    return VERSION
 
 
 def write_fivepseq_header(viz_pipeline):
@@ -36,7 +45,7 @@ def get_div_footer():
     These plots are generated with <it>fivepseq</it> version %s. 
     For more information on usage and citation, please visit <a href = "http://pelechanolab.com/software/fivepseq">
     our homepage </a>.
-    </div>""" % VERSION
+    </div>""" % get_version()
     return div
 
 
@@ -92,7 +101,7 @@ def get_html_body(viz_pipeline):
             combined_report = "None"
 
         result = template.format(svg=get_div_logo(),
-                                 version=VERSION,
+                                 version=get_version(),
                                  title=get_div_title(viz_pipeline.title),
                                  footer=get_div_footer(),
                                  bam_dir=os.path.abspath(args.b),

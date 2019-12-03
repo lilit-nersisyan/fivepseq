@@ -327,8 +327,7 @@ class FivePSeqCounts:
             self.logger.error(error_message)
             raise ValueError(error_message)
 
-    @preconditions(lambda transcript: isinstance(transcript, plastid.genomics.roitools.Transcript),
-                   lambda span_size: isinstance(span_size, int),
+    @preconditions(lambda span_size: isinstance(span_size, int),
                    lambda region: isinstance(region, str))
     def get_count_vector(self, transcript, span_size, region, downsample=True):
         """
