@@ -1,11 +1,23 @@
-#!/bin/sh
+echo "##############################################################################" 
+echo "#         Preprocessing fastq files for fivepseq                             #" 
+echo "# Usage:                                                                     #"
+echo "# fivepseq_preprocess.sh \                                                   #"
+echo "#    -f [path to fastq_dir] \                                                #"
+echo "#    -g [path to genome fasta] \                                             #"
+echo "#    -a [path to annotation gff/gtf] \                                       #"
+echo "#    -i [path to reference index, if exists] \                               #"
+echo "#    -o [output directory] \                                                 #"
+echo "#    -s [which steps to skip: either or combination of characters {cudqm} ]  #"
+echo "#                                                                            #"
+echo "#                                                                            #"
+echo "# Note: this pipeline is designed for single-end libraries. In case of       #"
+echo "# paired-end files, each of them will be mapped separately. You may only     #"
+echo "# use the first reads (*_R1*) for downstream analysis with fivepseq.         #"
+echo "#                                                                            #"
+echo "##############################################################################"
+echo ""
 
-#SBATCH -A snic2018-8-292
-#SBATCH -p core
-#SBATCH -n 4
-#SBATCH -t 17:00:00
-#SBATCH -J preprocesing_fivepseq_human
-#SBATCH -o log/preprocesing_fivepseq_human.log
+
 
 echo "################################" 
 echo "###         INPUT            ###" 
@@ -152,7 +164,8 @@ else
 
     fastqcdir=`which fastqc`
     if [ -z $fastqcdir ]; then
-	echo "Could not load FastQC"
+	echo "Could not find program FastQC. Make sure you have it installed or loaded."
+	exit -1 
     else
 	echo ""
     fi
@@ -191,18 +204,18 @@ else
 
     module load bioinfo-tools MultiQC
     wait
+
     multiqcdir=`which multiqc`
     if [ -z $multiqcdir ]; then
-	echo "Could not load MULTIQC"
+	echo "Could not find program MULTIQC. Make sure you have it installed or loaded."
+	exit -1
     else
 	echo ""
     fi
 
     multiqc -d -o $multiqc_dir $fastqc_dir
 
-
     echo "MULTIQC finished for all fastqc files in $fastqc_dir"
-
     module unload MultiQC
 fi
 if grep -q 'c' <<<"$skip"; then
@@ -218,20 +231,19 @@ else
     echo "###         CUTADAPT         ###" 
     echo "################################" 
     echo ""
-
+    
     module load bioinfo-tools
     wait
     module load cutadapt
     wait
-
+    
     moduledir=`which cutadapt`
     if [ -z $moduledir ]; then
-	echo "Could not load cutadapt"
+	echo "Could not find program cutadapt. Make sure you have it installed or loaded."
+	exit -1
     else
 	echo ""
     fi
-
-
 
     cutadapt_dir=$out_dir'/fastq_trimmed'
     echo "INFO: cutadapt input" 
@@ -288,15 +300,15 @@ else
     echo "################################" 
     echo ""
     
-
     module load bioinfo-tools
     wait
     module load umi_tools
     wait
-
+    
     umidir=`which umi_tools`
     if [ -z $umidir ]; then
-	echo "Could not load umi_tools"
+	echo "Could not find program umi_tools. Make sure you have it installed or loaded."
+	exit -1
     else
 	echo ""
     fi
@@ -384,7 +396,8 @@ else
 
     fastqcdir=`which fastqc`
     if [ -z $fastqcdir ]; then
-	echo "Could not load FastQC"
+	echo "Could not find program FastQC. Make sure you have it installed or loaded."
+	exit -1 
     else
 	echo ""
     fi
@@ -422,9 +435,10 @@ else
 
     module load bioinfo-tools MultiQC
     wait
+
     multiqcdir=`which multiqc`
     if [ -z $multiqcdir ]; then
-	echo "Could not load MULTIQC"
+	echo "Could not find program MULTIQC. Make sure you have it installed or loaded."
     else
 	echo ""
     fi
@@ -474,7 +488,7 @@ else
     echo "Loading STAR"
     stardir=`which star`
     if [ -z $stardir ]; then
-	echo "ERROR: Could not load star"
+	echo "ERROR: Could find program star. Make sure you have it installed or loaded."
 	exit 3
     else
 	echo ""
@@ -549,7 +563,7 @@ else
     module load bioinfo-tools star
     stardir=`which star`
     if [ -z $stardir ]; then
-	echo "ERROR: Could not load star"
+	echo "ERROR: Could not find program star. Make sure you have it installed or loaded."
 	exit 3
     else
 	echo ""
@@ -605,7 +619,7 @@ else
             --outFilterMultimapNmax 3 \
 	    --alignIntronMax 2500 \
             --outReadsUnmapped Fastx \
-            --limitBAMsortRAM 1000000000
+            --limitBAMsortRAM 8000000000 
 
 
 	wait
@@ -672,7 +686,7 @@ else
 
     umidir=`which umi_tools`
     if [ -z $umidir ]; then
-	echo "Could not load umi_tools"
+	echo "Could not find program umi_tools. Make sure you have it installed or loaded."
     else
 	echo ""
     fi
@@ -682,7 +696,7 @@ else
 
     samtoolsdir=`which samtools`
     if [ -z $samtoolsdir ]; then
-	echo "Could not load samtools"
+	echo "Could not find program samtools. Make sure you have it installed or loaded."
     else
 	echo ""
     fi
@@ -733,7 +747,8 @@ wait
 
 bedtoolsdir=`which bedtools`
 if [ -z $bedtoolsdir ]; then
-    echo "Could not load bedtools"
+    echo "Could not find program bedtools. Make sure you have it installed or loaded."
+    exit -1
 else
     echo ""
 fi
@@ -742,7 +757,7 @@ module load bioinfo-tools samtools
 wait
 samtoolsdir=`which samtools`
 if [ -z $samtoolsdir ]; then
-    echo "Could not load samtools"
+    echo "Could not find program samtools. Make sure you have it installed or loaded."
 else
     echo ""
 fi
