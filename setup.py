@@ -1,22 +1,17 @@
+import fivepseq
 from setuptools import setup, find_packages
-
-VERSION = '1.0beta0'
-import os
-
-def get_version():
-    #f = open(os.path.abspath(os.path.join(os.curdir, "fivepseq", "version.txt")), 'r')
-    #version = f.read()
-    return VERSION
 
 def readme():
     with open('README.rst') as f:
         return f.read()
 
+def get_version():
+    return fivepseq.__version__
 
 setup(name='fivepseq',
       version=get_version(),
       entry_points={'console_scripts': ['fivepseq = fivepseq.__main__:main']},
-      description='A package for analysis of 5pseq datasets',
+      description='A package for analysis and visualization of 5\' endpoint distribution in RNA-seq datasets.',
       url='http://github.com/lilit-nersisyan/fivepseq',
       dependency_links=['http://github.com/lilit-nersisyan/fivepseq/tarball/master#egg=package-1.0'],
       author='Lilit Nersisyan, Maryia Ropat',

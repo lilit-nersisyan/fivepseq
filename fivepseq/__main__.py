@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import fivepseq
+
 """
 The fivepseq entry point.
 """
@@ -27,6 +29,8 @@ FIVEPSEQ_PLOTS_DIR = "fivepseq_plots"
 FIVEPSEQ_LOG_DIR = "log"
 
 
+
+
 class FivepseqArguments:
     """
     This class is for reading, parsing, storing and printing command line arguments.
@@ -44,34 +48,55 @@ class FivepseqArguments:
         ###############################
 
         parser = argparse.ArgumentParser(prog="fivepseq",
-                                         description="Reports 5'-footprint properties from 5Pseq reads in a given alignment file")
+                                         description="Reports the distribution of 5\' endpoints in RNA-seq reads from alignment files.")
+        parser._action_groups.pop()
+        required = parser.add_argument_group('required arguments')
+        optional = parser.add_argument_group('optional arguments')
+        additional = parser.add_argument_group('additional arguments')
+        advanced = parser.add_argument_group('advanced arguments')
 
-        # TODO parse arguments for fivepseq count and viz programs separately;
-        # TODO implement main accordingly
-
-        #       subparsers = parser.add_subparsers(help="Use help functions of commands count or plot",
-        #                                          dest="command")
+        optional.add_argument('--version', action='version', version='%(prog)s' + fivepseq.__version__)
+        #TODO accept compressed files
 
         ##########################
-        #       common arguments
+        #       required arguments
         ##########################
 
-        parser.add_argument("-g", "-genome",
-                            help="the full path to the fa/fasta file (may be compressed)",
+
+        required.add_argument("-b", "-bam",
+                            help="the full path one or many bam/sam files (many files should be provided with a pattern, within brackets)",
                             type=str,
                             required=True)
-        parser.add_argument("-a", "-annotation",
-                            help="the full path to the gtf/gff/gff3 file (may be compressed)",
+
+        required.add_argument("-g", "-genome",
+                            help="the full path to the fa/fasta file",
                             type=str,
                             required=True)
-        parser.add_argument("--span",
+        required.add_argument("-a", "-annotation",
+                            help="the full path to the gtf/gff/gff3 file",
+                            type=str,
+                            required=True)
+
+        optional.add_argument("-o", "-outdir",
+                            help="the output directory",
+                            type=str,
+                            required=False,
+                            default="fivepseq_out")
+
+        optional.add_argument("-t", "-title",
+                            help="title of the reports",
+                            type=str,
+                            required=False)
+
+
+        optional.add_argument("--span",
                             help="the number of bases to span around a genomic position",
                             type=int,
                             required=False,
                             default=100)
 
-        parser.add_argument('--conflicts',
-                            help="The file conflict mode:\n"
+        optional.add_argument('--conflicts',
+                            help="file conflict mode:\n"
                                  "add (default) - only adds missing files to existing directory\n"
                                  "overwrite - overwrites all the files in the existing (in case) output directory\n"
                                  "alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory",
@@ -80,57 +105,46 @@ class FivepseqArguments:
                             required=False,
                             default="add")
 
-        parser.add_argument("--log",
-                            help="set logging level",
-                            choices=["INFO", "DEBUG", "info", "debug"],
-                            default="DEBUG",
-                            required=False)
-
-        parser.add_argument('--ds', '--downsample',
-                            help="The constant threshold for down-sampling: points exceeding this value will be downsampled"
-                                 "to be equal to it",
-                            type=float,
-                            required=False)
-
-        parser.add_argument('--op', '--outlier_probability',
-                            help="The probablity threshold for poisson distribution: points less than this value will be downsampled"
-                                 "as outliers",
-                            type=float,
-                            required=False,
-                            default=0)
-
-        # NOTE I am replacing count_and_plot_parser with parser below - to combine all the the subprograms into one
-        parser.add_argument("-b", "-bam",
-                            help="the full path one or many bam/sam files (many files should be provided with a pattern, within brackets)",
-                            type=str,
-                            required=True)
-
-        parser.add_argument("-o", "-outdir",
-                            help="the output directory",
-                            type=str,
-                            required=False,
-                            default="fivepseq_out")
-
-        parser.add_argument("-gf", "-genefilter",
-                            help="the file containing gene names of interest",
+        additional.add_argument("-gf", "-genefilter",
+                            help="file containing gene names of interest",
                             type=str,
                             required=False)
 
-        parser.add_argument("--loci-file",
-                            help="file with loci to count mapping positions relative to",
-                            required=False,
-                            type=str)
+        additional.add_argument("-gs", "-genesets",
+                            help="a file with gene-geneset mapping",
+                            type=str,
+                            required=False)
 
-        parser.add_argument("--ignore-cache",
+        optional.add_argument("--ignore-cache",
                             help="read in transcript assembly and rewrite existing pickle paths",
                             action="store_true",
                             default=False,
                             required=False)
 
-        parser.add_argument("-t", "-title",
-                            help="title of the plots file(s)",
-                            type=str,
+        advanced.add_argument("--loci-file",
+                            help="coordinates of loci relative to which mapping positions are to be plotted",
+                            required=False,
+                            type=str)
+
+        advanced.add_argument('--ds', '--downsample',
+                            help="constant threshold for down-sampling: points exceeding this value will be downsampled"
+                                 "to be equal to it",
+                            type=float,
                             required=False)
+
+        advanced.add_argument('--op', '--outlier_probability',
+                            help="probablity threshold for poisson distribution: points less than this value will be downsampled"
+                                 "as outliers",
+                            type=float,
+                            required=False,
+                            default=0)
+
+        advanced.add_argument("--log",
+                            help="set logging level",
+                            choices=["INFO", "DEBUG", "info", "debug"],
+                            default="DEBUG",
+                            required=False)
+
 
 #        parser.add_argument("-tf", "-transcript_filter",
 #                            help="Name of filter to apply on transcripts",
@@ -141,10 +155,6 @@ class FivepseqArguments:
 #                                     Annotation.REVERSE_STRAND_FILTER],
 #                            required=False)
 
-        parser.add_argument("-gs", "-genesets",
-                            help="A file with gene-geneset mapping",
-                            type=str,
-                            required=False)
 
         ##########################
         #       config setup

@@ -1,7 +1,7 @@
 import os
 import sys
 
-VERSION = "1.0beta0"
+import fivepseq
 
 def get_version():
     #version_path = os.path.abspath(os.path.join(os.curdir, "version.txt"))
@@ -9,8 +9,8 @@ def get_version():
     #    version_path = os.path.abspath(os.path.join(os.curdir, "fivepseq", "version.txt"))
     #f = open(version_path, 'r')
     #version = f.read()
-    #TODO the working directory is changing all the time. I don't want to struggle with this right now
-    return VERSION
+
+    return fivepseq.__version__
 
 
 def write_fivepseq_header(viz_pipeline):
