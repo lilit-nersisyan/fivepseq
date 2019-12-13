@@ -136,12 +136,12 @@ The counts folder will also be divided according to the geneset used. The defaul
 
 *default: None*
 
-This option requires a file with coordinates of the loci (e.g. RBP binding coordinates), relative to which, the user wants to generate scatter-plots.
+This option requires a file with coordinates of the loci (e.g. RBP binding coordinates), relative to which, the user wants to generate line-charts.
 The file should be tab-separated, with the following structure:
 Columns: chr->str->start->end->symbol
 Rows: the chromosome name, strand (+ or -), start and end coordinates and the name of the RBP (or the locus).
 
-This feature is in beta-, so scatter plots of reads relative to all the loci combined will be plotted underneath the main html file.
+This feature is in beta-, so line charts of reads relative to all the loci combined will be plotted underneath the main html file.
 Four different plots will correspond to reads located in (1) 3UTR and CDS regions, (2) only 3UTR, (3) only 5UTR and (4) only CDS.
 
 

@@ -13,8 +13,8 @@ from fivepseq import config
 from fivepseq.logic.structures.codons import Codons
 from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts
 from fivepseq.util.writers import FivePSeqOut
-from fivepseq.viz.bokeh_plots import bokeh_scatter_plot, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
-    bokeh_composite, bokeh_fft_plot, bokeh_tabbed_scatter_plot, bokeh_tabbed_triangle_plot, \
+from fivepseq.viz.bokeh_plots import bokeh_line_chart, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
+    bokeh_composite, bokeh_fft_plot, bokeh_tabbed_line_chart, bokeh_tabbed_triangle_plot, \
     bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot
 from fivepseq.viz.header_html import write_fivepseq_header
 
@@ -407,10 +407,10 @@ class VizPipeline:
         write_fivepseq_header(self)
 
         self.figure_list = []
-        self.figure_list += [self.get_scatter_plot(region=FivePSeqCounts.START),
-                             self.get_scatter_plot(region=FivePSeqCounts.TERM)]
-        self.figure_list += [self.get_scatter_plot(region=FivePSeqCounts.START, scale=True),
-                             self.get_scatter_plot(region=FivePSeqCounts.TERM, scale=True)]
+        self.figure_list += [self.get_line_chart(region=FivePSeqCounts.START),
+                             self.get_line_chart(region=FivePSeqCounts.TERM)]
+        self.figure_list += [self.get_line_chart(region=FivePSeqCounts.START, scale=True),
+                             self.get_line_chart(region=FivePSeqCounts.TERM, scale=True)]
         self.figure_list += [self.get_frame_barplot(), None]
         self.figure_list += [self.get_triangle_plot(), None]  # self.p_triangle_start]
         self.figure_list += [self.get_fft_plot(region=FivePSeqCounts.START),
@@ -419,16 +419,16 @@ class VizPipeline:
         self.figure_list += [self.get_heatmap_plot(scale=True), None]
 
         if self.loci_meta_counts_dict_ALL is not None:
-            self.figure_list += [self.get_scatter_plot(plot_name="ALL_metacounts_relative_to", region="loci",
+            self.figure_list += [self.get_line_chart(plot_name="ALL_metacounts_relative_to", region="loci",
                                                        count_dict=self.loci_meta_counts_dict_ALL, scale=True)]
         if self.loci_meta_counts_dict_3UTR is not None:
-            self.figure_list += [self.get_scatter_plot(plot_name="ALL_metacounts_relative_to", region="loci",
+            self.figure_list += [self.get_line_chart(plot_name="ALL_metacounts_relative_to", region="loci",
                                                        count_dict=self.loci_meta_counts_dict_3UTR, scale=True)]
         if self.loci_meta_counts_dict_5UTR is not None:
-            self.figure_list += [self.get_scatter_plot(plot_name="5UTR_metacounts_relative_to", region="loci",
+            self.figure_list += [self.get_line_chart(plot_name="5UTR_metacounts_relative_to", region="loci",
                                                        count_dict=self.loci_meta_counts_dict_5UTR, scale=True)]
         if self.loci_meta_counts_dict_CDS is not None:
-            self.figure_list += [self.get_scatter_plot(plot_name="CDS_metacounts_relative_to", region="loci",
+            self.figure_list += [self.get_line_chart(plot_name="CDS_metacounts_relative_to", region="loci",
                                                        count_dict=self.loci_meta_counts_dict_CDS, scale=True)]
 
         bokeh_composite(self.title + "_main",
@@ -437,27 +437,27 @@ class VizPipeline:
 
         if self.combine:
             self.figure_list_combined = [
-                self.get_scatter_plot(region=FivePSeqCounts.START, combine_sum=True,
+                self.get_line_chart(region=FivePSeqCounts.START, combine_sum=True,
                                       combine_color=self.combine_sum_color),
-                self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_sum=True,
+                self.get_line_chart(region=FivePSeqCounts.TERM, combine_sum=True,
                                       combine_color=self.combine_sum_color)
             ]
             self.figure_list_combined += [
-                self.get_scatter_plot(region=FivePSeqCounts.START, combine_weighted=True,
+                self.get_line_chart(region=FivePSeqCounts.START, combine_weighted=True,
                                       combine_color=self.combine_weighted_color),
-                self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_weighted=True,
+                self.get_line_chart(region=FivePSeqCounts.TERM, combine_weighted=True,
                                       combine_color=self.combine_weighted_color)
             ]
             self.figure_list_combined += [
-                self.get_scatter_plot(region=FivePSeqCounts.START, combine_sum=True,
+                self.get_line_chart(region=FivePSeqCounts.START, combine_sum=True,
                                       combine_color=self.combine_sum_color, scale=True),
-                self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_sum=True,
+                self.get_line_chart(region=FivePSeqCounts.TERM, combine_sum=True,
                                       combine_color=self.combine_sum_color, scale=True)
             ]
             self.figure_list_combined += [
-                self.get_scatter_plot(region=FivePSeqCounts.START, combine_weighted=True,
+                self.get_line_chart(region=FivePSeqCounts.START, combine_weighted=True,
                                       combine_color=self.combine_weighted_color, scale=True),
-                self.get_scatter_plot(region=FivePSeqCounts.TERM, combine_weighted=True,
+                self.get_line_chart(region=FivePSeqCounts.TERM, combine_weighted=True,
                                       combine_color=self.combine_weighted_color, scale=True)
             ]
 
@@ -541,11 +541,11 @@ class VizPipeline:
                              bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict,
                                                 scale=True)],
                             os.path.join(self.supplement_dir, codon_title + ".html"), 1)
-        # amino acid scatter-plots
-        self.logger.info("Generating supplement plots: amino acid scatter-plots")
-        aa_scatterplots = []
+        # amino acid line-charts
+        self.logger.info("Generating supplement plots: amino acid line-charts")
+        aa_linecharts = []
         for aa in Codons.AMINO_ACID_TABLE.keys():
-            self.logger.info("Plotting scatter for %s counts" % aa)
+            self.logger.info("Plotting line charts for %s counts" % aa)
 
             aa_count_dict = {}
 
@@ -556,28 +556,28 @@ class VizPipeline:
                 aa_df = aa_df.reset_index(drop=True)
                 aa_count_dict.update({sample: aa_df})
 
-            aa_scatterplots.append(self.get_scatter_plot(plot_name=aa, region="codon", count_dict=aa_count_dict,
+            aa_linecharts.append(self.get_line_chart(plot_name=aa, region="codon", count_dict=aa_count_dict,
                                                          scale=True,
                                                          png_dir=self.supplement_png_dir,
                                                          svg_dir=self.supplement_svg_dir))
 
             if self.combine:
-                aa_scatterplots.append(self.get_scatter_plot(plot_name=aa, region="codon", count_dict=aa_count_dict,
+                aa_linecharts.append(self.get_line_chart(plot_name=aa, region="codon", count_dict=aa_count_dict,
                                                              scale=True,
                                                              combine_weighted=True,
                                                              combine_color=self.combine_weighted_color,
                                                              png_dir=self.supplement_png_dir,
                                                              svg_dir=self.supplement_svg_dir))
 
-        bokeh_composite(self.title + "_amino_acid_scatterplots", aa_scatterplots,
-                        os.path.join(self.supplement_dir, self.title + "_amino_acid_scatterplots.html"), 2)
+        bokeh_composite(self.title + "_amino_acid_linecharts", aa_linecharts,
+                        os.path.join(self.supplement_dir, self.title + "_amino_acid_linecharts.html"), 2)
 
-        # codon scatter-plots
-        self.logger.info("Generating supplement plots: codon scatter-plots")
-        codon_scatterplots = []
+        # codon line-charts
+        self.logger.info("Generating supplement plots: codon line-charts")
+        codon_linecharts = []
         for aa in Codons.AMINO_ACID_TABLE.keys():
             for codon in Codons.AMINO_ACID_TABLE[aa]:
-                self.logger.info("Plotting scatter for %s counts" % codon)
+                self.logger.info("Plotting line charts for %s counts" % codon)
 
                 codon_count_dict = {}
 
@@ -590,16 +590,16 @@ class VizPipeline:
                     codon_count_dict.update({sample: codon_df})
 
                 codon_name = codon + "(" + Codons.CODON_TABLE[codon] + ")"
-                codon_scatterplots.append(
-                    self.get_scatter_plot(plot_name=codon_name,
+                codon_linecharts.append(
+                    self.get_line_chart(plot_name=codon_name,
                                           region="codon", count_dict=codon_count_dict,
                                           scale=True,
                                           png_dir=self.supplement_png_dir,
                                           svg_dir=self.supplement_svg_dir))
 
                 if self.combine:
-                    codon_scatterplots.append(
-                        self.get_scatter_plot(plot_name=codon_name,
+                    codon_linecharts.append(
+                        self.get_line_chart(plot_name=codon_name,
                                               region="codon", count_dict=codon_count_dict,
                                               scale=True,
                                               combine_weighted=True,
@@ -607,8 +607,8 @@ class VizPipeline:
                                               png_dir=self.supplement_png_dir,
                                               svg_dir=self.supplement_svg_dir))
 
-        bokeh_composite(self.title + "_codon_scatterplots", codon_scatterplots,
-                        os.path.join(self.supplement_dir, self.title + "_codon_scatterplots.html"), 2)
+        bokeh_composite(self.title + "_codon_linecharts", codon_linecharts,
+                        os.path.join(self.supplement_dir, self.title + "_codon_linecharts.html"), 2)
 
     def is_phantomjs_installed(self):
         if self.phantomjs_installed is not None:
@@ -888,12 +888,12 @@ class VizPipeline:
         gs_lib_size_dict = self.generate_gs_sample_dict(None, self.DATA_TYPE_LIB_SIZE)
 
         plots.append(self.get_gs_mapping_div())
-        plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_start_dict,
+        plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_start_dict,
                                                   region=FivePSeqCounts.START,
                                                   scale=True, lib_size_dict_dict=gs_lib_size_dict,
                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_term_dict,
+        plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_term_dict,
                                                   region=FivePSeqCounts.TERM,
                                                   scale=True, lib_size_dict_dict=gs_lib_size_dict,
                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
@@ -943,13 +943,13 @@ class VizPipeline:
 
                 gs_lib_size_combined.update({gs: {self.COMBINED: sum(self.lib_size_dict.values())}})
 
-            plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_start_dict,
+            plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_start_dict,
                                                       region=FivePSeqCounts.START,
                                                       scale=True, lib_size_dict_dict=gs_lib_size_dict,
                                                       combine_weighted=True, combine_color=self.combine_weighted_color,
                                                       png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-            plots.append(self.get_tabbed_scatter_plot(group_count_dict=gs_meta_count_term_dict,
+            plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_term_dict,
                                                       region=FivePSeqCounts.TERM,
                                                       scale=True, lib_size_dict_dict=gs_lib_size_dict,
                                                       combine_weighted=True, combine_color=self.combine_weighted_color,
@@ -1011,12 +1011,12 @@ class VizPipeline:
                 self.gs_colors_list[0:len(self.shortGS_gs_dict.keys())]))
 
         plots.append(self.get_gs_mapping_div())
-        plots.append(self.get_tabbed_scatter_plot(group_count_dict=sample_gs_meta_count_start_dict,
+        plots.append(self.get_tabbed_line_chart(group_count_dict=sample_gs_meta_count_start_dict,
                                                   region=FivePSeqCounts.START, color_dict=gs_colors_dict,
                                                   scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-        plots.append(self.get_tabbed_scatter_plot(group_count_dict=sample_gs_meta_count_term_dict,
+        plots.append(self.get_tabbed_line_chart(group_count_dict=sample_gs_meta_count_term_dict,
                                                   region=FivePSeqCounts.TERM, color_dict=gs_colors_dict,
                                                   scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
                                                   png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
@@ -1081,13 +1081,13 @@ class VizPipeline:
 
                 sample_gs_lib_size_combined.update({gs: sum(self.lib_size_dict.values())})
 
-            plots.append(self.get_scatter_plot(region=FivePSeqCounts.START,
+            plots.append(self.get_line_chart(region=FivePSeqCounts.START,
                                                count_dict=sample_gs_meta_counts_start_combined,
                                                color_dict=gs_colors_dict,
                                                scale=True, lib_size_dict=sample_gs_lib_size_combined,
                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
-            plots.append(self.get_scatter_plot(region=FivePSeqCounts.TERM,
+            plots.append(self.get_line_chart(region=FivePSeqCounts.TERM,
                                                count_dict=sample_gs_meta_counts_term_combined,
                                                color_dict=gs_colors_dict,
                                                scale=True, lib_size_dict=sample_gs_lib_size_combined,
@@ -1103,7 +1103,7 @@ class VizPipeline:
 
         return plots
 
-    def get_scatter_plot(self, plot_name="metagene_counts", region="", count_dict=None,
+    def get_line_chart(self, plot_name="metagene_counts", region="", count_dict=None,
                          color_dict=colors_dict,
                          scale=False, lib_size_dict=None,
                          combine_sum=False, combine_weighted=False, combine_color=None,
@@ -1138,7 +1138,7 @@ class VizPipeline:
         else:
             title += "_" + "raw"
 
-        p = bokeh_scatter_plot(title=title,
+        p = bokeh_line_chart(title=title,
                                region=region,
                                count_series_dict=count_dict,
                                color_dict=color_dict,
@@ -1149,7 +1149,7 @@ class VizPipeline:
                                png_dir=png_dir, svg_dir=svg_dir)
         return p
 
-    def get_tabbed_scatter_plot(self, group_count_dict,
+    def get_tabbed_line_chart(self, group_count_dict,
                                 plot_name="metagene_counts", region="",
                                 color_dict=colors_dict,
                                 scale=False, lib_size_dict_dict=None,
@@ -1175,7 +1175,7 @@ class VizPipeline:
         elif combine_sum:
             title += "_" + "combined_summed"
 
-        p = bokeh_tabbed_scatter_plot(title=title,
+        p = bokeh_tabbed_line_chart(title=title,
                                       region=region,
                                       group_count_series_dict_dict=group_count_dict,
                                       color_dict=color_dict,

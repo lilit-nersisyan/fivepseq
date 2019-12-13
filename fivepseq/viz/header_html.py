@@ -118,12 +118,12 @@ def get_html_body(viz_pipeline):
                                  lib_size_table=get_libsize_table(viz_pipeline),
                                  main_report=os.path.join("main", viz_pipeline.title + "_main.html"),
                                  combined_report=combined_report,
-                                 suppl_amino_acid_scatter_report=os.path.join(
+                                 suppl_amino_acid_line_report=os.path.join(
                                      "supplement",
-                                     viz_pipeline.title + "_amino_acid_scatterplots.html"),
-                                 suppl_codon_scatter_report=os.path.join(
+                                     viz_pipeline.title + "_amino_acid_linecharts.html"),
+                                 suppl_codon_line_report=os.path.join(
                                      "supplement",
-                                     viz_pipeline.title + "_codon_scatterplots.html"),
+                                     viz_pipeline.title + "_codon_linecharts.html"),
                                  suppl_codon_report=os.path.join(
                                      "supplement",
                                      viz_pipeline.title + "_codon_heatmaps.html"),

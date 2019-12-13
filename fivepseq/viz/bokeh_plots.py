@@ -70,7 +70,7 @@ def bokeh_table(title, table_df_dict):
     return mainLayout
 
 
-def bokeh_tabbed_scatter_plot(title, region, group_count_series_dict_dict, color_dict,
+def bokeh_tabbed_line_chart(title, region, group_count_series_dict_dict, color_dict,
                               scale=False, lib_size_dict_dict=None,
                               combine_sum=False, combine_weighted=False,
                               combine_color=None,
@@ -79,7 +79,7 @@ def bokeh_tabbed_scatter_plot(title, region, group_count_series_dict_dict, color
         return None
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info(
-        "Making count scatter plots with geneset-tabs: " + title + ": " + region)
+        "Making count line charts with geneset-tabs: " + title + ": " + region)
 
     tab_list = []
     for group in group_count_series_dict_dict.keys():
@@ -92,7 +92,7 @@ def bokeh_tabbed_scatter_plot(title, region, group_count_series_dict_dict, color
         else:
             lib_size_dict = None
 
-        p_group = bokeh_scatter_plot(title, region, count_series_dict_gs, color_dict, scale=scale,
+        p_group = bokeh_line_chart(title, region, count_series_dict_gs, color_dict, scale=scale,
                                      combine_sum=combine_sum, combine_weighted=combine_weighted,
                                      combine_color=combine_color,
                                      lib_size_dict=lib_size_dict, png_dir=png_dir, svg_dir=svg_dir)
@@ -102,14 +102,14 @@ def bokeh_tabbed_scatter_plot(title, region, group_count_series_dict_dict, color
     return tabs
 
 
-def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False, lib_size_dict=None,
+def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, lib_size_dict=None,
                        combine_sum=False,
                        combine_weighted=False, combine_color=None, png_dir=None, svg_dir=None):
     if count_series_dict is None:
         return None
 
     if combine_weighted and combine_sum:
-        e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
+        e_msg = "Exception plotting line chart %s: the options %s and %s cannot be true at the same time: " \
                 % (title + ": " + region, "combine_sum", "combine_weighted")
         logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
@@ -126,7 +126,7 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
 
     if combine_weighted or combine_sum:
         if lib_size_dict is None:
-            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+            e_msg = "Exception plotting line chart %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title + ": " + region, "combine_sum", "combine_weighted")
             logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
@@ -138,7 +138,7 @@ def bokeh_scatter_plot(title, region, count_series_dict, color_dict, scale=False
             c = get_random_color()
         color_dict = {suffix: c}
 
-    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count scatter plot %s with options: scaled(%s), "
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count line chart %s with options: scaled(%s), "
                                                         "combine_sum(%s), comine_weighted(%s): " % (title + ": " +
                                                                                                     region,
                                                                                                     str(scale),
@@ -289,7 +289,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
         return None
 
     if combine_weighted and combine_sum:
-        e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
+        e_msg = "Exception plotting line chart %s: the options %s and %s cannot be true at the same time: " \
                 % (title + ": " + align_region, "combine_sum", "combine_weighted")
         logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
@@ -304,7 +304,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
 
     if combine_weighted or combine_sum:
         if lib_size_dict is None:
-            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+            e_msg = "Exception plotting line chart %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title + ": " + align_region, "combine_sum", "combine_weighted")
             logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
@@ -314,14 +314,14 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
             c = get_random_color()
         color_dict = {suffix: c}
 
-    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count scatter plot %s with options: "
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count line chart %s with options: "
                                                         "combine_sum(%s), comine_weighted(%s): "
                                                         % (title + ": " +
                                                            align_region,
                                                            str(combine_sum),
                                                            str(combine_weighted)))
 
-    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making FFT signal scatter plot: " + align_region)
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making FFT signal line chart: " + align_region)
     output_file(title + ".html")
 
     my_x_label = "Periodicity"
@@ -394,7 +394,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
     return p
 
 
-def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_dict,
+def bokeh_normalized_meta_line_chart(title, transcript_count_list_dict, color_dict,
                                        x_max, show_plot=False, png_dir=None, svg_dir=None):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Plotting normalized full-length meta counts. ")
     output_file(title + ".html", mode="cdn")
@@ -440,7 +440,7 @@ def bokeh_normalized_meta_scatter_plot(title, transcript_count_list_dict, color_
     return p
 
 
-def bokeh_transcript_scatter_plot(title, transcript_count_list_dict, transcript_assembly, color_dict,
+def bokeh_transcript_line_chart(title, transcript_count_list_dict, transcript_assembly, color_dict,
                                   align_to, span_size, index_filter, min_count=0, max_count=1000, save_plot=True):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info(
         "Plotting transcript specific counts. %d filtered transcript indices specified" % len(index_filter))
@@ -525,7 +525,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
     output_file(title + ".html")
 
     if combine_weighted and combine_sum:
-        e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
+        e_msg = "Exception plotting line chart %s: the options %s and %s cannot be true at the same time: " \
                 % (title + ": ", "combine_sum", "combine_weighted")
         logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
@@ -540,7 +540,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
 
     if combine_weighted or combine_sum:
         if lib_size_dict is None:
-            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+            e_msg = "Exception plotting line chart %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title, "combine_sum", "combine_weighted")
             logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
@@ -741,7 +741,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
 
     if combine_weighted or combine_sum:
         if lib_size_dict is None:
-            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+            e_msg = "Exception plotting line chart %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title_prefix, "combine_sum", "combine_weighted")
             logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
@@ -864,7 +864,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
         return None
 
     if combine_weighted and combine_sum:
-        e_msg = "Exception plotting scatter plot %s: the options %s and %s cannot be true at the same time: " \
+        e_msg = "Exception plotting line chart %s: the options %s and %s cannot be true at the same time: " \
                 % (title_prefix, "combine_sum", "combine_weighted")
         logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
         return None
@@ -879,7 +879,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
 
     if combine_weighted or combine_sum:
         if lib_size_dict is None:
-            e_msg = "Exception plotting scatter plot %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
+            e_msg = "Exception plotting line chart %s: the option %s or %s cannot be supplied with lib_size_dict of None: " \
                     % (title_prefix, "combine_sum", "combine_weighted")
             logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
@@ -985,7 +985,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
     return mainLayout
 
 
-def bokeh_aa_scatter_grid(title_prefix, amino_acid_df_dict, png_dir=None, svg_dir=None):
+def bokeh_aa_line_grid(title_prefix, amino_acid_df_dict, png_dir=None, svg_dir=None):
     print("Plotting amino acid pauses: %s" % title_prefix)
     # output_file(title_prefix + ".html")
     mainLayout = row(row(), name=title_prefix + ' amino acid pauses')
@@ -1011,7 +1011,7 @@ def bokeh_aa_scatter_grid(title_prefix, amino_acid_df_dict, png_dir=None, svg_di
     return mainLayout
 
 
-def bokeh_aa_pause_scatterplot(title, amino_acid_df):
+def bokeh_aa_pause_linechart(title, amino_acid_df):
     p = figure(title=title,
                x_axis_label="distance from amino acid", y_axis_label="5'seq read counts")
 
