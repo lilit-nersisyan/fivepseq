@@ -202,7 +202,7 @@ class FivePSeqCounts:
             self.count_distribution = []
         else:
             try:
-                count_distribution = map(int, count_distribution)
+                count_distribution = list(map(int, count_distribution))
                 self.count_distribution = count_distribution
             except Exception as e:
                 raise ValueError("problem converting count distribution values to int: %s" % str(e))
@@ -385,7 +385,7 @@ class FivePSeqCounts:
         if not isinstance(count_vector, list):
             count_vector = count_vector.tolist()
         # if not isinstance(count_vector[0], int):
-        count_vector = map(int, count_vector)
+        count_vector = list(map(int, count_vector))
 
         return count_vector
 
@@ -1320,7 +1320,7 @@ class CountManager:
         df = pd.read_csv(file_path, header=None, sep="|")
         count_vector_list = [[]] * len(df)
         for i in range(0, len(df)):
-            count_vector_list[i] = map(int, df.iloc[i, 0].split("\t"))
+            count_vector_list[i] = list(map(int, df.iloc[i, 0].split("\t")))
         return count_vector_list
 
     @staticmethod
@@ -1453,7 +1453,7 @@ class CountManager:
             counts = []
         else:
             counts = pd.read_csv(file_path, header=None)
-            counts = map(int, counts.iloc[:, 0])
+            counts = list(map(int, counts.iloc[:, 0]))
 
         return counts
 
