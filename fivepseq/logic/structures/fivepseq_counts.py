@@ -1288,8 +1288,8 @@ class CountManager:
         for t_ind in range(0, n):
             # Print status update to console
             if t_ind % 100 == 0:
-                print "\r>>Transcript count: %d (%d%s)\t" % (
-                    t_ind, np.floor(100 * (t_ind - 1) / n), '%'),
+                logging.getLogger(config.FIVEPSEQ_LOGGER).info("\r>>Transcript count: %d (%d%s)\t" % (
+                    t_ind, np.floor(100 * (t_ind - 1) / n), '%'))
 
             # extract frame count vectors from count vectors
             count_vector = count_vector_list[t_ind]
