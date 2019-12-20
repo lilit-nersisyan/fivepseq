@@ -386,7 +386,7 @@ def generate_and_store_fivepseq_counts(plot=False):
 
     logger.info("%s" % (pad_spaces("\tInput bam files:")))
     bam_files = []
-    for bam in glob.glob(config.args.b):
+    for bam in sorted(glob.glob(config.args.b)):
         if bam.endswith(".bam"):
             bam_files.append(bam)
             logger.info("%s" % pad_spaces("\t%s" % bam))

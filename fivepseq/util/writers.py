@@ -218,7 +218,7 @@ class FivePSeqOut:
         """
         f = self.open_file_for_writing(file_name)
         if f is not None:
-            data_series.to_csv(f, sep="\t")
+            data_series.to_csv(f, sep="\t", header=False)
 
     def write_transcript_assembly_to_file(self, transcript_assembly, file_name):
         f = self.open_file_for_writing(file_name)

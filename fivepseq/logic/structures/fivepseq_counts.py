@@ -1093,6 +1093,17 @@ class CountManager:
         """
 
         # TODO check that the count vectors have the same length
+        max_len = 0
+        for i in range(len(count_vector_list)):
+            if len(count_vector_list) > max_len:
+                max_len = len(count_vector_list[i])
+
+        for i in range(len(count_vector_list)):
+            if len(count_vector_list[i]) < max_len:
+                short_vec = count_vector_list[i]
+                long_vec = [0]*max_len
+                long_vec[0:len(short_vec)] = short_vec
+                count_vector_list[i] = long_vec
 
         # sum the position-wise counts
         meta_count_vector = np.vstack(count_vector_list).sum(axis=0).tolist()
