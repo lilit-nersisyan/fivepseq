@@ -53,63 +53,57 @@ In order to enable exporting vector and portable image files, you'll also need t
 
 
 
-Preprocessing from FASTQ files (!NEW)
---------
-A script for processing raw fastq files from yeast has been added to preprocess_scripts directory.
-It takes raw fastq files and
+Preprocessing from FASTQ files
+----------------------------------------
+Fastq files need to be preprocessed and aligned to the reference genome before proceeding to fivepseq downstream analysis. Preprocessing proceeds with the following steps:
 
-- does quality checks (with FASTQC and MULTIQC),
+- quality checks (with FASTQC and MULTIQC),
+- adapter and quality based trimming,
+- UMI extraction (if the library was generated with UMIs),
+- mapping to reference
+- read deduplication (if the library was generated with UMIs),
 
-- trims adapters,
+An example of pre\-processing pipeline can be found in the preprocess_scripts directory
 
-- extracts UMI,
+In order to run this pipeline, you need to have access to common bioinformatics software such as `STAR <https://github.com/alexdobin/STAR>`_, `UMI-tools <https://github.com/CGATOxford/UMI-tools>`_, `bedtools <https://bedtools.readthedocs.io/en/latest/>`_, `Samtools <http://www.htslib.org/>`_, `FastQC <https://www.bioinformatics.babraham.ac.uk/projects/fastqc/>`_, `MultiQC <https://multiqc.info/>`_ and `cutadapt <https://github.com/marcelm/cutadapt>`_.
 
-- generates a STAR index if not provided
+To use it, navigate to the directory where the script is located and use the following command in the prompt:
 
-- maps with STAR
+.. code-block:: shell
 
-- deduplicates reads with umitools
+ ./fivepseq_preprocess.sh -f [path to directory containing fastq files] -g [path to genome fasta] -a [path to annotation gff/gtf] -i [path to reference index, if exists] -o [output directory] -s [which steps to skip: either or combination of characters {cudqm} ]
 
-- analyzes RNA transcript content (relative content of coding versus non-coding RNA). The final stats are in the align_rna/rna_stats.txt
+The option ``-s`` specifies which steps of the pipeline you'd like to skip. Possible values are:
 
+- c skip trimming adapters with cutadapt
 
-*Run the script with options:*
+- u skip UMI extraction
 
+- d skip deduplication after alignment
 
--f directory with fastq files (leave only the files you'd like to use (Read1 for fivepseq))
+- q skip quality check: FASTQC and MULTIQC
 
--o output directory
+- m skip mapping
 
--g genome (fasta) file path
+You may use any combination of these characters, e.g. use ``-s cudqm`` to skip all
 
--a annotation (gff) file path
+This script will produce sub-folders in the output directory, containing results of each step of the pipeline. The bam files will be generated in the **align_dedup** folder.
 
--i STAR index path, if you'd like to use existing index
+In the  In addition to performing the steps described above, it also evaluates the distribution of reads across the genome, according to gene classes {"rRNA" "mRNA" "tRNA" "snoRNA" "snRNA" "ncRNA"}. These statistics are kept in the **align_rna/rna_stats.txt** file.
 
--s specify which steps of the pipeline you'd like to skip. Possible values are:
+**!!NOTE!!** This example pipeline treats files as **singl-end** libraries. If you have paired-end reads, you should only supply the first read (\*_R1\* files) to fivepseq.
 
-   c   skip trimming adapters with cutadapt
-
-   u   skip UMI extraction
-
-   d   skip deduplication after alignment
-
-   q   skip quality check: FASTQC and MULTIQC
-
-   m   skip mapping
-
-   or any combination of these characters, e.g. use -s cudqm to skip all
 
 For UPPMAX users only
---------
+------------------------
 
 - Install the latest stable version of fivepseq by
 - - cd /proj/sllstore2017018/lilit/fivepseq_latest:
 - - python setup.py install
 
-*****************
+
 Running fivepseq
-*****************
+==================
 
 Fivepseq requires the following files to run:
 
