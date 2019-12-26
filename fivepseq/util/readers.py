@@ -201,7 +201,7 @@ class AnnotationReader(TopReader):
         else:
             transcript_assembly_generator = plastid.GFF3_TranscriptAssembler(self.file, return_type=plastid.Transcript)
 
-        transcript_assembly = [None] * 300000
+        transcript_assembly = [None] * 1000000
         index = 0
         i = 1
         progress_bar = ""
@@ -228,7 +228,10 @@ class AnnotationReader(TopReader):
                         if type_token in transcript_biotype:
                             if transcript.cds_start is not None:
                                 valid_type = True
-                                transcript_assembly[index] = transcript
+                                if index < len(transcript_assembly):
+                                    transcript_assembly[index] = transcript
+                                else:
+                                    transcript_assembly.append(transcript)
                                 index += 1
                                 break
                         else:
@@ -250,7 +253,9 @@ class AnnotationReader(TopReader):
             with open(biotypes_file, 'w') as file:
                 file.write("\n".join(unique_biotypes))
 
-        transcript_assembly = transcript_assembly[:index]
+        if index < len(transcript_assembly):
+            transcript_assembly = transcript_assembly[:index]
+
 
         self.logger.debug(
             "Read %d transcripts, of which %d were of type %s" % (i, index, biotype))

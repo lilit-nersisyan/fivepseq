@@ -441,8 +441,12 @@ class FivePSeqCounts:
             sequence = transcript.get_sequence(self.genome.genome_dict)
             cds_sequence = sequence[transcript.cds_start + span_size: transcript.cds_end + span_size]
         except:
+            if transcript.chrom in self.genome.genome_dict.keys():
+                logging.getLogger(config.FIVEPSEQ_LOGGER).warn("No chromosome named %s found in the genome sequence" % transcript.chrom)
+                t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
+                cds_sequence = ''.join(['N'] * t_len)
 
-            if transcript.spanning_segment.start < 0:
+            elif transcript.spanning_segment.start < 0:
                 diff = -1 * transcript.spanning_segment.start
                 t_subchain = transcript.get_subchain(diff, transcript.spanning_segment.end, stranded=False)
                 sequence = t_subchain.get_sequence(self.genome.genome_dict)
