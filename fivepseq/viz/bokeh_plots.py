@@ -767,6 +767,9 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
             if scale:
                 for i in range(amino_acid_df.shape[0]):
                     amino_acid_df.iloc[i, :] /= (10 ** 6) * (sum(amino_acid_df.iloc[i, :]) + 1)
+#                    amino_acid_df.iloc[i, :] -= amino_acid_df.iloc[i, :].min()
+#                    if amino_acid_df.iloc[i,:].max() > 0:
+#                        amino_acid_df.iloc[i, :] /= amino_acid_df.iloc[i,:].max()
 
             colormap = cm.get_cmap("viridis")
             bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
@@ -1046,7 +1049,7 @@ def export_images(p, title, png_dir=None, svg_dir=None):
                                                                    % (title, str(e)))
 
 
-def get_key_title(title, key):
+def get_key_title(title, key, scale = False):
     return key + "-" + title
 
 

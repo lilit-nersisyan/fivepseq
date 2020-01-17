@@ -9,7 +9,7 @@ from fivepseq.util.writers import FivePSeqOut
 from preconditions import preconditions
 
 from fivepseq import config
-
+import pandas as pd
 
 class Annotation:
     file_path = None
@@ -124,6 +124,7 @@ class Annotation:
                 count += 1
 
         return gene_filter
+
 
     def set_default_span_size(self, span_size):
         """

@@ -31,6 +31,7 @@ class FivePSeqOut:
     TERM_CODON_DICT_FILE = "term_codon_dict.txt"
     CANONICAL_TRANSCRIPT_INDEX_FILE = "canonical_transcript_index.txt"
     TRANSCRIPT_DESCRIPTORS_FILE = "transcript_descriptors.txt"
+    MAPPED_TRANSCRIPT_INDICES_FILE = "mapped_transcript_indices.txt"
     COUNT_DISTRIBUTION_FILE = "count_distribution.txt"
     OUTLIER_LOWER_FILE = "outlier_lower.txt"
     DATA_SUMMARY_FILE = "data_summary.txt"

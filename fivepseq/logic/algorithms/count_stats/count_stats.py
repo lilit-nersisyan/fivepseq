@@ -49,6 +49,8 @@ class CountStats:
     max_num_reads_per_transcript = 0
     median_num_reads_per_transcript = 0
 
+    mapped_transcript_index = []
+
     # dfs
     frame_stats_df = None
     fft_stats_start = None
@@ -118,6 +120,7 @@ class CountStats:
 
                 self.logger.info("Writing summary data")
                 self.fivepseq_out.write_series_to_file(self.data_summary_series, FivePSeqOut.DATA_SUMMARY_FILE)
+
 
     def compute_fft_stats(self):
         if config.args.conflicts == config.ADD_FILES and \

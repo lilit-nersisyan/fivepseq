@@ -221,6 +221,9 @@ class AnnotationReader(TopReader):
 
             # filter for biotype
             valid_type = False
+            if transcript.chrom == "NZ_CP016094.1":
+                print("here")
+            print(transcript.chrom)
             transcript_biotype = transcript.attr.get('type')
             if transcript_biotype is not None:
                 if biotype == self.CODING:

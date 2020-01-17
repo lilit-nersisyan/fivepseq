@@ -1279,6 +1279,9 @@ class VizPipeline:
         elif combine_sum:
             title += "_" + "combined_summed"
 
+        if scale:
+            title = title + "_scaled"
+
         p = bokeh_heatmap_grid(title_prefix=title,
                                amino_acid_df_dict=count_dict,
                                scale=scale,
@@ -1317,7 +1320,8 @@ class VizPipeline:
 
     def get_frame_barplot(self, plot_name="global_frame_preference",
                           count_dict=None, frame_stats_df_dict=None,
-                          color_dict=None, lib_size_dict=None,
+                          color_dict=None, scale = True,
+                          lib_size_dict=None,
                           combine_sum=False, combine_weighted=False, combine_color=None,
                           png_dir=png_dir, svg_dir=svg_dir):
 

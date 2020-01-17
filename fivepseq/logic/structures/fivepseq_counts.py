@@ -166,6 +166,7 @@ class FivePSeqCounts:
             self.transcript_descriptors.at[transcript_ind, self.NUMBER_READS] = int(np.sum(count_vector))
             self.transcript_descriptors.loc[transcript_ind, self.NUMBER_POSITIONS] = np.count_nonzero(count_vector)
 
+
             if start_codon in self.start_codon_dict.keys():
                 self.start_codon_dict[start_codon] += 1
             else:
@@ -181,6 +182,7 @@ class FivePSeqCounts:
         self.logger.info("The lower bound for outliers set as %f " % self.outlier_lower)
 
         self.logger.info("Done generating transcript descriptors")
+
 
     def get_count_distribution(self):
         if self.count_distribution is not None:
@@ -272,8 +274,9 @@ class FivePSeqCounts:
 
         # setup the the counter
         counter = 1
-
-        for transcript in self.annotation.get_transcript_assembly():
+        ta = self.annotation.get_transcript_assembly()
+        for i in range(transcript_count):
+            transcript = ta[i]
 
             # update to console
             if counter % 10000 == 0:
@@ -658,12 +661,12 @@ class FivePSeqCounts:
         single_stop_cds_count = 0
         no_stop_cds_count = 0
 
-        # FIXME why on earth am I setting a span_size and then suffering to remove them from the ends?
-        # FIXME have set all span_sizes to 0. Hope it won't crush
+
         transcript_assembly = self.annotation.get_transcript_assembly(span_size=0)
         transcript_count = len(transcript_assembly)
-        for transcript in transcript_assembly:
-            if counter % np.floor(transcript_count / 10) == 0:
+        for i in range(transcript_count):
+            transcript = transcript_assembly[i]
+            if counter % np.floor(transcript_count / 10000) == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / transcript_count), '%',), )
                 self.logger.info("Amount of cds not multiple of 3 is %.2f %s"
@@ -672,9 +675,13 @@ class FivePSeqCounts:
                                  % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
             counter += 1
 
+
+
             count_vector = self.get_count_vector(transcript, span_size=0,
                                                  region=FivePSeqCounts.FULL_LENGTH,
                                                  downsample=downsample)
+            if sum(count_vector) == 0:
+                continue
             # sequence = transcript.get_sequence(self.genome.genome_dict)
             # cds_sequence = sequence[0: len(sequence) - 0]
             # cds_sequence = cds_sequence[transcript.cds_start: transcript.cds_end]
@@ -733,34 +740,7 @@ class FivePSeqCounts:
             else:
                 no_stop_cds_count += 1
 
-            # TODO test for problems with the fast implementation and remove the code below if successful
-            # comment out the previous implentation
-            """
-            if len(count_vector) % 3 == 0:
-                num_stops = 0
-                for i in range(0, len(count_vector), 3):
-                    codon = cds_sequence[i: i + 3]
 
-                    # NOTE the comparison is case-sensitive and the low-case letters are now not counted
-                    # NOTE however, low-case may indicate repetitive regions and it may be advantagous to skip them
-                    if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
-                        aa = Codons.CODON_TABLE[codon]
-                        if codon in Codons.stop_codons:
-                            num_stops += 1
-                        if i > dist:
-                            amino_acid_count_df.loc[aa, -1 * dist: 0] += count_vector[i - dist: i]
-                        else:
-                            amino_acid_count_df.loc[aa, -1 * i: 0] += count_vector[0: i]
-                if num_stops > 1:
-                    multi_stop_cds_count += 1
-                elif num_stops == 1:
-                    single_stop_cds_count += 1
-                else:
-                    no_stop_cds_count += 1
-            else:
-                wrong_cds_count += 1
-
-        """
         self.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
                           % (float(100 * wrong_cds_count) / counter, "%"))
         self.logger.debug("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
@@ -800,7 +780,8 @@ class FivePSeqCounts:
 
         transcript_assembly = self.annotation.get_transcript_assembly(span_size=dist_to)
         transcript_count = len(transcript_assembly)
-        for transcript in transcript_assembly:
+        for i in range(transcript_count):
+            transcript = transcript_assembly[i]
             if counter % np.floor(transcript_count / 10) == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / transcript_count), '%',), )
@@ -1305,19 +1286,43 @@ class CountManager:
                                         'F2': [0] * n})
         for t_ind in range(0, n):
             # Print status update to console
-            if t_ind % 100 == 0:
+            if t_ind % 10000 == 0:
                 logging.getLogger(config.FIVEPSEQ_LOGGER).info("\r>>Transcript count: %d (%d%s)\t" % (
                     t_ind, np.floor(100 * (t_ind - 1) / n), '%'))
 
             # extract frame count vectors from count vectors
             count_vector = count_vector_list[t_ind]
-            frame_counts = CountManager.extract_frame_count_vectors(count_vector, span_size, region)
+            if sum(count_vector) == 0:
+                for f in range(0, 3):
+                    frame_counts_df.iloc[t_ind, f] = 0
+            else:
+                frame_counts = CountManager.extract_frame_count_vectors(count_vector, span_size, region)
 
-            # sum-up counts in each frame and add to the dataframe
-            for f in range(0, 3):
-                frame_counts_df.iloc[t_ind, f] = sum(frame_counts[f])
+                # sum-up counts in each frame and add to the dataframe
+                for f in range(0, 3):
+                    frame_counts_df.iloc[t_ind, f] = sum(frame_counts[f])
 
         return frame_counts_df
+
+    @staticmethod
+    @preconditions(lambda file_path: isinstance(file_path, str))
+    def read_index_as_list(file_path):
+        """
+        Reads a new line separated list of integers from a file to a list of indices.
+
+        :param file_path: str: full path to the file
+        :return: [int]: list of indices
+        :exception: raise IOError if file does not exist
+        """
+        if not os.path.exists(file_path):
+            error_message = "Problem reading counts: the file %s does not exist" % file_path
+            logging.getLogger(config.FIVEPSEQ_LOGGER).error(error_message)
+            raise IOError(error_message)
+        logging.getLogger(config.FIVEPSEQ_LOGGER).debug("Reading count file %s" % file_path)
+
+        indices = list(pd.read_csv(file_path, header=None).iloc[:, 0])
+        return indices
+
 
     @staticmethod
     @preconditions(lambda file_path: isinstance(file_path, str))
