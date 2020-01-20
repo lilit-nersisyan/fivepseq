@@ -13,11 +13,6 @@ The main workflow of fivepseq is intended for downstream analysis of alignment f
 
 The output of fivepseq is in the form of html report files, as well as text files and image files in portable network graphic and vector graphics formats. 
 
-Homepage
-_________
-
-For more information, demo cases and citation, visit `Fivepseq homepage <http://pelechanolab.com/software/fivepseq/>`_
-
 ==================
 
 .. toctree::
