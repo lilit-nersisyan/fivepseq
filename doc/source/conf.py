@@ -26,7 +26,7 @@ author = u'Lilit Nersisyan, Maryia Ropat, Vicente Pelechano'
 # The short X.Y version
 version = u''
 # The full version, including alpha/beta/rc tags
-release = u'1.0beta0'
+release = u'1.0b0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -75,13 +75,19 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
+#import msmb_theme
 html_theme = 'alabaster'
+#html_theme_path = [msmb_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'logo': 'fivepseq_logo.svg',
+    'github_user': 'lilit-nersisyan',
+    'github_repo': 'fivepseq'
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

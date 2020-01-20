@@ -1,0 +1,225 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Preparing the data &#8212; fivepseq 1.0b0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Running fivepseq" href="running_fivepseq.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="preparing-the-data">
+<span id="preparing-data"></span><h1>Preparing the data<a class="headerlink" href="#preparing-the-data" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="required-files">
+<h2>Required files<a class="headerlink" href="#required-files" title="Permalink to this headline">¶</a></h2>
+<p>In order to run fivepseq, the following files are required:</p>
+<div class="line-block">
+<div class="line">Aligned reads (<strong>.bam</strong>)</div>
+<div class="line">Alignment index (<strong>.bai</strong>)</div>
+<div class="line">Genomic sequence file (<strong>.fasta</strong> / <strong>.fa</strong>)</div>
+<div class="line">Genomic annotation file (<strong>.gff/ .gtf</strong>)</div>
+</div>
+<p>This section is to help you generate alignment bam files from your fastq files. If you already have alignment, genome and annotation files you may skip this section and proceed to fivepseq downstream analysis.</p>
+</div>
+<div class="section" id="finding-genome-and-annotation-files">
+<h2>Finding genome and annotation files<a class="headerlink" href="#finding-genome-and-annotation-files" title="Permalink to this headline">¶</a></h2>
+<p>There are multiple resources which maintain and distribute genome sequence and annotation data, for instance <a class="reference external" href="https://www.ensembl.org/index.html">Ensembl</a>, <a class="reference external" href="https://www.ncbi.nlm.nih.gov/assembly/">RefSeq</a>, and <a class="reference external" href="https://www.yeastgenome.org/">SGD</a>.
+However, the naming conventions and format may differ slightly depending on the resource.
+For this reason, your genomic sequence and annotation files should be retrieved from the same database.</p>
+<p><strong>!!NOTE!!</strong> If you start from alignment files, make sure that the annotation and genome files you provide to fivepseq for downstream analysis are the same as those used during alignment.</p>
+</div>
+<div class="section" id="preprocessing-fastq-files">
+<h2>Preprocessing fastq files<a class="headerlink" href="#preprocessing-fastq-files" title="Permalink to this headline">¶</a></h2>
+<p>Fastq files need to be preprocessed and aligned to the reference genome before proceeding to fivepseq downstream analysis. Preprocessing proceeds with the following steps:</p>
+<ul class="simple">
+<li>quality checks (with FASTQC and MULTIQC),</li>
+<li>adapter and quality based trimming,</li>
+<li>UMI extraction (if the library was generated with UMIs),</li>
+<li>mapping to reference</li>
+<li>read deduplication (if the library was generated with UMIs),</li>
+</ul>
+<p>An example of pre-processing pipeline can be found in the <strong>preprocess_scripts/fivepseq_preprocess.sh</strong> directory in your fivepseq installation folder, and can also be downloaded from <a class="reference external" href="https://github.com/lilit-nersisyan/fivepseq/blob/master/preprocess_scripts/fivepseq_preprocess.sh">here</a>.</p>
+<p>In order to run this pipeline, you need to have access to common bioinformatics software such as <a class="reference external" href="https://github.com/alexdobin/STAR">STAR</a>, <a class="reference external" href="https://github.com/CGATOxford/UMI-tools">UMI-tools</a>, <a class="reference external" href="https://bedtools.readthedocs.io/en/latest/">bedtools</a>, <a class="reference external" href="http://www.htslib.org/">Samtools</a>, <a class="reference external" href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a>, <a class="reference external" href="https://multiqc.info/">MultiQC</a> and <a class="reference external" href="https://github.com/marcelm/cutadapt">cutadapt</a>.</p>
+<p>To use it, navigate to the directory where the script is located and use the following command in the prompt:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>./fivepseq_preprocess.sh <span class="se">\</span>
+  -f <span class="o">[</span>path to directory containing fastq files<span class="o">]</span> <span class="se">\</span>
+  -g <span class="o">[</span>path to genome fasta<span class="o">]</span> <span class="se">\</span>
+  -a <span class="o">[</span>path to annotation gff/gtf<span class="o">]</span> <span class="se">\</span>
+  -i <span class="o">[</span>path to reference index, <span class="k">if</span> exists<span class="o">]</span> <span class="se">\</span>
+  -o <span class="o">[</span>output directory<span class="o">]</span> <span class="se">\</span>
+  -s <span class="o">[</span>which steps to skip: either or combination of characters <span class="o">{</span>cudqm<span class="o">}</span> <span class="o">]</span>
+</pre></div>
+</div>
+<p><em>Note: this should be a single-line command or the backslashes should be properly indented.</em></p>
+<p>The option <code class="docutils literal notranslate"><span class="pre">-s</span></code> specifies which steps of the pipeline you’d like to skip. Possible values are:</p>
+<ul class="simple">
+<li>c skip trimming adapters with cutadapt</li>
+<li>u skip UMI extraction</li>
+<li>d skip deduplication after alignment</li>
+<li>q skip quality check: FASTQC and MULTIQC</li>
+<li>m skip mapping</li>
+</ul>
+<p>You may use any combination of these characters, e.g. use <code class="docutils literal notranslate"><span class="pre">-s</span> <span class="pre">cudqm</span></code> to skip all</p>
+<p>This script will produce subfolders in the output directory, containing results of each step of the pipeline. The bam files will be generated in the <strong>align_dedup</strong> folder.</p>
+<p>In addition to performing the steps described above, it also evaluates the distribution of reads across the genome, according to gene classes {“rRNA” “mRNA” “tRNA” “snoRNA” “snRNA” “ncRNA”}. These statistics are kept in the <strong>align_rna/rna_stats.txt</strong> file.</p>
+<p><strong>!!NOTE!!</strong> This example pipeline treats files as <strong>singl-end</strong> libraries. If you have paired-end reads, you should only supply the first read (*_R1* files) to fivepseq.</p>
+</div>
+<div class="section" id="test-data">
+<h2>Test data<a class="headerlink" href="#test-data" title="Permalink to this headline">¶</a></h2>
+<p>You may download the preprocessing test dataset for yeast <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/preprocess/">from here</a> to start with the following fastq to bam preprocessing pipeline. The archive contains subsetted fastq files from Saccharomyces Cerevisiae (first 100K reads), as well as genome fasta and annotation gff files. If you use another organism, you may refer to the following section to find needed genome files.</p>
+<p>The src folder in the test data contains a script named <strong>preprocess_test.sh</strong>, which contains the following command:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>./src/fivepseq_preprocess.sh <span class="se">\</span>
+    -f fastq <span class="se">\</span>
+    -o preprocess <span class="se">\</span>
+    -g genome/* <span class="se">\</span>
+    -a gff/*
+</pre></div>
+</div>
+<p>Navigate to the test data directory and give it a try by running <code class="docutils literal notranslate"><span class="pre">./src/preprocess.sh</span></code>. It should generate the following folders in the preprocess directory:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">fastqc_raw:</th><td class="field-body">FASTQC reports on the fastq files before preprocessing</td>
+</tr>
+<tr class="field-even field"><th class="field-name">multiqc_raw:</th><td class="field-body">MULTIQC report on the fastq files before preprocessing</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">fastq_trimmed:</th><td class="field-body">fastq files with standard illumina adapters :fastq_deumi: fastq files with UMI sequences extracted from the reads and placed in the read headers. Use <code class="docutils literal notranslate"><span class="pre">-s</span> <span class="pre">ud</span></code> if your data does not contain UMIs.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">fastqc:</th><td class="field-body">FASTQC reports on the fastq files after trimming and UMI extraction</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">multiqc:</th><td class="field-body">MULTIQC report on the fastq files after trimming and UMI extraction.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">star_index:</th><td class="field-body">the reference genome index generated by STAR. Use <code class="docutils literal notranslate"><span class="pre">-i</span> <span class="pre">star_index</span></code> option in the future runs to use the already generated index.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">star_align:</th><td class="field-body">alignment bam files</td>
+</tr>
+<tr class="field-even field"><th class="field-name">align_dedup:</th><td class="field-body">alignment bam files after UMI-based deduplication. These are the final files you should give as input to fivepseq.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">filtered_gff:</th><td class="field-body">annotation files filtered by RNA content, used for overlapping with bam files to analyze RNA content (see below).</td>
+</tr>
+<tr class="field-even field"><th class="field-name">align_rna:</th><td class="field-body">bam files, filtered for the {“rRNA” “mRNA” “tRNA” “snoRNA” “snRNA” “ncRNA”} classes of RNA and the <strong>rna.stats.txt</strong> file that summarized the read counts for each RNA class.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/fivepseq_logo.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=lilit-nersisyan&repo=fivepseq&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Preparing the data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#required-files">Required files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#finding-genome-and-annotation-files">Finding genome and annotation files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#preprocessing-fastq-files">Preprocessing fastq files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#test-data">Test data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="running_fivepseq.html">Running fivepseq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpreting_output.html">Interpreting the output</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="running_fivepseq.html" title="next chapter">Running fivepseq</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Lilit Nersisyan, Maryia Ropat, Vicente Pelechano.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/preparing_data.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

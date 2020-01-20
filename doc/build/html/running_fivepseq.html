@@ -1,0 +1,300 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Running fivepseq &#8212; fivepseq 1.0b0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Interpreting the output" href="interpreting_output.html" />
+    <link rel="prev" title="Preparing the data" href="preparing_data.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="running-fivepseq">
+<span id="id1"></span><h1>Running fivepseq<a class="headerlink" href="#running-fivepseq" title="Permalink to this headline">¶</a></h1>
+<p>Fivepseq requires the following files to run:</p>
+<div class="line-block">
+<div class="line">Aligned reads (<strong>.bam</strong>)</div>
+<div class="line">Alignment index (<strong>.bai</strong>)</div>
+<div class="line">Genomic sequence file (<strong>.fasta</strong> / <strong>.fa</strong>)</div>
+<div class="line">Genomic annotation file (<strong>.gff/ .gtf</strong>)</div>
+</div>
+<p>This section assumes that you already have these files. If not, please, refer to the section: <strong>Preparing the data</strong>.</p>
+<div class="section" id="fivepseq-usage">
+<h2>Fivepseq usage<a class="headerlink" href="#fivepseq-usage" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">fivepseq</span> <span class="pre">--help</span></code> command will show fivepseq usage and will list all the arguments.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>usage: fivepseq -b B -g G -a A <span class="o">[</span>optional arguments<span class="o">]</span>
+</pre></div>
+</div>
+<div class="section" id="required-arguments">
+<h3>Required arguments<a class="headerlink" href="#required-arguments" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-b B   full path to one or more bam/sam files <span class="o">(</span>many files should be provided with a pattern, **within double quotes**: e.g. <span class="o">[</span><span class="s2">&quot;your_bam_folder/*.bam&quot;</span><span class="o">])</span>
+-g G   full path to the fa/fasta file
+-a A   full path to the gtf/gff/gff3 file
+</pre></div>
+</div>
+<p><strong>Note:</strong></p>
+<ul class="simple">
+<li>The indexed alignment files (.bam.bai) should be in the same directory as the bam files, with the same name and .bai extension.</li>
+<li>Multiple bam files should be indicated with a pattern placed <strong>within double quotes</strong>: e.g. [“your_bam_folder/*.bam”]</li>
+</ul>
+<p>Commonly, you will run fivepseq by also providing the name of the <strong>output folder</strong> (‘fivepseq’ by default) and the <strong>title</strong> of your run (if not provided, it will be determined from bam path):</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>fivepseq <span class="se">\</span>
+   -g &lt;path_to_genome_fasta&gt; <span class="se">\</span>
+   -a &lt;path_to_annotation&gt; <span class="se">\</span>
+   -b &lt;path_to_bam_file<span class="o">(</span>s<span class="o">)</span> <span class="se">\</span>
+   -o &lt;output_directory&gt; <span class="se">\</span>
+   -t &lt;title_of_the_run&gt;
+</pre></div>
+</div>
+<p><em>Note: this is a single commandline, the backslashes are used to move to a new line for cozy representation: either copy-paste like this or use a single line without the backslashes.</em></p>
+</div>
+<div class="section" id="optional-arguments">
+<h3>Optional arguments<a class="headerlink" href="#optional-arguments" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>--span SPAN
+</pre></div>
+</div>
+<p>This specifies the number of bases to span around translation START and STOP positions. The default value is 100 bases.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>--conflicts <span class="o">{</span>add,overwrite,alt_dir<span class="o">}</span>
+</pre></div>
+</div>
+<p>The conflicts mode specifies how to deal with files/folders that already exist. You may choose either of the following options:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">add:</th><td class="field-body">(default). Only adds missing files to an existing directory and skips generating the ones that already exist.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">overwrite:</th><td class="field-body">Overwrites all the files in an existing output directory</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">alt_dir:</th><td class="field-body">Creates an alternative directory by appending ‘+’ suffix to an existing output directory</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>--ignore-cache
+</pre></div>
+</div>
+<p>When the annoatation gff/gtf file is read by fivepseq for the first time, it stores the transcript assembly object it generates in a pickle path, which is located in the same parent directory where your fivepseq output folder is, in the folder <strong>fivepseq_cache</strong>. If the annotation name stays the same, fivepseq will directly load this object in all further runs, instead of processing the annotation file. However, if the content of your annotation file has changed or you suspect that the previous pickle object might be truncated, you can use this option to ignore the cache and process the annotation file from scratch.</p>
+</div>
+<div class="section" id="additional-arguments">
+<h3>Additional arguments<a class="headerlink" href="#additional-arguments" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-gf GF, -genefilter GF
+</pre></div>
+</div>
+<p>If you are interested only in a specific set of transcripts, you may specify them with a text file containing newline-separated list of names you’d like to use. Note: only these genes will be used in all the calculations.</p>
+<p>In a properly formatted gene filter file, the first line should specify the gene attribute in the gff file, and the rest of the lines should correspond to the actual values of that attribute in the gff file. For example, for the following two entries in the gff file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Isgdgene335649</span><span class="o">.+.</span><span class="n">ID</span><span class="o">=</span><span class="n">gene</span><span class="p">:</span><span class="n">YAL069W</span><span class="p">;</span><span class="n">biotype</span><span class="o">=</span><span class="n">protein_coding</span><span class="p">;</span><span class="n">gene_id</span><span class="o">=</span><span class="n">YAL069W</span><span class="p">;</span><span class="n">logic_name</span><span class="o">=</span><span class="n">sgd</span>
+<span class="n">IsgdmRNA335649</span><span class="o">.+.</span><span class="n">ID</span><span class="o">=</span><span class="n">transcript</span><span class="p">:</span><span class="n">YAL069W_mRNA</span><span class="p">;</span><span class="n">Parent</span><span class="o">=</span><span class="n">gene</span><span class="p">:</span><span class="n">YAL069W</span><span class="p">;</span><span class="n">biotype</span><span class="o">=</span><span class="n">protein_coding</span><span class="p">;</span><span class="n">transcript_id</span><span class="o">=</span><span class="n">YAL069W_mRNA</span>
+<span class="n">Isgdexon335649</span><span class="o">.+.</span><span class="n">Parent</span><span class="o">=</span><span class="n">transcript</span><span class="p">:</span><span class="n">YAL069W_mRNA</span><span class="p">;</span><span class="n">Name</span><span class="o">=</span><span class="n">YAL069W_mRNA</span><span class="o">-</span><span class="n">E1</span><span class="p">;</span><span class="n">constitutive</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="n">ensembl_end_phase</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">ensembl_phase</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">exon_id</span><span class="o">=</span><span class="n">YAL069W_mRNA</span><span class="o">-</span><span class="n">E1</span><span class="p">;</span><span class="n">rank</span><span class="o">=</span><span class="mi">1</span>
+<span class="n">IsgdCDS335649</span><span class="o">.+</span><span class="mi">0</span><span class="n">ID</span><span class="o">=</span><span class="n">CDS</span><span class="p">:</span><span class="n">YAL069W_mRNA</span><span class="p">;</span><span class="n">Parent</span><span class="o">=</span><span class="n">transcript</span><span class="p">:</span><span class="n">YAL069W_mRNA</span><span class="p">;</span><span class="n">protein_id</span><span class="o">=</span><span class="n">YAL069W_mRNA</span>
+
+<span class="n">Isgdgene538792</span><span class="o">.+.</span><span class="n">ID</span><span class="o">=</span><span class="n">gene</span><span class="p">:</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A</span><span class="p">;</span><span class="n">biotype</span><span class="o">=</span><span class="n">protein_coding</span><span class="p">;</span><span class="n">gene_id</span><span class="o">=</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A</span><span class="p">;</span><span class="n">logic_name</span><span class="o">=</span><span class="n">sgd</span>
+<span class="n">IsgdmRNA538792</span><span class="o">.+.</span><span class="n">ID</span><span class="o">=</span><span class="n">transcript</span><span class="p">:</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A_mRNA</span><span class="p">;</span><span class="n">Parent</span><span class="o">=</span><span class="n">gene</span><span class="p">:</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A</span><span class="p">;</span><span class="n">biotype</span><span class="o">=</span><span class="n">protein_coding</span><span class="p">;</span><span class="n">transcript_id</span><span class="o">=</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A_mRNA</span>
+<span class="n">Isgdexon538792</span><span class="o">.+.</span><span class="n">Parent</span><span class="o">=</span><span class="n">transcript</span><span class="p">:</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A_mRNA</span><span class="p">;</span><span class="n">Name</span><span class="o">=</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A_mRNA</span><span class="o">-</span><span class="n">E1</span><span class="p">;</span><span class="n">constitutive</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="n">ensembl_end_phase</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">ensembl_phase</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="n">exon_id</span><span class="o">=</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A_mRNA</span><span class="o">-</span><span class="n">E1</span><span class="p">;</span><span class="n">rank</span><span class="o">=</span><span class="mi">1</span>
+<span class="n">IsgdCDS538792</span><span class="o">.+</span><span class="mi">0</span><span class="n">ID</span><span class="o">=</span><span class="n">CDS</span><span class="p">:</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A_mRNA</span><span class="p">;</span><span class="n">Parent</span><span class="o">=</span><span class="n">transcript</span><span class="p">:</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A_mRNA</span><span class="p">;</span><span class="n">protein_id</span><span class="o">=</span><span class="n">YAL068W</span><span class="o">-</span><span class="n">A_mRNA</span>
+</pre></div>
+</div>
+<p>The following gene filter file may be used, where the attribute is <strong>gene_id</strong>.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>gene_id
+YAL069W
+YAL068W-A
+</pre></div>
+</div>
+<p><em>In fact, the gene IDs you see in the file have the form</em> <strong>gene:YAL069W</strong>, <em>however, fivepseq tolerates if you just give the identifier following the colon.</em></p>
+<p>You may also specify the CDS ID, again omitting (or not) the text before colon:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>ID
+YAL069W_mRNA
+YAL068W-A_mRNA
+</pre></div>
+</div>
+<p>You may also use other attributes in the CDS entry if you have alternative gff/gtf files. In case you specify the wrong attribute, the error message will tell you what attributes you may use. In case you use the wrong attribute values, the error message will list a few values of that attribute in the correct format.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-gs GS, -genesets GS
+</pre></div>
+</div>
+<p>If you’d like to compare fivepseq plots between different gene sets, you may provide this as an additional argument. In comparison to the gene filter option above, the gene set option works as follows. Fivepseq first performs regular calculations, including all the genes in the annotation file, and later generates additional reports to compare profiles based on the gene sets provided.</p>
+<p>The file should be tab-delimited. With the first column indicating the genes, while the second one - the gene set names. The first line again indicates the attribute name and the geneset heading, while the rest of the lines contain gene - gene set mappings. The following example demonstrates one such file (the attribute choice is explained above):</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>gene_id   GO:BP
+YLR116W   mRNA splicing, via spliceosome
+YDL070W   DNA repair
+YPR030W   fungal-type cell wall organization
+YJL158C   fungal-type cell wall organization
+YFL039C   DNA repair
+</pre></div>
+</div>
+<p><em>Note: the first line is required.</em></p>
+</div>
+<div class="section" id="advanced-arguments">
+<h3>Advanced arguments<a class="headerlink" href="#advanced-arguments" title="Permalink to this headline">¶</a></h3>
+<p>Fivepseq reduces noise by detecting 5’ counts that our outliers in the background count distribution. The latter is well approximated with Poisson distribution, computed based on the count distribution mean. Counts for which the probability of falling into this distribution is less than a certain threshold (0 by default) are considered as outliers. These outliers are usually down-scaled or down-sampled to the most extreme distribution count possible. However, you may modify this by either of the two options below:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>--ds DS, --downsample DS
+</pre></div>
+</div>
+<p>With this option you can omit the distribution-modeled down-sampling described above and specify a constant value instead. Counts exceeding this threshold will be down-scaled to it.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>--op OP, --outlier_probability OP
+</pre></div>
+</div>
+<p>With this option you may change the default probability threshold of Poisson distribution. You may increase it from 0, to be more harsh in allowing high count values.
+You can also use this option to turn off down-sampling altogether, by setting the probability threshold to -1.</p>
+</div>
+</div>
+<div class="section" id="running-fivepseq-on-test-data">
+<h2>Running fivepseq on test data<a class="headerlink" href="#running-fivepseq-on-test-data" title="Permalink to this headline">¶</a></h2>
+<p>To run fivepseq on test alignment files, download the dataset <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/yeat_eIF5A/">from here</a>.</p>
+<p>The test data folder also contains source files for running fivepseq. There is a script for a quick test (<strong>src/fivepseq_quick.sh</strong> in the test_data folder), where only a small subset of transcripts is chosen. This test does not produce reasonable plots, but if it runs successfully you will know that everything is set up properly. Navigate to the test dataset directory (yeast_eIF5A) and run the <strong>./src/fivepseq_quick.sh</strong> script, or copy paste this code to the command line:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>fivepseq <span class="se">\</span>
+   -g genome/* <span class="se">\</span>
+   -a gff/* <span class="se">\</span>
+   -b <span class="s2">&quot;preprocess/align_dedup/*.bam&quot;</span> <span class="se">\</span>
+   -o fivepseq_quick <span class="se">\</span>
+   -t yeast_quick_test <span class="se">\</span>
+   -gf genesets/test_set.txt
+</pre></div>
+</div>
+<p>This should produce a folder named <strong>fivepseq_quick</strong>, with the following file structure:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>fivepseq_quick
+├── fivepseq_counts
+│   ├── 1_eIF5A_mut_R1
+│       ├── protein_coding
+│           ├── text files explained in the next chapters
+│   ├── 2_WT_R3
+│       ├── protein_coding
+│           ├── text files explained in the next chapters
+│   ├── 3_eIF5A_mut_R1
+│       ├── protein_coding
+│           ├── text files explained in the next chapters
+├── fivepseq_plots
+│   ├── main
+│       ├── png
+│       ├── svg
+│       ├── yeast_quick_test_combined.html
+│       ├── yeast_quick_test_main.html
+│   ├── supplement
+│       ├── png
+│       ├── svg
+│       ├── yeast_quick_test_amino_acid_scatterplots.html
+│       ├── yeast_quick_test_codon_heatmaps.html
+│       ├── yeast_quick_test_codon_scatterplots.html
+│   ├── yeast_quick_test.html   <span class="c1"># &lt;&lt;-- this is the main entry point for all the reports</span>
+├── log
+│   ├── fivepseq.log
+├── count_summary.txt
+</pre></div>
+</div>
+<p>The main result of the run is the file <strong>fivepseq_quick/fivepseq_plots/yeast_quick_test.html</strong>. This file has hyperlinks to all the other report files. The files generated here will be explained in detail in the <strong>Interpreting the output</strong> section.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/fivepseq_logo.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=lilit-nersisyan&repo=fivepseq&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="preparing_data.html">Preparing the data</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Running fivepseq</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#fivepseq-usage">Fivepseq usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-fivepseq-on-test-data">Running fivepseq on test data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="interpreting_output.html">Interpreting the output</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="preparing_data.html" title="previous chapter">Preparing the data</a></li>
+      <li>Next: <a href="interpreting_output.html" title="next chapter">Interpreting the output</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Lilit Nersisyan, Maryia Ropat, Vicente Pelechano.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/running_fivepseq.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

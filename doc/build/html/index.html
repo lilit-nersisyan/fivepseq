@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Welcome to fivepseq’s documentation! &#8212; fivepseq 1.0beta0 documentation</title>
+    <title>Fivepseq User Guide &#8212; fivepseq 1.0b0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -16,6 +16,7 @@
     <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -32,18 +33,48 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="welcome-to-fivepseq-s-documentation">
-<h1>Welcome to fivepseq’s documentation!<a class="headerlink" href="#welcome-to-fivepseq-s-documentation" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="fivepseq-user-guide">
+<h1>Fivepseq User Guide<a class="headerlink" href="#fivepseq-user-guide" title="Permalink to this headline">¶</a></h1>
+<p>Fivepseq is a software package for analysis of 5’ endpoint distribution in RNA sequencing datasets. This is particularly useful for techniques that capture 5’ monophosphorylated RNAs, such as 5PSeq, PARE-seq or GMUC. It may also be useful for ribosome profiling datasets and alike.</p>
+<p>The main workflow of fivepseq is intended for downstream analysis of alignment files to describe the distribution of 5’ endpoints of reads relative to translation start and stop sites, as well as relative to amino acids or codons. It also computes frame preference of 5’ endpoint distribution and captures periodicity patterns.</p>
+<p>The output of fivepseq is in the form of html report files, as well as text files and image files in portable network graphic and vector graphics formats.</p>
+<hr class="docutils" />
 <div class="toctree-wrapper compound">
-</div>
-</div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
-<ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#dependencies">Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#fivepseq-installation">Fivepseq installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#fivepseq-module-installation">Fivepseq module installation</a></li>
 </ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="preparing_data.html">Preparing the data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="preparing_data.html#required-files">Required files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preparing_data.html#finding-genome-and-annotation-files">Finding genome and annotation files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preparing_data.html#preprocessing-fastq-files">Preprocessing fastq files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preparing_data.html#test-data">Test data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="running_fivepseq.html">Running fivepseq</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="running_fivepseq.html#fivepseq-usage">Fivepseq usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running_fivepseq.html#running-fivepseq-on-test-data">Running fivepseq on test data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="interpreting_output.html">Interpreting the output</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#demo-data">Demo data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#entry-point-fivepseq-plots-runname-html">Entry point: fivepseq_plots/RUNNAME.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#general-notes-on-interacting-with-html-report-files">General notes on interacting with html report files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#main-report-fivepseq-plots-main-runname-main-html">Main report: fivepseq_plots/main/RUNNAME_main.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#combined-report-fivepseq-plots-main-runname-combined-html">Combined report: fivepseq_plots/main/RUNNAME_combined.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#supplement-fivepseq-plots-supplement-runname-amino-acid-linecharts-html">Supplement: fivepseq_plots/supplement/RUNNAME_amino_acid_linecharts.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#supplement-fivepseq-plots-supplement-runname-codon-linecharts-html">Supplement: fivepseq_plots/supplement/RUNNAME_codon_linecharts.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#supplement-fivepseq-plots-supplement-runname-codon-heatmaps-html">Supplement: fivepseq_plots/supplement/RUNNAME_codon_heatmaps.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#genesets-fivepseq-plots-genesets-runname-genesets-per-sample-html">Genesets: fivepseq_plots/genesets/RUNNAME_genesets_per_sample.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#genesets-fivepseq-plots-genesets-runname-samples-per-geneset-html">Genesets: fivepseq_plots/genesets/RUNNAME_samples_per_geneset.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interpreting_output.html#text-output">Text output</a></li>
+</ul>
+</li>
+</ul>
+</div>
 </div>
 
 
@@ -53,21 +84,40 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="#">fivepseq</a></h1>
+<p class="logo">
+  <a href="#">
+    <img class="logo" src="_static/fivepseq_logo.svg" alt="Logo"/>
+    
+  </a>
+</p>
 
 
 
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=lilit-nersisyan&repo=fivepseq&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
 
 
 
 
 
 <h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="preparing_data.html">Preparing the data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running_fivepseq.html">Running fivepseq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpreting_output.html">Interpreting the output</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="installation.html" title="next chapter">Installation</a></li>
   </ul></li>
 </ul>
 </div>
