@@ -552,7 +552,7 @@ class VizPipeline:
             for sample in self.samples:
                 amino_acid_df_full = self.amino_acid_df_full_dict[sample]
                 aa_df = pd.DataFrame(
-                    data={'D': map(int, amino_acid_df_full.columns), 'C': amino_acid_df_full.loc[aa, :]})
+                    data={'D': list(map(int, amino_acid_df_full.columns)), 'C': amino_acid_df_full.loc[aa, :]})
                 aa_df = aa_df.reset_index(drop=True)
                 aa_count_dict.update({sample: aa_df})
 
@@ -584,7 +584,7 @@ class VizPipeline:
                 for sample in self.samples:
                     codon_df_full = self.codon_df_dict[sample]
                     codon_df = pd.DataFrame(
-                        data={'D': map(int, codon_df_full.columns),
+                        data={'D': list(map(int, codon_df_full.columns)),
                               'C': codon_df_full.loc[Codons.CODON_TABLE[codon]+"_"+codon, :]})
                     codon_df = codon_df.reset_index(drop=True)
                     codon_count_dict.update({sample: codon_df})
