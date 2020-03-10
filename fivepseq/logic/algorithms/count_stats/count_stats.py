@@ -175,12 +175,20 @@ class CountStats:
 
     @staticmethod
     def fft_stats_on_vector(count_vector, n=1):
+        # get absolute values of signals for each wave, and take wave-frequencies less than half of the input vector
         fft_abs = np.abs(np.fft.fft(count_vector))
         fft_abs = fft_abs[1:(len(fft_abs) // 2 + 1)]
 
+        # sort the signals from smallest to largest, and take the largest n values
+        # check if flip works with python 3, without the axis argument
         ind = np.flip(np.argsort(fft_abs)[-1 * n:])
         signals = [fft_abs[i] for i in ind]
+
+        # scale each signal according to the mean of all the signals
         scales = [signal / np.mean(fft_abs) for signal in signals]
+
+        # compute the actual wavelengths or periods by dividing vector length by the frequency
+        # periods greater than half of the vector length are considered as 1 (no periodicity)
         periods = [0] * n
         ii = 0
         for i in ind:
@@ -190,6 +198,7 @@ class CountStats:
             periods[ii] = period
             ii += 1
 
+        # also return the whole thing as Series
         d = [float(len(count_vector) + 1) / (i + 1) for i in range(len(fft_abs))]
         fft_signal_series = pd.Series(data=fft_abs, index=d)
 

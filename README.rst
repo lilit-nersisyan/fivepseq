@@ -4,8 +4,17 @@ Welcome to fivepseq readme!
 Fivepseq is a software package for analysis of 5′ endpoints distribution in RNA sequencing datasets.
  
 
+Homepage
+------------
+The homage is hosted at Pelechano lab website at http://pelechanolab.com/software/fivepseq/.
+
+User guide
+------------
+Below is a quick manual to get you started.
+For detailed instructions and explanations on fivepseq output, please visit the user guide at: https://fivepseq.readthedocs.io/en/latest/.
+
 Installation
---------
+------------
 Install dependencies:
 
 To set up fivepseq, the following python packages need to be pre-installed manually using pip (if you don't have pip you may install it as described `here <ht\

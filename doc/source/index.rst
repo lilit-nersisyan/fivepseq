@@ -27,3 +27,4 @@ For more information, demo cases and citation, visit `Fivepseq homepage <http://
    preparing_data.rst
    running_fivepseq.rst
    interpreting_output.rst
+   count_files.rst
