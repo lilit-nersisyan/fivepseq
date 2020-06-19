@@ -288,7 +288,7 @@ class Annotation:
                 geneIDs.append(geneID)
                 geneset = tokens[1].rstrip("\n\r")
 
-                if gs_dict.has_key(geneset):
+                if geneset in gs_dict:
                     gs_dict[geneset].append(geneID)
                 else:
                     gs_dict.update({geneset: [geneID]})
@@ -341,7 +341,7 @@ class Annotation:
             self.transcript_assembly_dict.update({gs:{0:[]}})
             gs_transcriptInd_dict.update({gs: []})
             for geneID in gs_dict[gs]:
-                if geneID_transcript_dict.has_key(geneID):
+                if geneID in geneID_transcript_dict:
                     #TODO remove if fine
                     #gs_transcript_dict[gs].append(geneID_transcript_dict[geneID])
                     self.transcript_assembly_dict[gs][0].append(geneID_transcript_dict[geneID])
@@ -366,7 +366,7 @@ class Annotation:
         self.default_filter = self.PROTEIN_CODING
 
     def apply_geneset_filter(self, gs):
-        if not self.gs_transcriptInd_dict.has_key(gs):
+        if gs not in self.gs_transcriptInd_dict:
             raise Exception("The annotation does not have a filter named %s" % gs)
 
         self.default_filter = gs
