@@ -664,8 +664,8 @@ class FivePSeqCounts:
 
         transcript_assembly = self.annotation.get_transcript_assembly(span_size=0)
         transcript_count = len(transcript_assembly)
-        for i in range(transcript_count):
-            transcript = transcript_assembly[i]
+        for t in range(transcript_count):
+            transcript = transcript_assembly[t]
             if counter % np.floor(transcript_count / 10000) == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / transcript_count), '%',), )
@@ -706,15 +706,15 @@ class FivePSeqCounts:
             # NOTE as we don't scroll through the full transcripts, the number of stops will only be counted for non-empty triplets
             # identify 3nt bins with non-zero counts
             ind = np.array(range(0, len(count_vector), 3))
-            hits = [sum(count_vector[i:i + 3]) > 0 for i in ind]
+            hits = [sum(count_vector[t:t + 3]) > 0 for t in ind]
             non_empty_ind = ind[hits]
 
             stop_pos = []
             num_stops = 0
             # loop through non-empty triplets only
-            for i in non_empty_ind:
+            for t in non_empty_ind:
                 # loop through all amino acids 20 nucleotides downstream (seven amino-acids)
-                for j in range(i + 3, i + 3 + dist, 3):
+                for j in range(t + 3, t + 3 + dist, 3):
                     if j + 3 > len(cds_sequence):
                         break
                     codon = cds_sequence[j: j + 3].upper()
@@ -728,9 +728,9 @@ class FivePSeqCounts:
                             if j not in stop_pos:
                                 stop_pos.append(j)
                         for p in range(0, 3):
-                            d = i - j + p
+                            d = t - j + p
                             if -1 * d <= dist:
-                                amino_acid_count_df.at[aa, d] += count_vector[i + p]
+                                amino_acid_count_df.at[aa, d] += count_vector[t + p]
 
             num_stops = len(stop_pos)
             if num_stops > 1:
@@ -780,8 +780,8 @@ class FivePSeqCounts:
 
         transcript_assembly = self.annotation.get_transcript_assembly(span_size=dist_to)
         transcript_count = len(transcript_assembly)
-        for i in range(transcript_count):
-            transcript = transcript_assembly[i]
+        for t in range(transcript_count):
+            transcript = transcript_assembly[t]
             if counter % np.floor(transcript_count / 10) == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / transcript_count), '%',), )
@@ -803,13 +803,13 @@ class FivePSeqCounts:
 
             # identify 3nt bins with non-zero counts
             ind = np.array(range(0, len(count_vector), 3))
-            hits = [sum(count_vector[i:i + 3]) > 0 for i in ind]
+            hits = [sum(count_vector[t:t + 3]) > 0 for t in ind]
             non_empty_ind = ind[hits]
 
             # loop through non-empty triplets only
-            for i in non_empty_ind:
+            for t in non_empty_ind:
                 # loop through all codons dist_from nucleotides downstream and dist_to nucleotides upstream
-                j_range = list(np.arange(i, i - dist_to, -3))[::-1] + list(np.arange(i + 3, i + 3 - dist_from, 3))
+                j_range = list(np.arange(t, t - dist_to, -3))[::-1] + list(np.arange(t + 3, t + 3 - dist_from, 3))
                 for j in j_range:
                     if j < 0:
                         continue
@@ -819,12 +819,12 @@ class FivePSeqCounts:
 
                     if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
                         for p in range(0, 3):
-                            d = i - j + p
+                            d = t - j + p
                             try:
-                                codon_count_df.at[codon, d] += count_vector[i + p]
+                                codon_count_df.at[codon, d] += count_vector[t + p]
                             except Exception as e:
                                 self.logger.warn("Index out of range: i: %d, j: %d, p: %d, d: %d. %s"
-                                                 % (i, j, p, d, str(e)))
+                                                 % (t, j, p, d, str(e)))
 
         # rename codon_count_df indices by adding amino acid names
         new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in codon_count_df.index]
