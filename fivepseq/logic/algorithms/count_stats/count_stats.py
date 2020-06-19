@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from scipy.stats import stats
+from scipy import stats
 
 from fivepseq import config
 from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts, CountManager
@@ -57,6 +57,8 @@ class CountStats:
     fft_stats_term = None
     transcript_fpi_df = None
     transcript_fft_df = None
+    meta_count_peaks_start_df = None
+    meta_count_peaks_term_df = None
 
     def __init__(self, fivepseq_counts, fivepseq_out, config):
         self.fivepseq_counts = fivepseq_counts
@@ -80,6 +82,7 @@ class CountStats:
             self.compute_fpi_per_transcript()
             self.compute_fft_stats()
             self.compute_fft_per_transcript()
+            self.compute_meta_count_peaks()
 
     def summarize_transcript_stats(self):
         self.logger.info("Summarizing transcript counts")
@@ -204,6 +207,57 @@ class CountStats:
 
         return fft_signal_series, periods, signals, scales
 
+    def compute_meta_count_peaks(self):
+        """
+        Gets meta count series from fivepseq_counts as input, computes the the probability of each count
+        falling into the distribution and sets self meta count peak dataframes as those containing counts that fall into
+        Poisson distribution at p-values less than 0.001.
+
+        """
+
+        if config.args.conflicts == config.ADD_FILES and os.path.exists(
+                self.fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_START_PEAKS_FILE)):
+            self.logger.info("Skipping frame stats calculation: file %s exists" % FivePSeqOut.META_COUNT_START_PEAKS_FILE)
+        else:
+            meta_count_series = self.fivepseq_counts.get_meta_count_series(FivePSeqCounts.START).copy(deep = True)
+            self.meta_count_peaks_start_df = self.poisson_df_from_meta_count_series(meta_count_series)
+            self.fivepseq_out.write_df_to_file(self.meta_count_peaks_start_df, FivePSeqOut.META_COUNT_START_PEAKS_FILE)
+
+        if config.args.conflicts == config.ADD_FILES and os.path.exists(
+                self.fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)):
+            self.logger.info("Skipping frame stats calculation: file %s exists" % FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)
+        else:
+            meta_count_series = self.fivepseq_counts.get_meta_count_series(FivePSeqCounts.TERM).copy(deep = True)
+            self.meta_count_peaks_term_df = self.poisson_df_from_meta_count_series(meta_count_series)
+            self.fivepseq_out.write_df_to_file(self.meta_count_peaks_term_df, FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)
+
+
+    def poisson_df_from_meta_count_series(self, meta_count_series):
+        """
+        Given meta count series as input, compute the mean as the lambda parameter of Poisson distribution,
+        and compute the probability of each count falling into the distribution. Concatenate the the column with
+        p-values and return a count and p-value sorted dataframe for those counts that have p-value less than 0.001.
+
+        :param meta_count_series: pd.Series{int: int}: series of position-wise sum of transcript-specific counts indexed according to the
+        distance of genomic coordinates from the first nucleotides of the codon corresponding to the specified region (START or TERM)
+        :return: pd.DataFrame ['D', 'C', 'pval'] sorted dataframe for p-values < 0.001
+        """
+
+        meta_count_df = meta_count_series.to_frame(name='C')
+        meta_count_df['D'] = list(meta_count_df.index)
+
+        lam = np.mean(meta_count_df['C'])
+
+        ps = [1 - stats.poisson.cdf(x, lam) for x in meta_count_df['C']]
+        ps_df = meta_count_df.copy(deep=True)
+        ps_df['pval'] = ps
+        ps_df = ps_df.sort_values(by=['pval']).sort_values(by=['C'], ascending=False)
+        ps_df = ps_df[ps_df['pval'] < 0.001]
+        ps_df = ps_df[['D', 'C', 'pval']]
+
+        return ps_df
+
+
     def compute_frame_preference_stats(self):
         """
         percentage_per_frame: F0, F1, F2
@@ -264,6 +318,7 @@ class CountStats:
             self.frame_stats_df = frame_stats_df
 
             self.fivepseq_out.write_df_to_file(self.frame_stats_df, FivePSeqOut.FRAME_STATS_DF_FILE)
+
 
     def compute_fpi_per_transcript(self):
         """
