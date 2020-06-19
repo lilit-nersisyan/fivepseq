@@ -546,7 +546,7 @@ def main():
     setup_output_dir()
     setup_logger()
 
-    start_time = time.clock()
+    start_time = time.time()
 
     # body
 
@@ -556,7 +556,7 @@ def main():
             generate_and_store_fivepseq_counts(plot=True)
         else:
             generate_and_store_fivepseq_counts(plot=False)
-        elapsed_time = time.clock() - start_time
+        elapsed_time = time.time() - start_time
 
         logging.getLogger(config.FIVEPSEQ_LOGGER).info("SUCCESS! Fivepseq count finished in\t%s\tseconds. "
                                                        "The report files maybe accessed at:\t\t%s "
