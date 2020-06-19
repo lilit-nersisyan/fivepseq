@@ -148,7 +148,7 @@ class FivePSeqCounts:
             cds_sequence = self.get_cds_sequence_safe(transcript, 0)
             count_vector = self.get_count_vector_safe(transcript, 0)
 
-            # NOTE the count distribution does not include values 0 and 1 to avoid skewness for outlier detection
+            # NOTE the count distribution does not include values 0 to avoid skewness for outlier detection
             for c in count_vector:
                 if c > 0:
                     self.count_distribution.append(c)

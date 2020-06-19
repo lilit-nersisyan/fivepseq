@@ -38,7 +38,7 @@ COMBINED = "combined"
 def bokeh_composite(title, figure_list, filename, ncols=2):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making composite plot")
 
-    output_file(title + ".html")
+    output_file(title + ".html", title = title)
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Title provided as: %s" % title)
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of figures: %d" % len(figure_list))
