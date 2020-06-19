@@ -213,7 +213,7 @@ def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, 
             hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x'), ('RPM', '@y'), ('raw count', '@raw')],
                               renderers=[line])
         else:
-            hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x'), ('raw count', '@y')], renderers=[line])
+            hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x'), ('raw count', '@raw')], renderers=[line])
         p.add_tools(hover)
 
         # figures for exporting
@@ -762,7 +762,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
 
     for key in amino_acid_df_dict.keys():
         logging.getLogger(config.FIVEPSEQ_LOGGER).info(key)
-        amino_acid_df = amino_acid_df_dict.get(key)
+        amino_acid_df = amino_acid_df_dict.get(key).copy(deep = True)
         if amino_acid_df is not None:
             if scale:
                 for i in range(amino_acid_df.shape[0]):

@@ -1610,7 +1610,7 @@ class CountManager:
         amino_acid_df_combined = None
         start = True
         for key in amino_acid_df_dict.keys():
-            count_df = amino_acid_df_dict[key]
+            count_df = amino_acid_df_dict[key].copy(deep = True)
             if lib_size_dict is not None:
                 count_df *= float(lib_size_dict[key]) / sum(lib_size_dict.values())
 
