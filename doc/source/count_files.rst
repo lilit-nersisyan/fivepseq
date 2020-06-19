@@ -225,7 +225,9 @@ For each transcript, this file contains columns in the following order:
     F:              the frame of preference {0,1,2}
     f_count:        the counts at the preferred frame
     f_perc:         the percentage of those counts compared to the total counts at the transcript
-    fpi:            the frame protection index computed as (log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)))
+    fpi:            the frame protection index (FPI)
+
+The FPI is computed as (log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)))
 
 
 fft_stats.txt

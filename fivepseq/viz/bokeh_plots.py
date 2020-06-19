@@ -961,9 +961,9 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
                 )
                 legend_items.append((legend_text, [bars]))
                 legend_text = "p-vals: \tF0=%.2f | \tF1=%.2f | \tF2=%.2f" % (
-                    np.round(frame_stats_df.loc[CountStats.PVAL_FPI, CountStats.F0], 2),
-                    np.round(frame_stats_df.loc[CountStats.PVAL_FPI, CountStats.F1], 2),
-                    np.round(frame_stats_df.loc[CountStats.PVAL_FPI, CountStats.F2], 2),
+                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F0], 2),
+                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F1], 2),
+                    np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F2], 2),
                 )
                 legend_items.append((legend_text, [bars]))
 
