@@ -30,6 +30,10 @@ The files you should find inside each of these folders are listed below.
     │           ├── frame_counts_START.txt
     │           ├── frame_counts_TERM.txt
     │           ├── frame_stats.txt
+    │           ├── meta_count_peaks_START.txt
+    │           ├── meta_count_peaks_TERM.txt
+    │           ├── meta_counts_TERM.txt
+    │           ├── meta_counts_TERM.txt
     │           ├── meta_counts_START.txt
     │           ├── meta_counts_TERM.txt
     │           ├── outlier_lower.txt
@@ -174,6 +178,20 @@ _____________________________
 
 This file contains cumulative counts for each genomic position in the region -97 to +102 from CDS stop of all the protein-coding genes (0 - the first nucleotide of the STOP codon).
 There are two columns - the first one keeps the relative positions, the second one - the cumulative counts.
+
+meta_count_peaks_START
+_____________________________
+
+This file provides significance p-values of the peaks observed in the meta-counts at the start. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.
+The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.
+There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.
+
+meta_count_peaks_TERM
+_____________________________
+
+This file provides significance p-values of the peaks observed in the meta-counts at the termination. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.
+The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.
+There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.
 
 frame_counts_START
 _____________________________
