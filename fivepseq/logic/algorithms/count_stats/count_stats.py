@@ -188,7 +188,10 @@ class CountStats:
         signals = [fft_abs[i] for i in ind]
 
         # scale each signal according to the mean of all the signals
-        scales = [signal / np.mean(fft_abs) for signal in signals]
+        if np.mean(fft_abs) > 0:
+            scales = [signal / np.mean(fft_abs) for signal in signals]
+        else:
+            scales = signals
 
         # compute the actual wavelengths or periods by dividing vector length by the frequency
         # periods greater than half of the vector length are considered as 1 (no periodicity)
@@ -246,15 +249,30 @@ class CountStats:
         meta_count_df = meta_count_series.to_frame(name='C')
         meta_count_df['D'] = list(meta_count_df.index)
 
-        lam = np.mean(meta_count_df['C'])
+        lam = stats.mstats.mquantiles(meta_count_df['C'], 0.84)[0]
 
         ps = [1 - stats.poisson.cdf(x, lam) for x in meta_count_df['C']]
         ps_df = meta_count_df.copy(deep=True)
         ps_df['pval'] = ps
+
+        ps_df = ps_df[['D', 'C', 'pval']].reset_index(drop=True)
+
+        ind = list()
+        for i in range(len(ps_df)):
+            if ps_df['pval'][i] < 0.01:
+                if i ==0:
+                    if ps_df['C'][i] > ps_df['C'][i+1]:
+                        ind.append(i)
+                elif i == len(ps_df) - 1:
+                    if ps_df['C'][i] > ps_df['C'][i-1]:
+                        ind.append(i)
+                else:
+                    if ps_df['C'][i] > ps_df['C'][i - 1] and ps_df['C'][i] > ps_df['C'][i + 1]:
+                        ind.append(i)
+
+        ps_df = ps_df.iloc[ind,].reset_index(drop=True)
         ps_df = ps_df.sort_values(by=['pval']).sort_values(by=['C'], ascending=False)
-        ps_df = ps_df[ps_df['pval'] < 0.001]
-        ps_df = ps_df[['D', 'C', 'pval']]
-        ps_df = ps_df.reset_index(drop = True)
+
 
         return ps_df
 

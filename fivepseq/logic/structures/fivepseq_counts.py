@@ -666,7 +666,7 @@ class FivePSeqCounts:
         transcript_count = len(transcript_assembly)
         for t in range(transcript_count):
             transcript = transcript_assembly[t]
-            if counter % np.floor(transcript_count / 10000) == 0:
+            if np.floor(transcript_count / 10000) > 0 and counter %  np.floor(transcript_count / 10000) == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / transcript_count), '%',), )
                 self.logger.info("Amount of cds not multiple of 3 is %.2f %s"
@@ -782,7 +782,7 @@ class FivePSeqCounts:
         transcript_count = len(transcript_assembly)
         for t in range(transcript_count):
             transcript = transcript_assembly[t]
-            if counter % np.floor(transcript_count / 10) == 0:
+            if np.floor(transcript_count / 10) > 0 and counter % np.floor(transcript_count / 10) == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / transcript_count), '%',), )
             counter += 1
