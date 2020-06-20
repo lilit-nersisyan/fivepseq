@@ -347,7 +347,7 @@ class FivePSeqCounts:
         try:
             # retrieve the count vector using plastid function "get_counts" called from the given Transcript object
             count_vector = self.get_count_vector_safe(transcript, span_size)
-            if downsample and np.array(count_vector > self.outlier_lower).any():
+            if downsample and any(x > self.outlier_lower for x in count_vector):
                 count_vector_ds = [0] * len(count_vector)
                 for i in range(len(count_vector_ds)):
                     if count_vector[i] > self.outlier_lower:

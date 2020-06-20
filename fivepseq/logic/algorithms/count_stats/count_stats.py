@@ -254,6 +254,7 @@ class CountStats:
         ps_df = ps_df.sort_values(by=['pval']).sort_values(by=['C'], ascending=False)
         ps_df = ps_df[ps_df['pval'] < 0.001]
         ps_df = ps_df[['D', 'C', 'pval']]
+        ps_df = ps_df.reset_index(drop = True)
 
         return ps_df
 
