@@ -617,18 +617,18 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
         ))
 
         # circles = p.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
-        circles = p.circle('x', 'y', color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None, source=source)
+        circles = p.circle('x', 'y', color=color_dict.get(key), fill_alpha=0.5, size=5, line_color=None, source=source)
         legend_items.append((key, [circles]))
         hover = HoverTool(tooltips=[('name', '@name'), ('F0', '@F0'), ('F1', '@F1'), ('F2', '@F2')],
                           renderers=[circles])
         p.add_tools(hover)
 
         if p_key_png is not None:
-            circles_png = p_key_png.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
+            circles_png = p_key_png.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=5, line_color=None)
             legend_items_png.append((key, [circles_png]))
             export_images(p_key_png, key_title, png_dir=png_dir)
         if p_key_svg is not None:
-            circles_svg = p_key_svg.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
+            circles_svg = p_key_svg.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=5, line_color=None)
             legend_items_svg.append((key, [circles_svg]))
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
