@@ -1,0 +1,374 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Count files &#8212; fivepseq 1.0b0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Interpreting the output" href="interpreting_output.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="count-files">
+<span id="id1"></span><h1>Count files<a class="headerlink" href="#count-files" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="fivepseq-count-directory-listing">
+<h2>fivepseq_count directory listing<a class="headerlink" href="#fivepseq-count-directory-listing" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes you might want to use the files that contain raw counts or stats in text formats for alternative downstream applications. Fivepseq stores the count files in the fivepseq_counts directory in the output folder. Each sample has a default folder named <strong>protein_coding</strong>, where the count files and stats for all protein coding genes are stored. If fivepseq is run with the <code class="docutils literal notranslate"><span class="pre">--geneset</span></code> option enabled, count folders corresponding to each gene set will also appear along with the <strong>protein_coding</strong> folder.
+The files you should find inside each of these folders are listed below.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>fivepseq
+├── fivepseq_counts
+│   ├── 1_eIF5A_mut_R1
+│       ├── protein_coding
+│           ├── amino_acid_pauses.txt
+│           ├── canonical_transcript_index.txt
+│           ├── codon_pauses.txt
+│           ├── count_distribution.txt
+│           ├── counts_FULL_LENGTH.txt
+│           ├── counts_START.txt
+│           ├── counts_TERM.txt
+│           ├── data_summary.txt
+│           ├── fft_signals_start.txt
+│           ├── fft_signals_term.txt
+│           ├── fft_stats.txt
+│           ├── frame_counts_START.txt
+│           ├── frame_counts_TERM.txt
+│           ├── frame_stats.txt
+│           ├── meta_count_peaks_START.txt
+│           ├── meta_count_peaks_TERM.txt
+│           ├── meta_counts_TERM.txt
+│           ├── meta_counts_TERM.txt
+│           ├── meta_counts_START.txt
+│           ├── meta_counts_TERM.txt
+│           ├── outlier_lower.txt
+│           ├── outliers_df.txt
+│           ├── start_codon_dict.txt
+│           ├── term_codon_dict.txt
+│           ├── transcript_assembly.txt
+│           ├── transcript_descriptors.txt
+│           ├── transcript_fft.txt
+│           ├── transcript_frame_prefs.txt
+│   ├── 2_WT_R3
+│   ├── 3_eIF5A_mut_R1
+├── fivepseq_plots
+├── log
+├── count_summary.txt
+</pre></div>
+</div>
+<div class="section" id="data-summary">
+<h3>data_summary<a class="headerlink" href="#data-summary" title="Permalink to this headline">¶</a></h3>
+<p>This file contains general statistics on the number of reads in the protein coding regions (or the geneset) used by fivepseq.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>NumOfReads:                     Number of reads in the coding regions, accounting <span class="k">for</span> transcript filters
+NumOfMapPositions:              Number of genome positions with at leads one mapping reads <span class="o">(</span>more than one reads in the same position are counted as one<span class="o">)</span>
+NumOfTranscripts:               Number of transcripts in the given annotation <span class="k">for</span> the given filter
+NumOfMapTranscripts:            Number of transcripts with at least one mapping <span class="nb">read</span>
+MinNumOfReadsPerTranscript:     Minumum number of reads per transcript
+MaxNumOfReadsPerTranscript:     Maximum number of reads per transcript
+MedianNumOfReadsPerTranscript:  Median  number of reads per transcript
+</pre></div>
+</div>
+</div>
+<div class="section" id="transcript-assembly">
+<h3>transcript_assembly<a class="headerlink" href="#transcript-assembly" title="Permalink to this headline">¶</a></h3>
+<p>This file contains transcript descriptors: a row per transcript and six fields (columns).
+Note that transcript assemblies for each gene set filter will be different and will only include transcripts in the filter. Also, if <code class="docutils literal notranslate"><span class="pre">--genefilter</span></code> option is given, only the filtered transcripts will be included in the assembly.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>ID:         transcript ID
+gene:       gene ID <span class="o">(</span><span class="k">if</span> found in the annotation<span class="o">)</span>
+chr:        chromosome name
+cds_start:  start coordinate of the CDS
+cds_end:    end coordinate of the CDS
+type:       the transcript <span class="nb">type</span> <span class="o">(</span>e.g. mRNA, tRNA, etc.<span class="o">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="transcript-descriptors">
+<h3>transcript_descriptors<a class="headerlink" href="#transcript-descriptors" title="Permalink to this headline">¶</a></h3>
+<p>This file contains basic stats for each transcript. The order of transcripts corresponds to that of the <strong>transcript_assembly.txt</strong>.
+Each transcript is described by six fields:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>start:                      the codon at transcript CDS start
+stop:                       the codon at transcript CDS stop
+len:                        transcript length
+3nt:                        presence of <span class="m">3</span>-nucleotide periodicity in the transcript <span class="o">(</span><span class="m">1</span> <span class="k">for</span> present, <span class="m">0</span> <span class="k">for</span> absent<span class="o">)</span>
+NumOfReads:                 number of reads mapping to that transcript
+NumOfMapPositions:          number of positions in the transcript with at least one mapped <span class="nb">read</span> <span class="o">(</span>multiple reads per position are counted as one<span class="o">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="start-codon-dict-txt">
+<h3>start_codon_dict.txt<a class="headerlink" href="#start-codon-dict-txt" title="Permalink to this headline">¶</a></h3>
+<p>This file lists all the codons present at CDS start of the transcripts. For each codon, the number of transcripts where it is present is indicated. The codons are sorted in decreasing order of occurrence.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>ATG     <span class="m">6590</span>
+TTG     <span class="m">1</span>
+GCT     <span class="m">2</span>
+AAC     <span class="m">1</span>
+ATA     <span class="m">6</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="term-codon-dict-txt">
+<h3>term_codon_dict.txt<a class="headerlink" href="#term-codon-dict-txt" title="Permalink to this headline">¶</a></h3>
+<p>This file lists all the codons present at CDS stop of the transcripts. For each codon, the number of transcripts where it is present is indicated. The codons are sorted in decreasing order of occurrence.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>TAG     <span class="m">1511</span>
+TGA     <span class="m">1951</span>
+TAA     <span class="m">3138</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="canonical-transcript-index">
+<h3>canonical_transcript_index<a class="headerlink" href="#canonical-transcript-index" title="Permalink to this headline">¶</a></h3>
+<p>The indices (as they appear in the <strong>transcript_descriptors.txt</strong>) of transcripts containing canonical start (AUG) and termination ({TAG, TGA, TAA}) codons are listed in this file.</p>
+</div>
+<div class="section" id="count-distribution">
+<h3>count_distribution<a class="headerlink" href="#count-distribution" title="Permalink to this headline">¶</a></h3>
+<p>This file simply lists the read 5’ endpoint counts per genomic position if those counts are greater than 0.</p>
+</div>
+<div class="section" id="outlier-lower">
+<h3>outlier_lower<a class="headerlink" href="#outlier-lower" title="Permalink to this headline">¶</a></h3>
+<p>This file contains the maximum count value that falls into Poisson distribution according to the count distribution in the file above. All the counts greater than this value are down-scaled to it.</p>
+</div>
+<div class="section" id="outliers-df">
+<h3>outliers_df<a class="headerlink" href="#outliers-df" title="Permalink to this headline">¶</a></h3>
+<p>This file contains genomic positions with counts greater than the maximum allowed count (indicated in <em>outlier_lower.txt</em>) and shows the down-scaled (downsampled) count for it.
+Each such genomic position is described by the following fields:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>ID:                     transcript ID
+Name:                   gene Name (if such attribute exists for the annotation)
+position_from_start:    the relative position of the location from the transcript CDS start (first nucleotide = 0)
+position_from_term:     the relative position of the location from the transcript CDS stop (last nucleotide = 0)
+actual_count:           the actual count of read 5&#39; endpoint at the position
+downasampled_count:     the count set at the location after noise removal
+</pre></div>
+</div>
+</div>
+<div class="section" id="counts-full-length">
+<h3>counts_FULL_LENGTH<a class="headerlink" href="#counts-full-length" title="Permalink to this headline">¶</a></h3>
+<p>Each row is a transcript in the order of <strong>transcript_assembly.txt</strong>.
+The counts correspond to the number of read 5’ endpoints mapping to each position in the transcript. The coordinates span the CDS and -100/+100 nucleotides around it.</p>
+</div>
+<div class="section" id="counts-start">
+<h3>counts_START<a class="headerlink" href="#counts-start" title="Permalink to this headline">¶</a></h3>
+<p>Each row is a transcript in the order of <strong>transcript_assembly.txt</strong>.
+The counts correspond to the number of read 5’ endpoints mapping to each position within the initial part of the transcript. The coordinates start from -100 to +99 from start (first nucleotide = 0).</p>
+</div>
+<div class="section" id="counts-term">
+<h3>counts_TERM<a class="headerlink" href="#counts-term" title="Permalink to this headline">¶</a></h3>
+<p>Each row is a transcript in the order of <strong>transcript_assembly.txt</strong>.
+The counts correspond to the number of read 5’ endpoints mapping to each position within the terminal part of the transcript. The coordinates start from -97 to +102 from stop (first nucleotide of the STOP codon = 0).</p>
+</div>
+<div class="section" id="meta-counts-start">
+<h3>meta_counts_START<a class="headerlink" href="#meta-counts-start" title="Permalink to this headline">¶</a></h3>
+<p>This file contains cumulative counts for each genomic position in the region -100 to +99 from CDS start of all the protein-coding genes (0 - the first nucleotide of the START codon).
+There are two columns - the first one keeps the relative positions, the second one - the cumulative counts.</p>
+</div>
+<div class="section" id="meta-counts-term">
+<h3>meta_counts_TERM<a class="headerlink" href="#meta-counts-term" title="Permalink to this headline">¶</a></h3>
+<p>This file contains cumulative counts for each genomic position in the region -97 to +102 from CDS stop of all the protein-coding genes (0 - the first nucleotide of the STOP codon).
+There are two columns - the first one keeps the relative positions, the second one - the cumulative counts.</p>
+</div>
+<div class="section" id="meta-count-peaks-start">
+<h3>meta_count_peaks_START<a class="headerlink" href="#meta-count-peaks-start" title="Permalink to this headline">¶</a></h3>
+<p>This file provides significance p-values of the peaks observed in the meta-counts at the start. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.
+The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.
+There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.</p>
+</div>
+<div class="section" id="meta-count-peaks-term">
+<h3>meta_count_peaks_TERM<a class="headerlink" href="#meta-count-peaks-term" title="Permalink to this headline">¶</a></h3>
+<p>This file provides significance p-values of the peaks observed in the meta-counts at the termination. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.
+The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.
+There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.</p>
+</div>
+<div class="section" id="frame-counts-start">
+<h3>frame_counts_START<a class="headerlink" href="#frame-counts-start" title="Permalink to this headline">¶</a></h3>
+<p>This file contains the number of read 5’ endpoints in each translation frame for each transcript. The frame is counted relative to the CDS start.
+After the index column there are three columns representing the frames: F0 (corresponds to the first nucleotide of the START codon), F1 and F2.
+Each row is a transcript, ordered as in the <strong>transcript_assembly.txt</strong> file.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>        F0      F1      F2
+<span class="m">0</span>       <span class="m">0</span>       <span class="m">0</span>       <span class="m">0</span>
+<span class="m">1</span>       <span class="m">0</span>       <span class="m">0</span>       <span class="m">0</span>
+<span class="m">2</span>       <span class="m">0</span>       <span class="m">0</span>       <span class="m">0</span>
+<span class="m">3</span>       <span class="m">0</span>       <span class="m">0</span>       <span class="m">0</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="frame-counts-term">
+<h3>frame_counts_TERM<a class="headerlink" href="#frame-counts-term" title="Permalink to this headline">¶</a></h3>
+<p>This file contains the number of read 5’ endpoints in each translation frame for each transcript. The frame is counted relative to the CDS stop.
+After the index column there are three columns representing the frames: F0 (corresponds to the first nucleotide of the STOP codon), F1 and F2.
+Each row is a transcript, ordered as in the <strong>transcript_assembly.txt</strong> file.</p>
+</div>
+<div class="section" id="frame-stats">
+<h3>frame_stats<a class="headerlink" href="#frame-stats" title="Permalink to this headline">¶</a></h3>
+<p>This file contains general statistics on the count frame preference for frames F0, F1 and F2 described above. Each frame is described the following fields:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>f_count:        the raw counts at each frame
+f_perc:         the fraction of counts falling into each frame
+fpi:            frame protection index computed as <span class="o">(</span>log<span class="se">\ </span>:sub:<span class="sb">`</span><span class="m">2</span><span class="sb">`</span><span class="se">\(</span>2F<span class="se">\ </span>:sub:<span class="sb">`</span>i<span class="sb">`</span><span class="se">\/</span><span class="o">(</span>F<span class="se">\ </span>:sub:<span class="sb">`</span>total<span class="sb">`</span><span class="se">\ </span>- F<span class="se">\ </span>:sub:<span class="sb">`</span>i<span class="sb">`</span><span class="se">\)</span><span class="o">))</span>
+p_val_pair:     the p value of t-test computed on the difference of transcript-wise counts between the frame and its neighboring frame to the right <span class="o">(</span>F0 vs F1, F1 vs F2 or F2 vs F0<span class="o">)</span>
+p_val_fpi:      the p value of t-test computed on the difference of transcript-wise counts between the frame and the other two frames combined
+p_val_pair_max: the p value of t-test computed on the difference of transcript-wise counts between the frame and another frame with closest counts to it
+</pre></div>
+</div>
+</div>
+<div class="section" id="transcript-frame-prefs">
+<h3>transcript_frame_prefs<a class="headerlink" href="#transcript-frame-prefs" title="Permalink to this headline">¶</a></h3>
+<p>For each transcript, this file contains columns in the following order:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>count:          the total counts at the transcript
+F:              the frame of preference <span class="o">{</span><span class="m">0</span>,1,2<span class="o">}</span>
+f_count:        the counts at the preferred frame
+f_perc:         the percentage of those counts compared to the total counts at the transcript
+fpi:            the frame protection index <span class="o">(</span>FPI<span class="o">)</span>
+</pre></div>
+</div>
+<p>The FPI is computed as (log<sub>2</sub>(2F<sub>i</sub>/(F<sub>total</sub>- F<sub>i</sub>)))</p>
+</div>
+<div class="section" id="fft-stats-txt">
+<h3>fft_stats.txt<a class="headerlink" href="#fft-stats-txt" title="Permalink to this headline">¶</a></h3>
+<p>This file contains information regarding periodicity of read 5’ endpoints across transcript coordinates. Fivepseq applies Fast Fourier transformation (FFT) to compute presence and strength of periodic count waves.
+The transcripts are aligned either at the start (prefix START) or at the end (prefix TERM), truncated at the 0.75 percentile of lengths and short transcripts are padded with zeros. The counts are then summed at each position across the transcripts. The FFT is applied on the resulting metavector.</p>
+<p>The file contains the following statistics for the top five periodicity waves (marked with columns named 0-to-4)</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>START_periods:      the periodicity, number of nucleotides
+START_signals:      the strength of the signal <span class="o">(</span>the real component of FFT transformation<span class="o">)</span>
+START_scales:       the relative strength of the signal compared to background
+TERM_periods:       the periodicity, number of nucleotides
+TERM_signals:       the strength of the signal <span class="o">(</span>the real component of FFT transformation<span class="o">)</span>
+TERM_scales:        the relative strength of the signal compared to background
+</pre></div>
+</div>
+</div>
+<div class="section" id="fft-signals-start">
+<h3>fft_signals_start<a class="headerlink" href="#fft-signals-start" title="Permalink to this headline">¶</a></h3>
+<p>This file contains two columns with the START_period (periodicity) and START_signal (strength of the FFT signal at that periodicity) statistics described above. All of the identified waves are included (as opposed to top five only in the “fft_stats.txt” file).</p>
+</div>
+<div class="section" id="fft-signals-term">
+<h3>fft_signals_term<a class="headerlink" href="#fft-signals-term" title="Permalink to this headline">¶</a></h3>
+<p>This file contains two columns with the TERM_period (periodicity) and TERM_signal (strength of the FFT signal at that periodicity) statistics described above. All of the identified waves are included (as opposed to top five only in the “fft_stats.txt” file).</p>
+</div>
+<div class="section" id="transcript-fft">
+<h3>transcript_fft<a class="headerlink" href="#transcript-fft" title="Permalink to this headline">¶</a></h3>
+<p>This file contains FFT statistics for each transcript. Each row is described by the followings stats:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>count:      the total count of read 5&#39; endpoints at the transcript
+period:     the periodicity at the strongest FFT wave
+signal:     the strength of the FFT signal at that periodicity
+</pre></div>
+</div>
+</div>
+<div class="section" id="amino-acid-pauses">
+<h3>amino_acid_pauses<a class="headerlink" href="#amino-acid-pauses" title="Permalink to this headline">¶</a></h3>
+<p>Cumulative raw counts at certain distance (columns -50 to -1) from each amino acid (rows) are indicated. The distance is counted from the first nucleotide of each amino acid, with the first nucleotide considered as position 0 (not in the file).</p>
+</div>
+<div class="section" id="codon-pauses">
+<h3>codon_pauses<a class="headerlink" href="#codon-pauses" title="Permalink to this headline">¶</a></h3>
+<p>Cumulative raw counts at certain distance (columns -30 to +5) from each codon(rows) are indicated. The distance is counted from the first nucleotide of each codon as, with the first nucleotide considered as position 0.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/fivepseq_logo.svg" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=lilit-nersisyan&repo=fivepseq&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="preparing_data.html">Preparing the data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running_fivepseq.html">Running fivepseq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interpreting_output.html">Interpreting the output</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Count files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#fivepseq-count-directory-listing">fivepseq_count directory listing</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="interpreting_output.html" title="previous chapter">Interpreting the output</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Lilit Nersisyan, Maryia Ropat, Vicente Pelechano.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/count_files.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

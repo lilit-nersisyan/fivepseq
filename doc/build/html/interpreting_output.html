@@ -13,9 +13,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Count files" href="count_files.html" />
     <link rel="prev" title="Running fivepseq" href="running_fivepseq.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -129,12 +129,12 @@
 <div class="section" id="metagene-counts-start-and-stop">
 <h3>Metagene counts (START and STOP)<a class="headerlink" href="#metagene-counts-start-and-stop" title="Permalink to this headline">¶</a></h3>
 <p>Metagenes counts are produced by aligning the transcripts at the translation start/stop sites and summing up the counts in each position across the transcripts. The x axis plots the base positions relative to translation start/stop, with the first nucleotide of the first/last codon corresponding to the 0 start/stop positions. By default, the counts are spanned 100bp around the start/stop site, but this value may be changed with the –span option. The charts with _raw suffix contain raw counts along the y axis, while those with _scaled suffix represent reads per million of mapped reads in the coding regions (RPM) along the y axis.
-Usually you may want to focus your attention on peaks relative to start/stop positions. For yeast, the peaks 14 nt and 17 nt upstream from start and stop (-14/-17) respectively, indicate on ribosome stalling at translation initiation/termination. These numbers may differ depending on the species, strain or experimental conditions. You may also focus on additional peaks/valleys of possible importance.</p>
+Usually you may want to focus your attention on peaks relative to start/stop positions. For yeast, the peaks 14 nt and 17 nt upstream from start and stop (-14/-17) respectively, indicate on ribosome stalling at translation initiation/termination. These numbers may differ depending on the species, strain or experimental conditions. You may also focus on additional peaks/valleys of possible importance. The count files fivepseq_counts/meta_count_peaks_START.txt and fivepseq_counts/meta_count_peaks_TERM.txt also show the significance of observed peaks (see the section “Count files” for details).</p>
 <img alt="_images/metagene_counts.png" src="_images/metagene_counts.png" />
 </div>
 <div class="section" id="global-frame-preference">
 <h3>Global frame preference<a class="headerlink" href="#global-frame-preference" title="Permalink to this headline">¶</a></h3>
-<p>For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts. At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log<sub>2</sub>(2F<sub>i</sub>/(F<sub>total</sub>- F<sub>i</sub>)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each frame with a t test comparing counts in that frame with counts in the other two frames for all the transcripts.</p>
+<p>For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts. At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log<sub>2</sub>(2F<sub>i</sub>/(F<sub>total</sub>- F<sub>i</sub>)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each pair of frames with a t test, and for each frame, the maximum p-value between two possible comparisons is displayed.</p>
 <img alt="_images/global_frame_preference.png" src="_images/global_frame_preference.png" />
 </div>
 <div class="section" id="gene-frame-preference">
@@ -243,6 +243,7 @@ Most of the times the patterns will not differ much whether the transcripts are 
 <li class="toctree-l2"><a class="reference internal" href="#text-output">Text output</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="count_files.html">Count files</a></li>
 </ul>
 
 <div class="relations">
@@ -250,6 +251,7 @@ Most of the times the patterns will not differ much whether the transcripts are 
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="running_fivepseq.html" title="previous chapter">Running fivepseq</a></li>
+      <li>Next: <a href="count_files.html" title="next chapter">Count files</a></li>
   </ul></li>
 </ul>
 </div>
@@ -281,7 +283,7 @@ Most of the times the patterns will not differ much whether the transcripts are 
       &copy;2019, Lilit Nersisyan, Maryia Ropat, Vicente Pelechano.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
