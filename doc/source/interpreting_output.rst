@@ -167,7 +167,7 @@ Most of the times the patterns will not differ much whether the transcripts are 
 Amino acid relative count heatmaps 
 ___________________________________
 
-The amino acid heatmaps highlight the cumulative metacounts relative to the distance from each amino acid (or termination codons). These are computed by summing up the counts at certain distance from a certain amino acid across all the transcripts. In these heatmaps, the columns correspond to the relative distance from each amino acid, while the rows represent each amino acid. The values in the heatmaps are either the raw cumulative counts (top charts) or those scaled in each row (bottom charts). The values are then colored on the blue-to-yellow scale, with yellow corresponding to higher values. 
+The amino acid heatmaps highlight the cumulative counts in the gene body (discarding the start and termination regions) relative to the distance from each codon representing an amino acid or termination. These are computed by summing up the counts at certain distance from a certain amino acid across all the transcripts. In these heatmaps, the columns correspond to the relative distance from each amino acid, while the rows represent each amino acid. The values in the heatmaps are either the raw cumulative counts (top charts) or those scaled in each row (bottom charts). The values are then colored on the blue-to-yellow scale, with yellow corresponding to higher values.
 
 .. image:: _static/amino_acid_heatmaps.png
 
@@ -182,7 +182,7 @@ This report contains the same set of charts, as those found in main, but it merg
 Supplement: fivepseq_plots/supplement/RUNNAME_amino_acid_linecharts.html
 =========================================================================
 
-This report contains linecharts for metacounts relative to each amino acid for individual samples (left) or the samples combined (right). Samples are combined by accounting for their library size. The read counts are normalized to reads per million (RPM). In essence, these are the same data seen in amino acid heatmaps in the main report, in a different format.
+This report contains linecharts for cumulative counts in the gene body (discarding the start and termination regions) relative to the distance from each codon representing an amino acid or termination for individual samples (left) or the samples combined (right). Samples are combined by accounting for their library size. The read counts are normalized to reads per million (RPM). In essence, these are the same data seen in amino acid heatmaps in the main report, in a different format.
 
 
 .. image:: _static/PRO_linecharts.png

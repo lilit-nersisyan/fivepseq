@@ -706,15 +706,15 @@ class FivePSeqCounts:
             # NOTE as we don't scroll through the full transcripts, the number of stops will only be counted for non-empty triplets
             # identify 3nt bins with non-zero counts
             ind = np.array(range(0, len(count_vector), 3))
-            hits = [sum(count_vector[t:t + 3]) > 0 for t in ind]
+            hits = [sum(count_vector[i:i + 3]) > 0 for i in ind]
             non_empty_ind = ind[hits]
 
             stop_pos = []
             num_stops = 0
             # loop through non-empty triplets only
-            for t in non_empty_ind:
+            for i in non_empty_ind:
                 # loop through all amino acids 20 nucleotides downstream (seven amino-acids)
-                for j in range(t + 3, t + 3 + dist, 3):
+                for j in range(i + 3, i + 3 + dist, 3):
                     if j + 3 > len(cds_sequence):
                         break
                     codon = cds_sequence[j: j + 3].upper()
@@ -727,10 +727,16 @@ class FivePSeqCounts:
                             #num_stops += 1
                             if j not in stop_pos:
                                 stop_pos.append(j)
+
+                        # check if the codon is not close to the STOP or START codon, otherwise there will be termination/initiation-caused
+                        # peaks that do not reflect codon-pauses in the gene body
+                        if (i < dist-20 or i > len(count_vector) - 20) and codon not in Codons.stop_codons:
+                            continue
+
                         for p in range(0, 3):
-                            d = t - j + p
+                            d = i - j + p
                             if -1 * d <= dist:
-                                amino_acid_count_df.at[aa, d] += count_vector[t + p]
+                                amino_acid_count_df.at[aa, d] += count_vector[i + p]
 
             num_stops = len(stop_pos)
             if num_stops > 1:
@@ -803,13 +809,13 @@ class FivePSeqCounts:
 
             # identify 3nt bins with non-zero counts
             ind = np.array(range(0, len(count_vector), 3))
-            hits = [sum(count_vector[t:t + 3]) > 0 for t in ind]
+            hits = [sum(count_vector[i:i + 3]) > 0 for i in ind]
             non_empty_ind = ind[hits]
 
             # loop through non-empty triplets only
-            for t in non_empty_ind:
+            for i in non_empty_ind:
                 # loop through all codons dist_from nucleotides downstream and dist_to nucleotides upstream
-                j_range = list(np.arange(t, t - dist_to, -3))[::-1] + list(np.arange(t + 3, t + 3 - dist_from, 3))
+                j_range = list(np.arange(i, i - dist_to, -3))[::-1] + list(np.arange(i + 3, i + 3 - dist_from, 3))
                 for j in j_range:
                     if j < 0:
                         continue
@@ -818,13 +824,18 @@ class FivePSeqCounts:
                     codon = cds_sequence[j: j + 3].upper()
 
                     if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
+                        # check if the codon is not close to the STOP or START codon, otherwise there will be termination/initiation-caused
+                        # peaks that do not reflect codon-pauses in the gene body
+                        if (i < 20+dist_to or i > len(count_vector) - 20 - dist_from) and codon not in Codons.stop_codons:
+                            continue
+
                         for p in range(0, 3):
-                            d = t - j + p
+                            d = i - j + p
                             try:
-                                codon_count_df.at[codon, d] += count_vector[t + p]
+                                codon_count_df.at[codon, d] += count_vector[i + p]
                             except Exception as e:
                                 self.logger.warn("Index out of range: i: %d, j: %d, p: %d, d: %d. %s"
-                                                 % (t, j, p, d, str(e)))
+                                                 % (i, j, p, d, str(e)))
 
         # rename codon_count_df indices by adding amino acid names
         new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in codon_count_df.index]
