@@ -38,6 +38,30 @@ class Codons:
         "TERM": ["TAA", "TGA", "TAG"],
         "MET": ["ATG"]}
 
+    AMINO_ACID_SINGLELETTER_TABLE = {
+        "ALA": "A",
+        "ARG": "R",
+        "ASN": "N",
+        "ASP": "D",
+        "CYS": "C",
+        "GLN": "Q",
+        "GLY": "G",
+        "GLU": "E",
+        "HIS": "H",
+        "ILE": "I",
+        "LEU": "L",
+        "LYS": "K",
+        "MET": "M",
+        "PHE": "F",
+        "PRO": "P",
+        "SER": "S",
+        "THR": "T",
+        "TRP": "W",
+        "TYR": "Y",
+        "VAL": "V",
+        "TERM": "*"
+    }
+
     CODON_TABLE = {
         "GCT": "ALA",
         "GCC": "ALA",
@@ -103,6 +127,64 @@ class Codons:
         "TGA": "TERM",
         "TAG": "TERM",
         "ATG": "MET"}
+
+    @staticmethod
+    def get_dicodon_table():
+        dicodon_table = {}
+        for codon1 in Codons.CODON_TABLE.keys():
+            for codon2 in Codons.CODON_TABLE.keys():
+                dicodon_table.update(
+                    {codon1 + codon2: Codons.CODON_TABLE.get(codon1) + '-' + Codons.CODON_TABLE.get(codon2)})
+        return dicodon_table
+
+    @staticmethod
+    def get_tricodon_table():
+        tricodon_table = {}
+        for codonE in Codons.CODON_TABLE.keys():
+            for codonP in Codons.CODON_TABLE.keys():
+                for codonA in Codons.CODON_TABLE.keys():
+                    tricodon_table.update({codonE + codonP + codonA:
+                                               Codons.get_tripeptide_from_tricodon([codonE, codonP, codonA])
+                                           })
+        return tricodon_table
+
+    @staticmethod
+    def get_tripeptide_from_tricodon(codon_list):
+        return '-'.join([Codons.CODON_TABLE[codon] for codon in codon_list]) +\
+               ' (' + ''.join([Codons.AMINO_ACID_SINGLELETTER_TABLE[Codons.CODON_TABLE[codon]] for codon in codon_list]) +\
+               ')'
+
+    @staticmethod
+    def get_tripeptide_list():
+        tripeptide_list = list()
+        for aaE in Codons.AMINO_ACID_TABLE.keys():
+            for aaP in Codons.AMINO_ACID_TABLE.keys():
+                for aaA in Codons.AMINO_ACID_TABLE.keys():
+                    tripeptide_list.append(
+                        '-'.join([aaE, aaP, aaA]) +
+                        ' (' +
+                        ''.join([Codons.AMINO_ACID_SINGLELETTER_TABLE.get(aaE),
+                                 Codons.AMINO_ACID_SINGLELETTER_TABLE.get(aaP),
+                                 Codons.AMINO_ACID_SINGLELETTER_TABLE.get(aaA)
+                                 ]) +
+                        ')'
+                    )
+
+        return tripeptide_list
+
+    @staticmethod
+    def get_tricodon_full_index():
+        tricodon_index = list()
+        for codonE in Codons.CODON_TABLE.keys():
+            for codonP in Codons.CODON_TABLE.keys():
+                for codonA in Codons.CODON_TABLE.keys():
+                    tricodon_index.append(
+                        '-'.join([Codons.CODON_TABLE.get(codonE),
+                                  Codons.CODON_TABLE.get(codonP),
+                                  Codons.CODON_TABLE.get(codonA)]) +
+                        '_' +
+                        ''.join(codonE + codonP + codonA))
+        return tricodon_index
 
     def get_color20(i):
         tab20 = cm.get_cmap("tab20", 20)

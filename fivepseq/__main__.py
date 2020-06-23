@@ -121,6 +121,27 @@ class FivepseqArguments:
                             default=False,
                             required=False)
 
+        optional.add_argument("--no-mask",
+                              help="Turn off masking transcript boundaries for codon-relative counts",
+                              action="store_true",
+                              default=False,
+                              required=False)
+
+        advanced.add_argument("--codon-mask-size",
+                              help="a number {0, >3} specifying how many positions to mask from transcript start and end when counting codon-relative counts",
+                              type=int,
+                              required=False,
+                              default=20,
+                              choices=range(3,50))
+
+        advanced.add_argument("--tripeptide-pos",
+                              help="counts in which position {-24:9} from A site should be ordered to output top stalled tripeptides",
+                              type = int,
+                              required=False,
+                              default=-11,
+                              choices=range(-24,9)
+                              )
+
         advanced.add_argument("--loci-file",
                             help="coordinates of loci relative to which mapping positions are to be plotted",
                             required=False,
@@ -194,7 +215,12 @@ class FivepseqArguments:
             print("%s%s" % (pad_spaces("\tOutput directory:"), os.path.abspath(config.args.o)))
             print("%s%s" % (pad_spaces("\tConflict handling:"), config.args.conflicts))
 
-            print("%s%s" % (pad_spaces("\tLogging level:"), config.args.log.upper()))
+            # advanced arguments
+            print("%s%s" % (pad_spaces("\tTranscript boundary masking for codon counts:"), config.args.no_mask))
+            if not config.args.no_mask:
+                print("%s%s" % (pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
+
+            print("%s" % (pad_spaces("\tTripeptides will be sorted at position %d from the A site:" % config.args.tripeptide_pos)))
 
         #   if config.args.fivepseq_pickle is not None:
         #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
@@ -245,6 +271,13 @@ class FivepseqArguments:
             if config.args.t is not None:
                 print("%s%s" % (pad_spaces("\tOutput file title:"), config.args.t + ".html"))
 
+            # advanced arguments
+            if not config.args.no_mask:
+                print("%s%s" % (pad_spaces("\tTranscript boundary masking for codon counts:"), "ON"))
+            else:
+                print("%s%s" % (pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
+            if hasattr(config.args, "tripeptide_pos"):
+                print("%s%s" % (pad_spaces("\tSort tripeptides from A site at:"), config.args.tripeptide_pos))
 
             if config.args.loci_file is not None:
                 print("%s%s" % (pad_spaces("\tLoci file:"), config.args.loci_file))
@@ -498,7 +531,8 @@ def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
 
     # combine objects into FivePSeqCounts object
     fivepseq_counts = FivePSeqCounts(alignment, annotation, genome,
-                                     outlier_probability=config.args.op,
+                                     #outlier_probability=config.args.op,
+                                     config = config,
                                      downsample_constant=downsample_constant)
     fivepseq_counts.loci_file = loci_file
 

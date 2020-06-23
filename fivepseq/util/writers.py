@@ -22,6 +22,8 @@ class FivePSeqOut:
     META_COUNT_START_PEAKS_FILE = "meta_count_peaks_START.txt"
     AMINO_ACID_PAUSES_FILE = "amino_acid_pauses.txt"
     CODON_PAUSES_FILE = "codon_pauses.txt"
+    TRICODON_PAUSES_FILE = "tricodon_pauses.txt"
+    TRIPEPTIDE_PAUSES_FILE = "tripeptide_pauses.txt"
     LOCI_PAUSES_FILE = "loci_pauses.txt"
     LOCI_PAUSES_FILE_PREFIX = "loci_pauses"
     LOCI_OVERLAPS_FILE = "loci_overlaps.txt"

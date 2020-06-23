@@ -5,7 +5,7 @@ from preconditions import preconditions
 
 
 @preconditions(lambda string: isinstance(string, str))
-def pad_spaces(string, num_chars = 20):
+def pad_spaces(string, num_chars = 70):
     """
     Adds empty spaces to the string so that the final string has at least the specified number of characters.
     If the num_chars argument is less than the length of the original string, the original string is returned.

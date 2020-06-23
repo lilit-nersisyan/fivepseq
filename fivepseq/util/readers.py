@@ -46,9 +46,9 @@ class TopReader:
         try:
             check_file_path(file_path)
         except IOError as e:
-            raise IOError("Could not instantiate %s. Reason: %s." % (self.__class__.__name__, e.message))
+            raise IOError("Could not instantiate %s. Reason: %s." % (self.__class__.__name__, str(e)))
         except Exception as ex:
-            raise Exception("Could not instantiate %s. Reason: %s." % (self.__class__.__name__, ex.message))
+            raise Exception("Could not instantiate %s. Reason: %s." % (self.__class__.__name__, str(ex)))
 
         # check for valid file extension (also store the extension/compression as instance attributes)
         if get_file_extension(file_path) in self.valid_extensions:
@@ -170,7 +170,7 @@ class AnnotationReader(TopReader):
 
         except Exception as e:
             error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (
-                self.file, e.message)
+                self.file, str(e))
             self.logger.error(error_message)
             raise Exception(error_message)
 
@@ -289,7 +289,7 @@ class AnnotationReader(TopReader):
 
                 except Exception as e:
                     warning_message = "Problem loading transcript assembly from pickle path %s. Reason: %s" % (
-                        pickle_path, e.message)
+                        pickle_path, str(e))
                     self.logger.warning(warning_message)
 
         return transcript_assembly

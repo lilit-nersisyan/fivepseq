@@ -72,6 +72,8 @@ class VizPipeline:
     amino_acid_df_full_dict = {}
     codon_df_dict = {}
     codon_basesorted_df_dict = {}
+    tricodon_df_dict = {}
+    tripeptide_df_dict = {}
     frame_count_term_dict = {}
     frame_count_start_dict = {}
     frame_stats_df_dict = {}
@@ -348,6 +350,12 @@ class VizPipeline:
         self.amino_acid_df_full_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=True)})
         self.codon_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=False)})
         self.codon_basesorted_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=True)})
+        self.tricodon_df_dict.update({sample: self.read_codon_df(fivepseq_out,
+                                                                 file = fivepseq_out.get_file_path(FivePSeqOut.TRICODON_PAUSES_FILE),
+                                                                 basesort=False)})
+        self.tripeptide_df_dict.update({sample: self.read_codon_df(fivepseq_out,
+                                                                   file = fivepseq_out.get_file_path(FivePSeqOut.TRIPEPTIDE_PAUSES_FILE),
+                                                                   basesort=False)})
 
         self.fft_signal_start_dict.update({sample: self.read_fft_signal_start(fivepseq_out)})
         self.fft_signal_term_dict.update({sample: self.read_fft_signal_term(fivepseq_out)})
@@ -517,6 +525,8 @@ class VizPipeline:
         # codon pauses
         self.logger.info("Generating supplement plots: codon pauses")
         codon_title = self.title + "_codon_heatmaps"
+        tricodon_title = self.title + "_tricodon_heatmaps"
+        tripeptide_title = self.title + "_tripeptide_heatmaps"
 
         if self.combine:
             bokeh_composite(codon_title,
@@ -530,6 +540,13 @@ class VizPipeline:
                                                    scale=True),
                              self.get_heatmap_plot(codon_title + "_basesorted", self.codon_basesorted_df_dict,
                                                    scale=True, combine_weighted=True),
+
+                             self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=False),
+                             self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=True),
+
+                             self.get_heatmap_plot(tricodon_title, self.tricodon_df_dict, scale=False),
+                             self.get_heatmap_plot(tricodon_title, self.tricodon_df_dict, scale=True)
+
                              ],
                             os.path.join(self.supplement_dir, codon_title + ".html"), 1)
         else:
@@ -539,7 +556,14 @@ class VizPipeline:
                              self.get_heatmap_plot(codon_title + "_basesorted", self.codon_basesorted_df_dict,
                                                    scale=False),
                              bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict,
-                                                scale=True)],
+                                                scale=True),
+
+                             self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=False),
+                             self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=True),
+
+                             self.get_heatmap_plot(tricodon_title, self.tricodon_df_dict, scale=False),
+                             self.get_heatmap_plot(tricodon_title, self.tricodon_df_dict, scale=True),
+                             ],
                             os.path.join(self.supplement_dir, codon_title + ".html"), 1)
         # amino acid line-charts
         self.logger.info("Generating supplement plots: amino acid line-charts")

@@ -33,11 +33,16 @@ class FivePSeqCounts:
     NUMBER_READS = "NumOfReads"
     NUMBER_POSITIONS = "NumOfMapPositions"
 
+    COUNT_THRESHOLD = 100
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
+
     count_distribution = None
     outlier_lower = None
     downsample_constant = None
     outlier_probability = None
 
+
+    config = None
     alignment = None
     annotation = None
     genome = None
@@ -49,6 +54,10 @@ class FivePSeqCounts:
     meta_count_series_term = None
     frame_counts_df_start = None
     frame_counts_df_term = None
+    codon_count_df = None
+    tricodon_count_df = None
+    tripeptide_count_df = None
+    amino_acid_count_df = None
 
     outliers = None
 
@@ -63,10 +72,13 @@ class FivePSeqCounts:
     READ_LOCATIONS_5UTR = "_5UTR"
     READ_LOCATIONS_CDS = "_CDS"
 
-    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
+    MASK_DIST = 20
+    TRIPEPTIDE_POS = -11
+
+
     missing_chroms = []
 
-    def __init__(self, alignment, annotation, genome, outlier_probability, downsample_constant, transcript_filter=None):
+    def __init__(self, alignment, annotation, genome, config, downsample_constant, transcript_filter=None):
         """
         Initializes a FivePSeqCounts object with Alignment and Annotation instances.
 
@@ -81,7 +93,8 @@ class FivePSeqCounts:
         self.annotation = annotation
         self.genome = genome
         self.transcript_filter = transcript_filter
-        self.outlier_probability = outlier_probability
+        self.config = config
+        self.outlier_probability = config.args.op
         self.outlier_lower = downsample_constant
         self.outliers = []
         self.start_codon_dict = {}
@@ -166,7 +179,6 @@ class FivePSeqCounts:
             self.transcript_descriptors.at[transcript_ind, self.NUMBER_READS] = int(np.sum(count_vector))
             self.transcript_descriptors.loc[transcript_ind, self.NUMBER_POSITIONS] = np.count_nonzero(count_vector)
 
-
             if start_codon in self.start_codon_dict.keys():
                 self.start_codon_dict[start_codon] += 1
             else:
@@ -182,7 +194,6 @@ class FivePSeqCounts:
         self.logger.info("The lower bound for outliers set as %f " % self.outlier_lower)
 
         self.logger.info("Done generating transcript descriptors")
-
 
     def get_count_distribution(self):
         if self.count_distribution is not None:
@@ -448,7 +459,8 @@ class FivePSeqCounts:
             if transcript.chrom not in self.genome.genome_dict.keys():
                 if transcript.chrom not in self.missing_chroms:
                     self.missing_chroms.append(transcript.chrom)
-                    logging.getLogger(config.FIVEPSEQ_LOGGER).warn("No chromosome named %s found in the genome sequence" % transcript.chrom)
+                    logging.getLogger(config.FIVEPSEQ_LOGGER).warn(
+                        "No chromosome named %s found in the genome sequence" % transcript.chrom)
                 t_len = transcript.spanning_segment.end - transcript.spanning_segment.start
                 cds_sequence = ''.join(['N'] * t_len)
 
@@ -635,143 +647,46 @@ class FivePSeqCounts:
             i += 1
         return sequences
 
-    @preconditions(lambda dist: isinstance(dist, int),
-                   lambda dist: dist > 0)
-    def get_amino_acid_pauses(self, dist, downsample=True):
-        """
-        Counts the meta-number of 5' mapping positions at the given distance from the specified codon
-        Only transcripts with cds of length multiple of 3 are accounted for.
-        The only frame in these transcripts is considered.
 
-        :param codon:
-        :param span_before:
-        :param span_after:
-        :return:
-        """
+    def get_amino_acid_pauses(self):
+        if self.amino_acid_count_df is None:
+            self.compute_codon_pauses()
 
-        self.logger.info(
-            "Counting amino acid specific pauses within 0 to %d nt distance from the first nucleotide of each codon" % dist)
-        # amino_acid_count_dict = {}
-        amino_acid_count_df = pd.DataFrame(data=0, index=Codons.AMINO_ACID_TABLE.keys(),
-                                           columns=range(-1 * dist, 0))
+        return self.amino_acid_count_df
 
-        counter = 1
-        wrong_cds_count = 0
-        multi_stop_cds_count = 0
-        single_stop_cds_count = 0
-        no_stop_cds_count = 0
+    def get_codon_pauses(self):
+        if self.codon_count_df is None:
+            self.compute_codon_pauses()
 
+        return self.codon_count_df
 
-        transcript_assembly = self.annotation.get_transcript_assembly(span_size=0)
-        transcript_count = len(transcript_assembly)
-        for t in range(transcript_count):
-            transcript = transcript_assembly[t]
-            if np.floor(transcript_count / 10000) > 0 and counter %  np.floor(transcript_count / 10000) == 0:
-                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
-                    counter, floor(100 * (counter - 1) / transcript_count), '%',), )
-                self.logger.info("Amount of cds not multiple of 3 is %.2f %s"
-                                 % (float(100 * wrong_cds_count) / counter, "%"))
-                self.logger.info("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
-                                 % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
-            counter += 1
+    def get_tricodon_pauses(self):
+        if self.tricodon_count_df is None:
+            self.compute_codon_pauses()
 
+        return self.tricodon_count_df
 
+    def get_tripeptide_pauses(self):
+        if self.tripeptide_count_df is None:
+            self.compute_codon_pauses()
 
-            count_vector = self.get_count_vector(transcript, span_size=0,
-                                                 region=FivePSeqCounts.FULL_LENGTH,
-                                                 downsample=downsample)
-            if sum(count_vector) == 0:
-                continue
-            # sequence = transcript.get_sequence(self.genome.genome_dict)
-            # cds_sequence = sequence[0: len(sequence) - 0]
-            # cds_sequence = cds_sequence[transcript.cds_start: transcript.cds_end]
-            # count_vector = count_vector[0:len(count_vector) - 0]
-            cds_sequence = self.get_cds_sequence_safe(transcript, span_size=0)
+        return self.tripeptide_count_df
 
-            if sum(count_vector) == 0:
-                continue
-
-            if len(cds_sequence) != len(count_vector):
-                # TODO in the future report the number of problematic transcripts
-                # TODO filter these transcripts during plotting
-                self.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
-                                    % (counter, len(cds_sequence), len(count_vector)))
-                continue
-
-            if len(count_vector) % 3 != 0:
-                wrong_cds_count += 1
-                continue
-
-            # NOTE below is the faster implementation based only on non-empty triplets of the vectors
-            # NOTE as we don't scroll through the full transcripts, the number of stops will only be counted for non-empty triplets
-            # identify 3nt bins with non-zero counts
-            ind = np.array(range(0, len(count_vector), 3))
-            hits = [sum(count_vector[i:i + 3]) > 0 for i in ind]
-            non_empty_ind = ind[hits]
-
-            stop_pos = []
-            num_stops = 0
-            # loop through non-empty triplets only
-            for i in non_empty_ind:
-                # loop through all amino acids 20 nucleotides downstream (seven amino-acids)
-                for j in range(i + 3, i + 3 + dist, 3):
-                    if j + 3 > len(cds_sequence):
-                        break
-                    codon = cds_sequence[j: j + 3].upper()
-
-                    # NOTE the comparison is case-sensitive and the low-case letters are now not counted
-                    # NOTE however, low-case may indicate repetitive regions and it may be advantagous to skip them
-                    if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
-                        aa = Codons.CODON_TABLE[codon]
-                        if codon in Codons.stop_codons:
-                            #num_stops += 1
-                            if j not in stop_pos:
-                                stop_pos.append(j)
-
-                        # check if the codon is not close to the STOP or START codon, otherwise there will be termination/initiation-caused
-                        # peaks that do not reflect codon-pauses in the gene body
-                        if (i < dist-20 or i > len(count_vector) - 20) and codon not in Codons.stop_codons:
-                            continue
-
-                        for p in range(0, 3):
-                            d = i - j + p
-                            if -1 * d <= dist:
-                                amino_acid_count_df.at[aa, d] += count_vector[i + p]
-
-            num_stops = len(stop_pos)
-            if num_stops > 1:
-                multi_stop_cds_count += 1
-            elif num_stops == 1:
-                single_stop_cds_count += 1
-            else:
-                no_stop_cds_count += 1
-
-
-        self.logger.debug("Amount of cds not multiple of 3 is %.2f %s"
-                          % (float(100 * wrong_cds_count) / counter, "%"))
-        self.logger.debug("Amount of cds with 0, 1, and more STOPs: %d, %d, %d"
-                          % (no_stop_cds_count, single_stop_cds_count, multi_stop_cds_count))
-
-        # for d in range(1,dist+1):
-        #    if (i > d) & (len(cds_sequence) > d):
-        #        amino_acid_count_df.loc[aa, -1*d] += count_vector[i - d]
-        # amino_acid_count_dict[aa][dist-d-1] += count_vector[i - d]
-
-        return amino_acid_count_df
-
+    # TODO a modification for di-codon counts to me incorporated inseat of get_codon_pauses in the future
     @preconditions(lambda dist_from: isinstance(dist_from, int),
                    lambda dist_from: dist_from < 0,
                    lambda dist_to: isinstance(dist_to, int),
                    lambda dist_to: dist_to >= 0)
-    def get_codon_pauses(self, dist_from=-30, dist_to=6, downsample=True):
+    def compute_codon_pauses(self, dist_from=-30, dist_to=3, downsample=True):
         """
-        Counts the meta-number of 5' mapping positions at the given distance from the specified codon
+        Counts the meta-number of 5' mapping positions at the given distance from a codon or codon-pair
         Only transcripts with cds of length multiple of 3 are accounted for.
         The only frame in these transcripts is considered.
 
         :param codon:
-        :param dist_from: negative distance from each codon
-        :param dist_to: positive distance after each codon
+        :param dist_from: negative distance from each codon or codon-pair
+        :param dist_to: positive distance after each codon or codon-pair
+        :param mask_dist: the number of positions to mask in the beginning and end of the gene body
         :return:
         """
 
@@ -779,25 +694,42 @@ class FivePSeqCounts:
             "Counting codon specific pauses within %d to %d nt distance from the first nucleotide of each codon" %
             (dist_from, dist_to))
 
+        if self.config.args.no_mask:
+            mask_dist = 0
+            self.logger.info("Transcript boundaries will not be masked" )
+        else:
+            if hasattr(config.args, "codon_mask_size"):
+                mask_dist = config.args.codon_mask_size
+            else:
+                mask_dist = self.MASK_DIST
+            self.logger.info("Transcript boundaries will be masked by %d nucleotides" % mask_dist)
+
         codon_count_df = pd.DataFrame(data=0, index=Codons.CODON_TABLE.keys(),
                                       columns=range(dist_from, dist_to))
 
+        tricodon_count_df = pd.DataFrame(data=0, index=Codons.get_tricodon_table().keys(),
+                                         columns=range(dist_from + 6, dist_to + 6))
+
+        tripeptide_count_df = pd.DataFrame(data=0, index=Codons.get_tripeptide_list(),
+                                           columns=range(dist_from + 6, dist_to + 6))
+
         counter = 1
 
-        transcript_assembly = self.annotation.get_transcript_assembly(span_size=dist_to)
+        transcript_assembly = self.annotation.get_transcript_assembly(
+            span_size=0)  # don't take more than the gene body (different from previous versions)
         transcript_count = len(transcript_assembly)
         for t in range(transcript_count):
             transcript = transcript_assembly[t]
-            if np.floor(transcript_count / 10) > 0 and counter % np.floor(transcript_count / 10) == 0:
+            if np.floor(transcript_count / 1000) > 0 and counter % np.floor(transcript_count / 1000) == 0:
                 self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
                     counter, floor(100 * (counter - 1) / transcript_count), '%',), )
             counter += 1
 
-            count_vector = self.get_count_vector(transcript, span_size=dist_to,
+            count_vector = self.get_count_vector(transcript, span_size=0,
                                                  region=FivePSeqCounts.FULL_LENGTH,
                                                  downsample=downsample)
-            count_vector = count_vector[dist_to:len(count_vector) - dist_to]
-            cds_sequence = self.get_cds_sequence_safe(transcript, dist_to)
+
+            cds_sequence = self.get_cds_sequence_safe(transcript, 0)
 
             if sum(count_vector) == 0:
                 continue
@@ -806,6 +738,16 @@ class FivePSeqCounts:
                 self.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
                                     % (counter, len(cds_sequence), len(count_vector)))
                 continue
+
+            if (mask_dist >= 3):
+                # NOTE v1.0b3 mask the first and last 20 counts to avoid initiation affecting codon-specific counts
+                count_vector[0:mask_dist] = [0] * mask_dist
+                # NOTE v1.0b3 mask the last 20 nucleotides to avoid termination affecting codon-specific counts, but keep STOP codon counts
+                cds_sequence = cds_sequence[0:len(cds_sequence) - mask_dist] + ''.join(
+                    'N' * (mask_dist - 3)) + cds_sequence[len(cds_sequence) - 3:len(cds_sequence)]
+            # NOTE v1.0b3 add stretches of 0's to count_vector and N's to cds_sequence to avoid checking vector boundaries
+            count_vector = [0] * (-1 * dist_from) + count_vector + [0] * dist_to
+            cds_sequence = ''.join('N' * (-1 * dist_from)) + cds_sequence + ''.join('N' * dist_to)
 
             # identify 3nt bins with non-zero counts
             ind = np.array(range(0, len(count_vector), 3))
@@ -821,31 +763,83 @@ class FivePSeqCounts:
                         continue
                     if j + 3 > len(cds_sequence):
                         break
-                    codon = cds_sequence[j: j + 3].upper()
+                    codonA = cds_sequence[j: j + 3].upper()
 
-                    if (len(codon) == 3) & (codon in Codons.CODON_TABLE.keys()):
-                        # check if the codon is not close to the STOP or START codon, otherwise there will be termination/initiation-caused
-                        # peaks that do not reflect codon-pauses in the gene body
-                        if (i < 20+dist_to or i > len(count_vector) - 20 - dist_from) and codon not in Codons.stop_codons:
-                            continue
+                    if j - 6 >= 0:
+                        codonP = cds_sequence[j - 3: j].upper()
+                        codonE = cds_sequence[j - 6: j - 3].upper()
+                    else:
+                        codonP = 'NNN'
+                        codonE = 'NNN'
 
+                    if (len(codonA) == 3) & (codonA in Codons.CODON_TABLE.keys()):
                         for p in range(0, 3):
                             d = i - j + p
                             try:
-                                codon_count_df.at[codon, d] += count_vector[i + p]
+                                codon_count_df.at[codonA, d] += count_vector[i + p]
+                                if len(codonP) == 3 and codonP in Codons.CODON_TABLE.keys() and \
+                                        len(codonE) == 3 and codonE in Codons.CODON_TABLE:
+                                    tricodon_count_df.at[codonE + codonP + codonA, d + 6] += count_vector[i + p]
+                                    tripeptide = Codons.get_tripeptide_from_tricodon([codonE, codonP, codonA])
+                                    tripeptide_count_df.at[tripeptide, d + 6] += count_vector[i + p]
                             except Exception as e:
                                 self.logger.warn("Index out of range: i: %d, j: %d, p: %d, d: %d. %s"
                                                  % (i, j, p, d, str(e)))
 
+        self.amino_acid_count_df = self.codon_to_amino_acid_count_df(codon_count_df)
+        self.tripeptide_count_df = self.filter_tricodon_counts(tripeptide_count_df)
+
         # rename codon_count_df indices by adding amino acid names
         new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in codon_count_df.index]
         codon_count_df.index = new_index
-        codon_count_df = codon_count_df.reindex(sorted(new_index))
+        self.codon_count_df = codon_count_df
 
-        return codon_count_df
+        # rename codon_count_df indices by adding amino acid names
+        self.logger.info("Mapping tricodons to amino acid names")
+        new_index = Codons.get_tricodon_full_index()
+        tricodon_count_df.index = new_index
+        self.tricodon_count_df = self.filter_tricodon_counts(tricodon_count_df)
+
+
+        return
+
+    def codon_to_amino_acid_count_df(self, codon_count_df):
+
+        amino_acid_count_df = pd.DataFrame(data=0, index=Codons.AMINO_ACID_TABLE.keys(),
+                                           columns=codon_count_df.columns)
+
+        for codon in codon_count_df.index:
+            aa = Codons.CODON_TABLE.get(codon)
+            amino_acid_count_df.loc[aa, :] += codon_count_df.loc[codon, :]
+
+        return amino_acid_count_df
+
+
+    def filter_tricodon_counts(self, tricodon_count_df, top = 50):
+        """
+        Filter the tricodon (or tripeptide) counts to exclude low counts (rowSums less than the specified threshold) and
+        to include only the top tricodons with highest relative counts at the given position
+
+        :param tricodon_count_df: the tricodon_df to filter
+        :param top: the number of highest relative count tricodons to keep
+        :param pos: the position to filter the top counts
+        :return tricodon_filtered_df: the filtered count dataframe
+        """
+        if hasattr(config.args, "tripeptide_pos"):
+            pos = config.args.tripeptide_pos
+        else:
+            pos = self.TRIPEPTIDE_POS
+
+        self.logger.info("Sorting and selecting top %d tripeptides/tricodons at position %d from the A site" %
+                         (top, pos))
+
+        tricodon_filtered_df = tricodon_count_df[tricodon_count_df.sum(1) >= self.COUNT_THRESHOLD]
+        pos_rel_counts = tricodon_filtered_df[pos]/tricodon_filtered_df.sum(1)
+        tricodon_filtered_df = tricodon_filtered_df.iloc[sorted(range(len(pos_rel_counts)), reverse=True, key=lambda k: pos_rel_counts[k])[0:top]]
+        return tricodon_filtered_df
 
     @preconditions(lambda loci_file: str)
-    def get_pauses_from_loci(self, loci_file, read_locations = READ_LOCATIONS_ALL):
+    def get_pauses_from_loci(self, loci_file, read_locations=READ_LOCATIONS_ALL):
         """
         Counts the meta-number of 5' mapping positions at the given distance from the specified loci
 
@@ -914,7 +908,7 @@ class FivePSeqCounts:
                         locus_pos = loci.loc[loci_row, "end"]
 
                     # locus is upstream of transcript -> move locus
-                    if transcript.cds_genome_start - span_size> locus_pos:
+                    if transcript.cds_genome_start - span_size > locus_pos:
                         move_locus = True
                         continue
                     # transcript is upstream of locus -> move transcript
@@ -937,20 +931,19 @@ class FivePSeqCounts:
                             move_transcript = True
                             continue
 
-
                         if transcript.strand == "+":
                             locus_ind = locus_pos - transcript_genome_start
                         else:
                             locus_ind = transcript_genome_end - locus_pos
 
                         if read_locations == self.READ_LOCATIONS_ALL:
-                            ind = np.array(range(len(count_vector) - 2*span_size, len(count_vector)))
+                            ind = np.array(range(len(count_vector) - 2 * span_size, len(count_vector)))
                         elif read_locations == self.READ_LOCATIONS_5UTR:
                             ind = np.array(range(0, span_size))
                         elif read_locations == self.READ_LOCATIONS_3UTR:
                             ind = np.array(range(len(count_vector) - span_size, len(count_vector)))
-                        elif  read_locations == self.READ_LOCATIONS_CDS:
-                            ind = np.array(range(len(count_vector) - 2*span_size, len(count_vector) - span_size))
+                        elif read_locations == self.READ_LOCATIONS_CDS:
+                            ind = np.array(range(len(count_vector) - 2 * span_size, len(count_vector) - span_size))
                         else:
                             ind = np.array(range(0, len(count_vector)))
 
@@ -960,7 +953,7 @@ class FivePSeqCounts:
                         for i in non_empty_ind:
                             distance = i - locus_ind
 
-                            if distance < 2*span_size and distance >= -2*span_size:
+                            if distance < 2 * span_size and distance >= -2 * span_size:
                                 if distance in loci_pauses_dict.keys():
                                     loci_pauses_dict[distance] += count_vector[i]
                                 else:
@@ -993,11 +986,11 @@ class FivePSeqCounts:
 
         # turn the dictionary into a metacount vector, with indices from -1*maxdistance to maxdistance
         self.logger.debug("Merging the dictionary into metacounts")
-        maxdist = 2*span_size
-        metacount_vector = [0] * 2*maxdist
-        for i in range(-1*maxdist, maxdist):
+        maxdist = 2 * span_size
+        metacount_vector = [0] * 2 * maxdist
+        for i in range(-1 * maxdist, maxdist):
             if i in loci_pauses_dict.keys():
-                metacount_vector[maxdist+i] = loci_pauses_dict[i]
+                metacount_vector[maxdist + i] = loci_pauses_dict[i]
         metacount_series = pd.Series(data=metacount_vector, index=np.arange(-1 * maxdist, maxdist))
 
         return metacount_series
@@ -1008,7 +1001,8 @@ class FivePSeqCounts:
 
         :return:
         """
-        colnames = ["ID", "Name", "chr", "str", "genome_start", "genome_end", "RBP", "loc_chr", "loc_str", "loc_start", "loc_end",
+        colnames = ["ID", "Name", "chr", "str", "genome_start", "genome_end", "RBP", "loc_chr", "loc_str", "loc_start",
+                    "loc_end",
                     "i", "dist", "count"]
 
         outliers_df = pd.DataFrame(self.loci_overlaps, index=None, columns=colnames)
@@ -1100,7 +1094,7 @@ class CountManager:
         for i in range(len(count_vector_list)):
             if len(count_vector_list[i]) < max_len:
                 short_vec = count_vector_list[i]
-                long_vec = [0]*max_len
+                long_vec = [0] * max_len
                 long_vec[0:len(short_vec)] = short_vec
                 count_vector_list[i] = long_vec
 
@@ -1334,7 +1328,6 @@ class CountManager:
         indices = list(pd.read_csv(file_path, header=None).iloc[:, 0])
         return indices
 
-
     @staticmethod
     @preconditions(lambda file_path: isinstance(file_path, str))
     def read_counts_as_list(file_path):
@@ -1553,7 +1546,7 @@ class CountManager:
         return fivepseq_counts_filtered
 
     @staticmethod
-    def combine_count_series(count_series_dict, lib_size_dict=None, scale = False):
+    def combine_count_series(count_series_dict, lib_size_dict=None, scale=False):
         """
         Combines counts in the series dictionary and returns a single count series.
         If lib_size_dict is not None, than the counts are first weighted based on the library size and then combined.
@@ -1569,7 +1562,7 @@ class CountManager:
             count_series = count_series_dict[key].copy()
             if lib_size_dict is not None:
                 if scale:
-                    count_series.C /= (float(lib_size_dict[key])/(10**6))* len(lib_size_dict)
+                    count_series.C /= (float(lib_size_dict[key]) / (10 ** 6)) * len(lib_size_dict)
                 else:
                     count_series.C *= float(lib_size_dict[key]) / sum(lib_size_dict.values())
 
@@ -1621,7 +1614,7 @@ class CountManager:
         amino_acid_df_combined = None
         start = True
         for key in amino_acid_df_dict.keys():
-            count_df = amino_acid_df_dict[key].copy(deep = True)
+            count_df = amino_acid_df_dict[key].copy(deep=True)
             if lib_size_dict is not None:
                 count_df *= float(lib_size_dict[key]) / sum(lib_size_dict.values())
 

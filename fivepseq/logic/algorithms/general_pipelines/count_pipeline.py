@@ -128,7 +128,7 @@ class CountPipeline:
 
             #   amino acid pauses
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.AMINO_ACID_PAUSES_FILE)):
-                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_pauses(50),
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_pauses(),
                                                    # generate more than needed for visualization
                                                    self.fivepseq_out.AMINO_ACID_PAUSES_FILE)
 
@@ -137,6 +137,18 @@ class CountPipeline:
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.CODON_PAUSES_FILE)):
                 self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_codon_pauses(),
                                                    self.fivepseq_out.CODON_PAUSES_FILE)
+
+            #   tricodon pauses
+
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TRICODON_PAUSES_FILE)):
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_tricodon_pauses(),
+                                                   self.fivepseq_out.TRICODON_PAUSES_FILE)
+            #   tripeptide pauses
+
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TRIPEPTIDE_PAUSES_FILE)):
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_tripeptide_pauses(),
+                                                   self.fivepseq_out.TRIPEPTIDE_PAUSES_FILE)
+
 
             #   loci pauses
             read_locations = FivePSeqCounts.READ_LOCATIONS_ALL

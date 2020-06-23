@@ -1,5 +1,5 @@
 import os
-import sys
+from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts
 
 import fivepseq
 
@@ -95,6 +95,19 @@ def get_html_body(viz_pipeline):
         else:
             input_gene_filter = "None"
 
+        if args.no_mask:
+            mask = "OFF"
+        else:
+            if hasattr(args, "tripeptide_pos"):
+                mask = "by %d positions" % args.codon_mask_size
+            else:
+                mask = "by %d nts (default)" % FivePSeqCounts.MASK_DIST
+
+        if hasattr(args, "tripeptide_pos"):
+            tripeptide_pos = args.tripeptide_pos
+        else:
+            tripeptide_pos = "-11 (default)"
+
         if viz_pipeline.combine:
             combined_report = os.path.join("main", viz_pipeline.title + "_combined.html")
         else:
@@ -115,6 +128,8 @@ def get_html_body(viz_pipeline):
                                  span_size=str(args.span),
                                  op=args.op,
                                  ds=args.ds,
+                                 mask=mask,
+                                 tripeptide_pos = tripeptide_pos,
                                  lib_size_table=get_libsize_table(viz_pipeline),
                                  main_report=os.path.join("main", viz_pipeline.title + "_main.html"),
                                  combined_report=combined_report,
