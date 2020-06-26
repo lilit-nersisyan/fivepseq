@@ -22,7 +22,9 @@ class Annotation:
     transcript_assembly_dict = {}
 
     PROTEIN_CODING = "protein_coding"
-    default_filter = PROTEIN_CODING
+    #transcript_type = PROTEIN_CODING
+    default_filter = None
+    transcript_type = None
 
     gs_transcript_dict = None
     gs_transcriptInd_dict = None
@@ -33,7 +35,7 @@ class Annotation:
 
     @preconditions(lambda file_path: isinstance(file_path, str),
                    lambda transcript_assembly: isinstance(transcript_assembly, list))
-    def __init__(self, transcript_assembly, file_path):
+    def __init__(self, transcript_assembly, file_path, transcript_type):
 
         """
         Initiates an Annotation instance with transcript_assembly list.
@@ -48,6 +50,13 @@ class Annotation:
             self.logger.error(error_message)
             raise ValueError(error_message)
         self.transcript_count = len(transcript_assembly)
+
+        # NOTE as every documentation refers to mRNA as protein_coding, I change the transcript type accordingly here
+        if transcript_type == "mRNA":
+            transcript_type = self.PROTEIN_CODING
+
+        self.default_filter = transcript_type
+        self.transcript_type = transcript_type
 
         self.transcript_assembly_dict.update({
             self.default_filter: {
@@ -363,7 +372,7 @@ class Annotation:
     def remove_geneset_filter(self):
         #TODO remove if fine
         #self.transcript_assembly_dict.update({self.protein_coding_filter: {0: self.transcript_assembly_default}})
-        self.default_filter = self.PROTEIN_CODING
+        self.default_filter = self.transcript_type
 
     def apply_geneset_filter(self, gs):
         if gs not in self.gs_transcriptInd_dict:

@@ -2,6 +2,8 @@ import os
 from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts
 
 import fivepseq
+from fivepseq.logic.structures.annotation import Annotation
+
 
 def get_version():
     #version_path = os.path.abspath(os.path.join(os.curdir, "version.txt"))
@@ -113,6 +115,11 @@ def get_html_body(viz_pipeline):
         else:
             combined_report = "None"
 
+        if hasattr(args, "transcript_type"):
+            transcript_type = args.transcript_type
+        else:
+            transcript_type = Annotation.transcript_type
+
         result = template.format(svg=get_div_logo(),
                                  version=get_version(),
                                  title=get_div_title(viz_pipeline.title),
@@ -126,6 +133,7 @@ def get_html_body(viz_pipeline):
                                  gene_set=input_gene_set,
                                  gene_filter=input_gene_filter,
                                  span_size=str(args.span),
+                                 transcript_type=transcript_type,
                                  op=args.op,
                                  ds=args.ds,
                                  mask=mask,

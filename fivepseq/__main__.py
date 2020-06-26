@@ -29,8 +29,6 @@ FIVEPSEQ_PLOTS_DIR = "fivepseq_plots"
 FIVEPSEQ_LOG_DIR = "log"
 
 
-
-
 class FivepseqArguments:
     """
     This class is for reading, parsing, storing and printing command line arguments.
@@ -56,70 +54,80 @@ class FivepseqArguments:
         advanced = parser.add_argument_group('advanced arguments')
 
         optional.add_argument('--version', action='version', version='%(prog)s' + fivepseq.__version__)
-        #TODO accept compressed files
+        # TODO accept compressed files
 
         ##########################
         #       required arguments
         ##########################
 
-
         required.add_argument("-b", "-bam",
-                            help="the full path one or many bam/sam files (many files should be provided with a pattern, within brackets)",
-                            type=str,
-                            required=True)
+                              help="the full path one or many bam/sam files (many files should be provided with a pattern, within quotation marks, e.g. \"bam/*.bam\")",
+                              type=str,
+                              required=True,
+                              metavar="[full path to BAMs with pattern in quotation marks, e.g. \"bam/*.bam\"]")
 
         required.add_argument("-g", "-genome",
-                            help="the full path to the fa/fasta file",
-                            type=str,
-                            required=True)
+                              help="the full path to the fa/fasta file",
+                              type=str,
+                              required=True,
+                              metavar="FASTA")
+
         required.add_argument("-a", "-annotation",
-                            help="the full path to the gtf/gff/gff3 file",
-                            type=str,
-                            required=True)
+                              help="the full path to the gtf/gff/gff3 file",
+                              type=str,
+                              required=True,
+                              metavar="GFF")
 
         optional.add_argument("-o", "-outdir",
-                            help="the output directory",
-                            type=str,
-                            required=False,
-                            default="fivepseq_out")
+                              help="the output directory",
+                              type=str,
+                              required=False,
+                              default="fivepseq_out",
+                              metavar="output_directory")
 
         optional.add_argument("-t", "-title",
-                            help="title of the reports",
-                            type=str,
-                            required=False)
-
+                              help="title of the reports",
+                              type=str,
+                              required=False,
+                              metavar="title")
 
         optional.add_argument("--span",
-                            help="the number of bases to span around a genomic position",
-                            type=int,
-                            required=False,
-                            default=100)
+                              help="the number of bases to span around a genomic position",
+                              type=int,
+                              required=False,
+                              default=100)
 
         optional.add_argument('--conflicts',
-                            help="file conflict mode:\n"
-                                 "add (default) - only adds missing files to existing directory\n"
-                                 "overwrite - overwrites all the files in the existing (in case) output directory\n"
-                                 "alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory",
-                            type=str,
-                            choices=['add', 'overwrite', 'alt_dir'],
-                            required=False,
-                            default="add")
+                              help="file conflict mode:\n"
+                                   "add (default) - only adds missing files to existing directory\n"
+                                   "overwrite - overwrites all the files in the existing (in case) output directory\n"
+                                   "alt_dir - uses alternative directory by appending '+' suffix to existing (in case) output directory",
+                              type=str,
+                              choices=['add', 'overwrite', 'alt_dir'],
+                              required=False,
+                              default="add")
 
         additional.add_argument("-gf", "-genefilter",
-                            help="file containing gene names of interest",
-                            type=str,
-                            required=False)
+                                help="file containing gene names of interest",
+                                type=str,
+                                required=False)
 
         additional.add_argument("-gs", "-genesets",
-                            help="a file with gene-geneset mapping",
-                            type=str,
-                            required=False)
+                                help="a file with gene-geneset mapping",
+                                type=str,
+                                required=False)
 
         optional.add_argument("--ignore-cache",
-                            help="read in transcript assembly and rewrite existing pickle paths",
-                            action="store_true",
-                            default=False,
-                            required=False)
+                              help="read in transcript assembly and rewrite existing pickle paths",
+                              action="store_true",
+                              default=False,
+                              required=False)
+
+        optional.add_argument("--transcript-type",
+                              help="choose transcript type (attribute biotype) to analyze",
+                              type=str,
+                              default=Annotation.default_filter,
+                              required=False)
 
         optional.add_argument("--no-mask",
                               help="Turn off masking transcript boundaries for codon-relative counts",
@@ -132,50 +140,50 @@ class FivepseqArguments:
                               type=int,
                               required=False,
                               default=20,
-                              choices=range(3,50))
+                              choices=range(3, 50),
+                              metavar="[3:50)")
 
         advanced.add_argument("--tripeptide-pos",
                               help="counts in which position {-24:9} from A site should be ordered to output top stalled tripeptides",
-                              type = int,
+                              type=int,
                               required=False,
                               default=-11,
-                              choices=range(-24,9)
+                              choices=range(-24, 9),
+                              metavar="[-24:9)"
                               )
 
         advanced.add_argument("--loci-file",
-                            help="coordinates of loci relative to which mapping positions are to be plotted",
-                            required=False,
-                            type=str)
+                              help="coordinates of loci relative to which mapping positions are to be plotted",
+                              required=False,
+                              type=str)
 
         advanced.add_argument('--ds', '--downsample',
-                            help="constant threshold for down-sampling: points exceeding this value will be downsampled"
-                                 "to be equal to it",
-                            type=float,
-                            required=False)
+                              help="constant threshold for down-sampling: points exceeding this value will be downsampled"
+                                   "to be equal to it",
+                              type=float,
+                              required=False)
 
         advanced.add_argument('--op', '--outlier_probability',
-                            help="probablity threshold for poisson distribution: points less than this value will be downsampled"
-                                 "as outliers",
-                            type=float,
-                            required=False,
-                            default=0)
+                              help="probablity threshold for poisson distribution: points less than this value will be downsampled"
+                                   "as outliers",
+                              type=float,
+                              required=False,
+                              default=0)
 
         advanced.add_argument("--log",
-                            help="set logging level",
-                            choices=["INFO", "DEBUG", "info", "debug"],
-                            default="DEBUG",
-                            required=False)
+                              help="set logging level",
+                              choices=["INFO", "DEBUG", "info", "debug"],
+                              default="DEBUG",
+                              required=False)
 
-
-#        parser.add_argument("-tf", "-transcript_filter",
-#                            help="Name of filter to apply on transcripts",
-#                            type=str,
-#                            choices=[VizPipeline.FILTER_TOP_POPULATED,
-#                                     VizPipeline.FILTER_CANONICAL_TRANSCRIPTS,
-#                                     Annotation.FORWARD_STRAND_FILTER,
-#                                     Annotation.REVERSE_STRAND_FILTER],
-#                            required=False)
-
+        #        parser.add_argument("-tf", "-transcript_filter",
+        #                            help="Name of filter to apply on transcripts",
+        #                            type=str,
+        #                            choices=[VizPipeline.FILTER_TOP_POPULATED,
+        #                                     VizPipeline.FILTER_CANONICAL_TRANSCRIPTS,
+        #                                     Annotation.FORWARD_STRAND_FILTER,
+        #                                     Annotation.REVERSE_STRAND_FILTER],
+        #                            required=False)
 
         ##########################
         #       config setup
@@ -186,6 +194,14 @@ class FivepseqArguments:
         #            config.bam = os.path.abspath(config.args.b)
         if not hasattr(config.args, "command"):
             config.args.command = "count_and_plot"
+
+        if not hasattr(config.args, "transcript_type") or config.args.transcript_type is None:
+            config.args.transcript_type = "protein_coding"
+
+        if hasattr(config.args, "no_mask") and config.args.no_mask:
+            config.args.codon_mask_size = 0
+        elif not hasattr(config.args, "codon_mask_size"):
+            config.args.codon_mask_size = 20
 
         # FIXME this imposes necessity to know the span size with which fivepseq was run for further visualization
         config.span_size = config.args.span
@@ -218,9 +234,11 @@ class FivepseqArguments:
             # advanced arguments
             print("%s%s" % (pad_spaces("\tTranscript boundary masking for codon counts:"), config.args.no_mask))
             if not config.args.no_mask:
-                print("%s%s" % (pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
+                print("%s%s" % (
+                pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
 
-            print("%s" % (pad_spaces("\tTripeptides will be sorted at position %d from the A site:" % config.args.tripeptide_pos)))
+            print("%s" % (pad_spaces(
+                "\tTripeptides will be sorted at position %d from the A site:" % config.args.tripeptide_pos)))
 
         #   if config.args.fivepseq_pickle is not None:
         #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
@@ -271,11 +289,15 @@ class FivepseqArguments:
             if config.args.t is not None:
                 print("%s%s" % (pad_spaces("\tOutput file title:"), config.args.t + ".html"))
 
+            # optional arguments
+            if hasattr(config.args, "transcript_type"):
+                print("%s%s" % (pad_spaces("\tTranscript type:"), config.args.transcript_type))
             # advanced arguments
-            if not config.args.no_mask:
-                print("%s%s" % (pad_spaces("\tTranscript boundary masking for codon counts:"), "ON"))
+            if config.args.no_mask:
+                print("%s%s" % (pad_spaces("\tTranscript boundary masking for codon counts:"), "OFF"))
             else:
-                print("%s%s" % (pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
+                print("%s%s" % (
+                pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
             if hasattr(config.args, "tripeptide_pos"):
                 print("%s%s" % (pad_spaces("\tSort tripeptides from A site at:"), config.args.tripeptide_pos))
 
@@ -305,12 +327,12 @@ def setup_output_dir():
     output_dir = config.out_dir
     if os.path.exists(output_dir):
         if config.args.conflicts == config.ADD_FILES:
-            print ("\nWARNING:\tThe output directory %s already exists.\n"
-                   "\tOnly missing files will be added." % output_dir)
+            print("\nWARNING:\tThe output directory %s already exists.\n"
+                  "\tOnly missing files will be added." % output_dir)
 
         if config.args.conflicts == config.OVERWRITE:
-            print ("\nWARNING:\tThe output directory %s already exists.\n"
-                   "\tOnly missing files will be added." % output_dir)
+            print("\nWARNING:\tThe output directory %s already exists.\n"
+                  "\tOnly missing files will be added." % output_dir)
 
             # NOTE the output directory is not removed as previously.
             # NOTE Only individual files will be overwritten
@@ -433,7 +455,9 @@ def generate_and_store_fivepseq_counts(plot=False):
 
     # set up annotation
 
-    annotation_reader = AnnotationReader(config.annot)  # set the break for human
+    annotation_reader = AnnotationReader(config.annot, transcript_type=config.args.transcript_type)
+
+    # set the break for human
     annotation = annotation_reader.annotation
 
     annotation.set_default_span_size(config.span_size)
@@ -469,16 +493,17 @@ def generate_and_store_fivepseq_counts(plot=False):
         if not os.path.exists(bam_out_dir):
             os.mkdir(bam_out_dir)
 
-        protein_coding_counts = bam_filter_counts(bam_name, bam_reader.alignment,
-                                                  annotation, fasta_reader.genome,
-                                                  bam_out_dir, count_folders, success_values,
-                                                  loci_file=config.args.loci_file)
+        main_type_counts = bam_filter_counts(bam_name, bam_reader.alignment,
+                                             annotation, fasta_reader.genome,
+                                             bam_out_dir, count_folders, success_values,
+                                             filter_name=config.args.transcript_type,
+                                             loci_file=config.args.loci_file)
 
         # fivepseq_counts_dict.update({bam: fivepseq_counts})
 
         # run on genesets
         if annotation.gs_transcriptInd_dict is not None:
-            outlier_lower = protein_coding_counts.get_outlier_lower()
+            outlier_lower = main_type_counts.get_outlier_lower()
             for gs in annotation.gs_transcriptInd_dict.keys():
                 bam_filter_counts(bam_name, bam_reader.alignment, annotation, fasta_reader.genome,
                                   bam_out_dir, count_folders_gs, success_values,
@@ -531,8 +556,8 @@ def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
 
     # combine objects into FivePSeqCounts object
     fivepseq_counts = FivePSeqCounts(alignment, annotation, genome,
-                                     #outlier_probability=config.args.op,
-                                     config = config,
+                                     # outlier_probability=config.args.op,
+                                     config=config,
                                      downsample_constant=downsample_constant)
     fivepseq_counts.loci_file = loci_file
 

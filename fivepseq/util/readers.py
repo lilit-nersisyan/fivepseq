@@ -142,10 +142,12 @@ class AnnotationReader(TopReader):
     EXTENSION_GFF3 = "gff3"
     valid_extensions = [EXTENSION_GTF, EXTENSION_GFF, EXTENSION_GFF3]
     annotation = None
-    CODING_TYPES = ["mRNA"]
+    CODING_TYPES = ["mRNA", "coding", "protein_coding"]
     CODING = "coding"
+    PROTEIN_CODING = "protein_coding"
+    MRNA = "mRNA"
 
-    def __init__(self, file_path,                                                                                                                                                                                                                                                                                                                                                                                                                                                       break_after=None):
+    def __init__(self, file_path, transcript_type = "mRNA", break_after=None):
         """
         Initializes an AnnotationReader with the given file path.
         Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
@@ -166,7 +168,7 @@ class AnnotationReader(TopReader):
         TopReader.__init__(self, file_path)
 
         try:
-            transcript_assembly = self.create_transcript_assembly(break_after=break_after)
+            transcript_assembly = self.create_transcript_assembly(biotype = transcript_type, break_after=break_after)
 
         except Exception as e:
             error_message = "Problem generating transcript assembly from annotation file %s. Reason:%s" % (
@@ -174,9 +176,9 @@ class AnnotationReader(TopReader):
             self.logger.error(error_message)
             raise Exception(error_message)
 
-        self.annotation = Annotation(transcript_assembly, file_path)
+        self.annotation = Annotation(transcript_assembly, file_path, transcript_type = transcript_type)
 
-    def create_transcript_assembly(self, break_after=None, biotype=CODING):
+    def create_transcript_assembly(self, biotype, break_after=None):
         """
         Uses the plastid transcript assembly generator to retrieve transcripts from the annotation file.
         Stores the transcripts in a list, to be accessed repeatedly later.
@@ -186,15 +188,19 @@ class AnnotationReader(TopReader):
         :return: list of transcripts read from the annotation file
         """
 
+        if biotype is None:
+            print("No biotype passed to AnnotationReader. Sticking to default one: %s" % self.CODING)
+            biotype = self.CODING
         # attempt to load assembly from pickle path if it exists
         if not config.args.ignore_cache:
             transcript_assembly = self.load_assembly_from_pickle(biotype, break_after)
             if transcript_assembly is not None:
                 return transcript_assembly
 
+
         # if transcript assembly not loaded proceed to reading it
 
-        self.logger.info("Reading in transcript assembly...")
+        self.logger.info("Reading in transcript assembly with transcript type %s" % biotype)
 
         if self.extension == self.EXTENSION_GTF:
             transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)
@@ -221,21 +227,20 @@ class AnnotationReader(TopReader):
 
             # filter for biotype
             valid_type = False
-            transcript_biotype = transcript.attr.get('type')
-            if transcript_biotype is not None:
-                if biotype == self.CODING:
-                    for type_token in self.CODING_TYPES:
-                        if type_token in transcript_biotype:
-                            if transcript.cds_start is not None:
-                                valid_type = True
-                                if index < len(transcript_assembly):
-                                    transcript_assembly[index] = transcript
-                                else:
-                                    transcript_assembly.append(transcript)
-                                index += 1
-                                break
-                        else:
-                            continue
+            if 'biotype' in transcript.attr:
+                transcript_biotype = transcript.attr.get('biotype')
+            else:
+                transcript_biotype = transcript.attr.get('type')
+
+
+            if self.biotype_valid(biotype, transcript_biotype):
+                if transcript.cds_start is not None:
+                    valid_type = True
+                    if index < len(transcript_assembly):
+                        transcript_assembly[index] = transcript
+                    else:
+                        transcript_assembly.append(transcript)
+                    index += 1
 
                 if transcript_biotype not in unique_biotypes:
                     unique_biotypes.append(transcript_biotype)
@@ -244,8 +249,7 @@ class AnnotationReader(TopReader):
             i += 1
 
         if index == 0:
-            error_message = "No transcripts with biotype with tokens %s were present" \
-                            % (','.join(self.CODING_TYPES))
+            error_message = "No transcripts with biotype %s were present" % biotype
             self.logger.error(error_message)
             raise Exception(error_message)
 
@@ -262,13 +266,24 @@ class AnnotationReader(TopReader):
 
         self.logger.debug("Transcript assembly read to memory, with %d valid transcripts" % index)
 
-        self.save_assembly_to_pickle(transcript_assembly)
+        self.save_assembly_to_pickle(transcript_assembly, biotype = biotype)
 
         return transcript_assembly
+
+    def biotype_valid(self, biotype, transcript_biotype):
+        if biotype == self.CODING or biotype == self.MRNA or biotype == self.PROTEIN_CODING:
+            for type_token in self.CODING_TYPES:
+                if type_token in transcript_biotype:
+                    return True
+        else:
+            if transcript_biotype == biotype:
+                return True
+        return False
 
     def load_assembly_from_pickle(self, biotype = CODING, break_after = None):
         """
         Loads the transcript assembly from a pickle path if it exists
+
 
         :param biotype:
         :param break_after:
