@@ -138,6 +138,19 @@ class CountPipeline:
                 self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_codon_pauses(),
                                                    self.fivepseq_out.CODON_PAUSES_FILE)
 
+
+            #   dicodon pauses
+
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.DICODON_PAUSES_FILE)):
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_dicodon_pauses(),
+                                                   self.fivepseq_out.DICODON_PAUSES_FILE)
+            #   dipeptide pauses
+
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.DIPEPTIDE_PAUSES_FILE)):
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_dipeptide_pauses(),
+                                                   self.fivepseq_out.DIPEPTIDE_PAUSES_FILE)
+
+
             #   tricodon pauses
 
             if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TRICODON_PAUSES_FILE)):

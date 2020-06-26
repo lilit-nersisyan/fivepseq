@@ -72,6 +72,8 @@ class VizPipeline:
     amino_acid_df_full_dict = {}
     codon_df_dict = {}
     codon_basesorted_df_dict = {}
+    dicodon_df_dict = {}
+    dipeptide_df_dict = {}
     tricodon_df_dict = {}
     tripeptide_df_dict = {}
     frame_count_term_dict = {}
@@ -350,11 +352,22 @@ class VizPipeline:
         self.amino_acid_df_full_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=True)})
         self.codon_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=False)})
         self.codon_basesorted_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=True)})
+
+        self.dicodon_df_dict.update({sample: self.read_codon_df(fivepseq_out,
+                                                                file=fivepseq_out.get_file_path(
+                                                                    FivePSeqOut.DICODON_PAUSES_FILE),
+                                                                basesort=False)})
+        self.dipeptide_df_dict.update({sample: self.read_codon_df(fivepseq_out,
+                                                                  file=fivepseq_out.get_file_path(
+                                                                      FivePSeqOut.DIPEPTIDE_PAUSES_FILE),
+                                                                  basesort=False)})
         self.tricodon_df_dict.update({sample: self.read_codon_df(fivepseq_out,
-                                                                 file = fivepseq_out.get_file_path(FivePSeqOut.TRICODON_PAUSES_FILE),
+                                                                 file=fivepseq_out.get_file_path(
+                                                                     FivePSeqOut.TRICODON_PAUSES_FILE),
                                                                  basesort=False)})
         self.tripeptide_df_dict.update({sample: self.read_codon_df(fivepseq_out,
-                                                                   file = fivepseq_out.get_file_path(FivePSeqOut.TRIPEPTIDE_PAUSES_FILE),
+                                                                   file=fivepseq_out.get_file_path(
+                                                                       FivePSeqOut.TRIPEPTIDE_PAUSES_FILE),
                                                                    basesort=False)})
 
         self.fft_signal_start_dict.update({sample: self.read_fft_signal_start(fivepseq_out)})
@@ -428,16 +441,16 @@ class VizPipeline:
 
         if self.loci_meta_counts_dict_ALL is not None:
             self.figure_list += [self.get_line_chart(plot_name="ALL_metacounts_relative_to", region="loci",
-                                                       count_dict=self.loci_meta_counts_dict_ALL, scale=True)]
+                                                     count_dict=self.loci_meta_counts_dict_ALL, scale=True)]
         if self.loci_meta_counts_dict_3UTR is not None:
             self.figure_list += [self.get_line_chart(plot_name="ALL_metacounts_relative_to", region="loci",
-                                                       count_dict=self.loci_meta_counts_dict_3UTR, scale=True)]
+                                                     count_dict=self.loci_meta_counts_dict_3UTR, scale=True)]
         if self.loci_meta_counts_dict_5UTR is not None:
             self.figure_list += [self.get_line_chart(plot_name="5UTR_metacounts_relative_to", region="loci",
-                                                       count_dict=self.loci_meta_counts_dict_5UTR, scale=True)]
+                                                     count_dict=self.loci_meta_counts_dict_5UTR, scale=True)]
         if self.loci_meta_counts_dict_CDS is not None:
             self.figure_list += [self.get_line_chart(plot_name="CDS_metacounts_relative_to", region="loci",
-                                                       count_dict=self.loci_meta_counts_dict_CDS, scale=True)]
+                                                     count_dict=self.loci_meta_counts_dict_CDS, scale=True)]
 
         bokeh_composite(self.title + "_main",
                         self.figure_list,
@@ -446,27 +459,27 @@ class VizPipeline:
         if self.combine:
             self.figure_list_combined = [
                 self.get_line_chart(region=FivePSeqCounts.START, combine_sum=True,
-                                      combine_color=self.combine_sum_color),
+                                    combine_color=self.combine_sum_color),
                 self.get_line_chart(region=FivePSeqCounts.TERM, combine_sum=True,
-                                      combine_color=self.combine_sum_color)
+                                    combine_color=self.combine_sum_color)
             ]
             self.figure_list_combined += [
                 self.get_line_chart(region=FivePSeqCounts.START, combine_weighted=True,
-                                      combine_color=self.combine_weighted_color),
+                                    combine_color=self.combine_weighted_color),
                 self.get_line_chart(region=FivePSeqCounts.TERM, combine_weighted=True,
-                                      combine_color=self.combine_weighted_color)
+                                    combine_color=self.combine_weighted_color)
             ]
             self.figure_list_combined += [
                 self.get_line_chart(region=FivePSeqCounts.START, combine_sum=True,
-                                      combine_color=self.combine_sum_color, scale=True),
+                                    combine_color=self.combine_sum_color, scale=True),
                 self.get_line_chart(region=FivePSeqCounts.TERM, combine_sum=True,
-                                      combine_color=self.combine_sum_color, scale=True)
+                                    combine_color=self.combine_sum_color, scale=True)
             ]
             self.figure_list_combined += [
                 self.get_line_chart(region=FivePSeqCounts.START, combine_weighted=True,
-                                      combine_color=self.combine_weighted_color, scale=True),
+                                    combine_color=self.combine_weighted_color, scale=True),
                 self.get_line_chart(region=FivePSeqCounts.TERM, combine_weighted=True,
-                                      combine_color=self.combine_weighted_color, scale=True)
+                                    combine_color=self.combine_weighted_color, scale=True)
             ]
 
             self.figure_list_combined += [
@@ -525,6 +538,8 @@ class VizPipeline:
         # codon pauses
         self.logger.info("Generating supplement plots: codon pauses")
         codon_title = self.title + "_codon_heatmaps"
+        dicodon_title = self.title + "_dicodon_heatmaps"
+        dipeptide_title = self.title + "_dipeptide_heatmaps"
         tricodon_title = self.title + "_tricodon_heatmaps"
         tripeptide_title = self.title + "_tripeptide_heatmaps"
 
@@ -540,6 +555,12 @@ class VizPipeline:
                                                    scale=True),
                              self.get_heatmap_plot(codon_title + "_basesorted", self.codon_basesorted_df_dict,
                                                    scale=True, combine_weighted=True),
+
+                             self.get_heatmap_plot(dipeptide_title, self.dipeptide_df_dict, scale=False),
+                             self.get_heatmap_plot(dipeptide_title, self.dipeptide_df_dict, scale=True),
+
+                             self.get_heatmap_plot(dicodon_title, self.dicodon_df_dict, scale=False),
+                             self.get_heatmap_plot(dicodon_title, self.dicodon_df_dict, scale=True),
 
                              self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=False),
                              self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=True),
@@ -557,6 +578,12 @@ class VizPipeline:
                                                    scale=False),
                              bokeh_heatmap_grid(codon_title + "_basesorted", self.codon_basesorted_df_dict,
                                                 scale=True),
+
+                             self.get_heatmap_plot(dipeptide_title, self.dipeptide_df_dict, scale=False),
+                             self.get_heatmap_plot(dipeptide_title, self.dipeptide_df_dict, scale=True),
+
+                             self.get_heatmap_plot(dicodon_title, self.dicodon_df_dict, scale=False),
+                             self.get_heatmap_plot(dicodon_title, self.dicodon_df_dict, scale=True),
 
                              self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=False),
                              self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=True),
@@ -581,17 +608,17 @@ class VizPipeline:
                 aa_count_dict.update({sample: aa_df})
 
             aa_linecharts.append(self.get_line_chart(plot_name=aa, region="codon", count_dict=aa_count_dict,
-                                                         scale=True,
-                                                         png_dir=self.supplement_png_dir,
-                                                         svg_dir=self.supplement_svg_dir))
+                                                     scale=True,
+                                                     png_dir=self.supplement_png_dir,
+                                                     svg_dir=self.supplement_svg_dir))
 
             if self.combine:
                 aa_linecharts.append(self.get_line_chart(plot_name=aa, region="codon", count_dict=aa_count_dict,
-                                                             scale=True,
-                                                             combine_weighted=True,
-                                                             combine_color=self.combine_weighted_color,
-                                                             png_dir=self.supplement_png_dir,
-                                                             svg_dir=self.supplement_svg_dir))
+                                                         scale=True,
+                                                         combine_weighted=True,
+                                                         combine_color=self.combine_weighted_color,
+                                                         png_dir=self.supplement_png_dir,
+                                                         svg_dir=self.supplement_svg_dir))
 
         bokeh_composite(self.title + "_amino_acid_linecharts", aa_linecharts,
                         os.path.join(self.supplement_dir, self.title + "_amino_acid_linecharts.html"), 2)
@@ -609,27 +636,27 @@ class VizPipeline:
                     codon_df_full = self.codon_df_dict[sample]
                     codon_df = pd.DataFrame(
                         data={'D': list(map(int, codon_df_full.columns)),
-                              'C': codon_df_full.loc[Codons.CODON_TABLE[codon]+"_"+codon, :]})
+                              'C': codon_df_full.loc[Codons.CODON_TABLE[codon] + "_" + codon, :]})
                     codon_df = codon_df.reset_index(drop=True)
                     codon_count_dict.update({sample: codon_df})
 
                 codon_name = codon + "(" + Codons.CODON_TABLE[codon] + ")"
                 codon_linecharts.append(
                     self.get_line_chart(plot_name=codon_name,
-                                          region="codon", count_dict=codon_count_dict,
-                                          scale=True,
-                                          png_dir=self.supplement_png_dir,
-                                          svg_dir=self.supplement_svg_dir))
+                                        region="codon", count_dict=codon_count_dict,
+                                        scale=True,
+                                        png_dir=self.supplement_png_dir,
+                                        svg_dir=self.supplement_svg_dir))
 
                 if self.combine:
                     codon_linecharts.append(
                         self.get_line_chart(plot_name=codon_name,
-                                              region="codon", count_dict=codon_count_dict,
-                                              scale=True,
-                                              combine_weighted=True,
-                                              combine_color=self.combine_weighted_color,
-                                              png_dir=self.supplement_png_dir,
-                                              svg_dir=self.supplement_svg_dir))
+                                            region="codon", count_dict=codon_count_dict,
+                                            scale=True,
+                                            combine_weighted=True,
+                                            combine_color=self.combine_weighted_color,
+                                            png_dir=self.supplement_png_dir,
+                                            svg_dir=self.supplement_svg_dir))
 
         bokeh_composite(self.title + "_codon_linecharts", codon_linecharts,
                         os.path.join(self.supplement_dir, self.title + "_codon_linecharts.html"), 2)
@@ -913,14 +940,14 @@ class VizPipeline:
 
         plots.append(self.get_gs_mapping_div())
         plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_start_dict,
-                                                  region=FivePSeqCounts.START,
-                                                  scale=True, lib_size_dict_dict=gs_lib_size_dict,
-                                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+                                                region=FivePSeqCounts.START,
+                                                scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
         plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_term_dict,
-                                                  region=FivePSeqCounts.TERM,
-                                                  scale=True, lib_size_dict_dict=gs_lib_size_dict,
-                                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+                                                region=FivePSeqCounts.TERM,
+                                                scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
         plots.append(self.get_tabbed_frame_barplots(group_count_dict=gs_frame_count_term_dict,
                                                     group_frame_stats_df_dict=gs_frame_stats_dict,
@@ -968,16 +995,16 @@ class VizPipeline:
                 gs_lib_size_combined.update({gs: {self.COMBINED: sum(self.lib_size_dict.values())}})
 
             plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_start_dict,
-                                                      region=FivePSeqCounts.START,
-                                                      scale=True, lib_size_dict_dict=gs_lib_size_dict,
-                                                      combine_weighted=True, combine_color=self.combine_weighted_color,
-                                                      png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+                                                    region=FivePSeqCounts.START,
+                                                    scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                                    combine_weighted=True, combine_color=self.combine_weighted_color,
+                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
             plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_term_dict,
-                                                      region=FivePSeqCounts.TERM,
-                                                      scale=True, lib_size_dict_dict=gs_lib_size_dict,
-                                                      combine_weighted=True, combine_color=self.combine_weighted_color,
-                                                      png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+                                                    region=FivePSeqCounts.TERM,
+                                                    scale=True, lib_size_dict_dict=gs_lib_size_dict,
+                                                    combine_weighted=True, combine_color=self.combine_weighted_color,
+                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
             plots.append(self.get_tabbed_triangle_plot(group_count_dict=gs_frame_count_term_dict,
                                                        combine_weighted=True, combine_color=self.combine_weighted_color,
@@ -1036,14 +1063,14 @@ class VizPipeline:
 
         plots.append(self.get_gs_mapping_div())
         plots.append(self.get_tabbed_line_chart(group_count_dict=sample_gs_meta_count_start_dict,
-                                                  region=FivePSeqCounts.START, color_dict=gs_colors_dict,
-                                                  scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
-                                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+                                                region=FivePSeqCounts.START, color_dict=gs_colors_dict,
+                                                scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
+                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
         plots.append(self.get_tabbed_line_chart(group_count_dict=sample_gs_meta_count_term_dict,
-                                                  region=FivePSeqCounts.TERM, color_dict=gs_colors_dict,
-                                                  scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
-                                                  png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+                                                region=FivePSeqCounts.TERM, color_dict=gs_colors_dict,
+                                                scale=True, lib_size_dict_dict=sample_gs_lib_size_dict,
+                                                png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
         plots.append(self.get_tabbed_frame_barplots(group_count_dict=sample_gs_frame_count_term_dict,
                                                     group_frame_stats_df_dict=sample_gs_frame_stats_dict,
@@ -1106,16 +1133,16 @@ class VizPipeline:
                 sample_gs_lib_size_combined.update({gs: sum(self.lib_size_dict.values())})
 
             plots.append(self.get_line_chart(region=FivePSeqCounts.START,
-                                               count_dict=sample_gs_meta_counts_start_combined,
-                                               color_dict=gs_colors_dict,
-                                               scale=True, lib_size_dict=sample_gs_lib_size_combined,
-                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+                                             count_dict=sample_gs_meta_counts_start_combined,
+                                             color_dict=gs_colors_dict,
+                                             scale=True, lib_size_dict=sample_gs_lib_size_combined,
+                                             png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
             plots.append(self.get_line_chart(region=FivePSeqCounts.TERM,
-                                               count_dict=sample_gs_meta_counts_term_combined,
-                                               color_dict=gs_colors_dict,
-                                               scale=True, lib_size_dict=sample_gs_lib_size_combined,
-                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+                                             count_dict=sample_gs_meta_counts_term_combined,
+                                             color_dict=gs_colors_dict,
+                                             scale=True, lib_size_dict=sample_gs_lib_size_combined,
+                                             png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
             plots.append(self.get_triangle_plot(count_dict=sample_gs_frame_counts_term_combined,
                                                 color_dict=gs_colors_dict,
                                                 lib_size_dict=sample_gs_lib_size_combined,
@@ -1128,10 +1155,10 @@ class VizPipeline:
         return plots
 
     def get_line_chart(self, plot_name="metagene_counts", region="", count_dict=None,
-                         color_dict=colors_dict,
-                         scale=False, lib_size_dict=None,
-                         combine_sum=False, combine_weighted=False, combine_color=None,
-                         png_dir=png_dir, svg_dir=svg_dir):
+                       color_dict=colors_dict,
+                       scale=False, lib_size_dict=None,
+                       combine_sum=False, combine_weighted=False, combine_color=None,
+                       png_dir=png_dir, svg_dir=svg_dir):
 
         if count_dict is None:
             if region == FivePSeqCounts.TERM:
@@ -1163,22 +1190,22 @@ class VizPipeline:
             title += "_" + "raw"
 
         p = bokeh_line_chart(title=title,
-                               region=region,
-                               count_series_dict=count_dict,
-                               color_dict=color_dict,
-                               scale=scale, lib_size_dict=lib_size_dict,
-                               combine_sum=combine_sum,
-                               combine_weighted=combine_weighted,
-                               combine_color=combine_color,
-                               png_dir=png_dir, svg_dir=svg_dir)
+                             region=region,
+                             count_series_dict=count_dict,
+                             color_dict=color_dict,
+                             scale=scale, lib_size_dict=lib_size_dict,
+                             combine_sum=combine_sum,
+                             combine_weighted=combine_weighted,
+                             combine_color=combine_color,
+                             png_dir=png_dir, svg_dir=svg_dir)
         return p
 
     def get_tabbed_line_chart(self, group_count_dict,
-                                plot_name="metagene_counts", region="",
-                                color_dict=colors_dict,
-                                scale=False, lib_size_dict_dict=None,
-                                combine_sum=False, combine_weighted=False, combine_color=None,
-                                png_dir=png_dir, svg_dir=svg_dir):
+                              plot_name="metagene_counts", region="",
+                              color_dict=colors_dict,
+                              scale=False, lib_size_dict_dict=None,
+                              combine_sum=False, combine_weighted=False, combine_color=None,
+                              png_dir=png_dir, svg_dir=svg_dir):
 
         if color_dict is None:
             color_dict = self.colors_dict
@@ -1200,14 +1227,14 @@ class VizPipeline:
             title += "_" + "combined_summed"
 
         p = bokeh_tabbed_line_chart(title=title,
-                                      region=region,
-                                      group_count_series_dict_dict=group_count_dict,
-                                      color_dict=color_dict,
-                                      scale=scale, lib_size_dict_dict=lib_size_dict_dict,
-                                      combine_sum=combine_sum,
-                                      combine_weighted=combine_weighted,
-                                      combine_color=combine_color,
-                                      png_dir=png_dir, svg_dir=svg_dir)
+                                    region=region,
+                                    group_count_series_dict_dict=group_count_dict,
+                                    color_dict=color_dict,
+                                    scale=scale, lib_size_dict_dict=lib_size_dict_dict,
+                                    combine_sum=combine_sum,
+                                    combine_weighted=combine_weighted,
+                                    combine_color=combine_color,
+                                    png_dir=png_dir, svg_dir=svg_dir)
         return p
 
     def get_triangle_plot(self, plot_name="gene_frame_preferences",
@@ -1344,7 +1371,7 @@ class VizPipeline:
 
     def get_frame_barplot(self, plot_name="global_frame_preference",
                           count_dict=None, frame_stats_df_dict=None,
-                          color_dict=None, scale = True,
+                          color_dict=None, scale=True,
                           lib_size_dict=None,
                           combine_sum=False, combine_weighted=False, combine_color=None,
                           png_dir=png_dir, svg_dir=svg_dir):

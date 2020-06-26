@@ -766,7 +766,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
         if amino_acid_df is not None and len(amino_acid_df) > 0:
             if scale:
                 for i in range(amino_acid_df.shape[0]):
-                    amino_acid_df.iloc[i, :] /= (10 ** 6) * (sum(amino_acid_df.iloc[i, :]) + 1)
+                    amino_acid_df.iloc[i, :] /= sum(amino_acid_df.iloc[i, :]) + 1
 #                    amino_acid_df.iloc[i, :] -= amino_acid_df.iloc[i, :].min()
 #                    if amino_acid_df.iloc[i,:].max() > 0:
 #                        amino_acid_df.iloc[i, :] /= amino_acid_df.iloc[i,:].max()

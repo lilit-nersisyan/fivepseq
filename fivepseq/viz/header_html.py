@@ -100,15 +100,21 @@ def get_html_body(viz_pipeline):
         if args.no_mask:
             mask = "OFF"
         else:
-            if hasattr(args, "tripeptide_pos"):
+            if hasattr(args, "codon_mask_size"):
                 mask = "by %d positions" % args.codon_mask_size
             else:
                 mask = "by %d nts (default)" % FivePSeqCounts.MASK_DIST
 
+        if hasattr(args, "dipeptide_pos"):
+            dipeptide_pos = args.dipeptide_pos
+        else:
+            dipeptide_pos = "%d (default)" % FivePSeqCounts.DIPEPTIDE_POS
+
+
         if hasattr(args, "tripeptide_pos"):
             tripeptide_pos = args.tripeptide_pos
         else:
-            tripeptide_pos = "-11 (default)"
+            tripeptide_pos = "%d (default)" % FivePSeqCounts.TRIPEPTIDE_POS
 
         if viz_pipeline.combine:
             combined_report = os.path.join("main", viz_pipeline.title + "_combined.html")
@@ -138,6 +144,7 @@ def get_html_body(viz_pipeline):
                                  ds=args.ds,
                                  mask=mask,
                                  tripeptide_pos = tripeptide_pos,
+                                 dipeptide_pos = dipeptide_pos,
                                  lib_size_table=get_libsize_table(viz_pipeline),
                                  main_report=os.path.join("main", viz_pipeline.title + "_main.html"),
                                  combined_report=combined_report,

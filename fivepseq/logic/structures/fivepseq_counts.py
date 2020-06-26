@@ -55,9 +55,12 @@ class FivePSeqCounts:
     frame_counts_df_start = None
     frame_counts_df_term = None
     codon_count_df = None
+    amino_acid_count_df = None
+    dicodon_count_df = None
+    dipeptide_count_df = None
     tricodon_count_df = None
     tripeptide_count_df = None
-    amino_acid_count_df = None
+
 
     outliers = None
 
@@ -74,6 +77,7 @@ class FivePSeqCounts:
 
     MASK_DIST = 20
     TRIPEPTIDE_POS = -11
+    DIPEPTIDE_POS = -14
 
 
     missing_chroms = []
@@ -666,6 +670,18 @@ class FivePSeqCounts:
 
         return self.tricodon_count_df
 
+    def get_dicodon_pauses(self):
+        if self.dicodon_count_df is None:
+            self.compute_codon_pauses()
+
+        return self.dicodon_count_df
+
+    def get_dipeptide_pauses(self):
+        if self.dipeptide_count_df is None:
+            self.compute_codon_pauses()
+
+        return self.dipeptide_count_df
+
     def get_tripeptide_pauses(self):
         if self.tripeptide_count_df is None:
             self.compute_codon_pauses()
@@ -707,6 +723,12 @@ class FivePSeqCounts:
         codon_count_df = pd.DataFrame(data=0, index=Codons.CODON_TABLE.keys(),
                                       columns=range(dist_from, dist_to))
 
+        dicodon_count_df = pd.DataFrame(data=0, index=Codons.get_dicodon_table().keys(),
+                                         columns=range(dist_from + 3, dist_to + 3))
+
+        dipeptide_count_df = pd.DataFrame(data=0, index=Codons.get_dipeptide_list(),
+                                           columns=range(dist_from + 3, dist_to + 3))
+
         tricodon_count_df = pd.DataFrame(data=0, index=Codons.get_tricodon_table().keys(),
                                          columns=range(dist_from + 6, dist_to + 6))
 
@@ -740,12 +762,13 @@ class FivePSeqCounts:
                 continue
 
             if (mask_dist >= 3):
-                # NOTE v1.0b3 mask the first and last 20 counts to avoid initiation affecting codon-specific counts
+                # v1.0b3 mask the first and last 20 counts to avoid initiation affecting codon-specific counts
                 count_vector[0:mask_dist] = [0] * mask_dist
-                # NOTE v1.0b3 mask the last 20 nucleotides to avoid termination affecting codon-specific counts, but keep STOP codon counts
+                # v1.0b3 mask the last 20 nucleotides to avoid termination affecting codon-specific counts, but keep STOP codon counts
                 cds_sequence = cds_sequence[0:len(cds_sequence) - mask_dist] + ''.join(
                     'N' * (mask_dist - 3)) + cds_sequence[len(cds_sequence) - 3:len(cds_sequence)]
-            # NOTE v1.0b3 add stretches of 0's to count_vector and N's to cds_sequence to avoid checking vector boundaries
+
+            # v1.0b3 add stretches of 0's to count_vector and N's to cds_sequence to avoid checking vector boundaries
             count_vector = [0] * (-1 * dist_from) + count_vector + [0] * dist_to
             cds_sequence = ''.join('N' * (-1 * dist_from)) + cds_sequence + ''.join('N' * dist_to)
 
@@ -765,11 +788,13 @@ class FivePSeqCounts:
                         break
                     codonA = cds_sequence[j: j + 3].upper()
 
-                    if j - 6 >= 0:
+                    if j - 3 >= 0:
                         codonP = cds_sequence[j - 3: j].upper()
-                        codonE = cds_sequence[j - 6: j - 3].upper()
                     else:
                         codonP = 'NNN'
+                    if j - 6 >= 0:
+                        codonE = cds_sequence[j - 6: j - 3].upper()
+                    else:
                         codonE = 'NNN'
 
                     if (len(codonA) == 3) & (codonA in Codons.CODON_TABLE.keys()):
@@ -777,17 +802,23 @@ class FivePSeqCounts:
                             d = i - j + p
                             try:
                                 codon_count_df.at[codonA, d] += count_vector[i + p]
-                                if len(codonP) == 3 and codonP in Codons.CODON_TABLE.keys() and \
-                                        len(codonE) == 3 and codonE in Codons.CODON_TABLE:
-                                    tricodon_count_df.at[codonE + codonP + codonA, d + 6] += count_vector[i + p]
-                                    tripeptide = Codons.get_tripeptide_from_tricodon([codonE, codonP, codonA])
-                                    tripeptide_count_df.at[tripeptide, d + 6] += count_vector[i + p]
+                                if len(codonP) == 3 and codonP in Codons.CODON_TABLE.keys():
+                                    dicodon_count_df.at[codonP + codonA, d + 3] += count_vector[i + p]
+                                    dipeptide = Codons.get_peptide_from_codon_list([codonP, codonA])
+                                    dipeptide_count_df.at[dipeptide, d + 3] += count_vector[i + p]
+
+                                    if len(codonE) == 3 and codonE in Codons.CODON_TABLE:
+                                        tricodon_count_df.at[codonE + codonP + codonA, d + 6] += count_vector[i + p]
+                                        tripeptide = Codons.get_peptide_from_codon_list([codonE, codonP, codonA])
+                                        tripeptide_count_df.at[tripeptide, d + 6] += count_vector[i + p]
+
                             except Exception as e:
                                 self.logger.warn("Index out of range: i: %d, j: %d, p: %d, d: %d. %s"
                                                  % (i, j, p, d, str(e)))
 
         self.amino_acid_count_df = self.codon_to_amino_acid_count_df(codon_count_df)
-        self.tripeptide_count_df = self.filter_tricodon_counts(tripeptide_count_df)
+        self.tripeptide_count_df = self.filter_codon_counts(tripeptide_count_df, self.get_tripeptide_pos())
+        self.dipeptide_count_df = self.filter_codon_counts(dipeptide_count_df, self.get_dipeptide_pos())
 
         # rename codon_count_df indices by adding amino acid names
         new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in codon_count_df.index]
@@ -796,10 +827,13 @@ class FivePSeqCounts:
 
         # rename codon_count_df indices by adding amino acid names
         self.logger.info("Mapping tricodons to amino acid names")
-        new_index = Codons.get_tricodon_full_index()
-        tricodon_count_df.index = new_index
-        self.tricodon_count_df = self.filter_tricodon_counts(tricodon_count_df)
+        tricodon_count_df.index = Codons.get_tricodon_full_index()
+        self.tricodon_count_df = self.filter_codon_counts(tricodon_count_df, self.get_tripeptide_pos())
 
+        # rename codon_count_df indices by adding amino acid names
+        self.logger.info("Mapping dicodons to amino acid names")
+        dicodon_count_df.index = Codons.get_dicodon_full_index()
+        self.dicodon_count_df = self.filter_codon_counts(dicodon_count_df, self.get_dipeptide_pos())
 
         return
 
@@ -815,28 +849,43 @@ class FivePSeqCounts:
         return amino_acid_count_df
 
 
-    def filter_tricodon_counts(self, tricodon_count_df, top = 50):
-        """
-        Filter the tricodon (or tripeptide) counts to exclude low counts (rowSums less than the specified threshold) and
-        to include only the top tricodons with highest relative counts at the given position
+    def get_tripeptide_pos(self):
 
-        :param tricodon_count_df: the tricodon_df to filter
-        :param top: the number of highest relative count tricodons to keep
-        :param pos: the position to filter the top counts
-        :return tricodon_filtered_df: the filtered count dataframe
-        """
         if hasattr(config.args, "tripeptide_pos"):
             pos = config.args.tripeptide_pos
         else:
             pos = self.TRIPEPTIDE_POS
 
-        self.logger.info("Sorting and selecting top %d tripeptides/tricodons at position %d from the A site" %
+        return pos
+
+    def get_dipeptide_pos(self):
+
+        if hasattr(config.args, "dipeptide_pos"):
+            pos = config.args.dipeptide_pos
+        else:
+            pos = self.DIPEPTIDE_POS
+
+        return pos
+
+
+    def filter_codon_counts(self, codon_count_df, pos, top = 50):
+        """
+        Filter the di/tricodon (or di/tripeptide) counts to exclude low counts (rowSums less than the specified threshold) and
+        to include only the top di/tricodons with highest relative counts at the given position
+
+        :param codon_count_df: the codon_df to filter
+        :param top: the number of highest relative count tricodons to keep
+        :param pos: the position to filter the top counts
+        :return codon_filtered_df: the filtered count dataframe
+        """
+
+        self.logger.info("Sorting and selecting top %d peptides/codons at position %d from the A site" %
                          (top, pos))
 
-        tricodon_filtered_df = tricodon_count_df[tricodon_count_df.sum(1) >= self.COUNT_THRESHOLD]
-        pos_rel_counts = tricodon_filtered_df[pos]/tricodon_filtered_df.sum(1)
-        tricodon_filtered_df = tricodon_filtered_df.iloc[sorted(range(len(pos_rel_counts)), reverse=True, key=lambda k: pos_rel_counts[k])[0:top]]
-        return tricodon_filtered_df
+        codon_filtered_df = codon_count_df[codon_count_df.sum(1) >= self.COUNT_THRESHOLD]
+        pos_rel_counts = codon_filtered_df[pos]/codon_filtered_df.sum(1)
+        codon_filtered_df = codon_filtered_df.iloc[sorted(range(len(pos_rel_counts)), reverse=True, key=lambda k: pos_rel_counts[k])[0:top]]
+        return codon_filtered_df
 
     @preconditions(lambda loci_file: str)
     def get_pauses_from_loci(self, loci_file, read_locations=READ_LOCATIONS_ALL):

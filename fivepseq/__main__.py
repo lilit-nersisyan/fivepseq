@@ -143,6 +143,15 @@ class FivepseqArguments:
                               choices=range(3, 50),
                               metavar="[3:50)")
 
+        advanced.add_argument("--dipeptide-pos",
+                              help="counts in which position {-27:6} from A site should be ordered to output top stalled dipeptides",
+                              type=int,
+                              required=False,
+                              default=-14,
+                              choices=range(-27, 6),
+                              metavar="[-27:6)"
+                              )
+
         advanced.add_argument("--tripeptide-pos",
                               help="counts in which position {-24:9} from A site should be ordered to output top stalled tripeptides",
                               type=int,
@@ -240,8 +249,9 @@ class FivepseqArguments:
             print("%s" % (pad_spaces(
                 "\tTripeptides will be sorted at position %d from the A site:" % config.args.tripeptide_pos)))
 
-        #   if config.args.fivepseq_pickle is not None:
-        #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
+            print("%s" % (pad_spaces(
+                "\tDipeptides will be sorted at position %d from the A site:" % config.args.dipeptide_pos)))
+
 
         elif config.args.command == 'plot':
             config.args.count_folders = []
@@ -298,8 +308,12 @@ class FivepseqArguments:
             else:
                 print("%s%s" % (
                 pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
+
             if hasattr(config.args, "tripeptide_pos"):
                 print("%s%s" % (pad_spaces("\tSort tripeptides from A site at:"), config.args.tripeptide_pos))
+
+            if hasattr(config.args, "dipeptide_pos"):
+                print("%s%s" % (pad_spaces("\tSort dipeptides from A site at:"), config.args.dipeptide_pos))
 
             if config.args.loci_file is not None:
                 print("%s%s" % (pad_spaces("\tLoci file:"), config.args.loci_file))

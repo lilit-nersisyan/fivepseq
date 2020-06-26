@@ -144,15 +144,32 @@ class Codons:
             for codonP in Codons.CODON_TABLE.keys():
                 for codonA in Codons.CODON_TABLE.keys():
                     tricodon_table.update({codonE + codonP + codonA:
-                                               Codons.get_tripeptide_from_tricodon([codonE, codonP, codonA])
+                                               Codons.get_peptide_from_codon_list([codonE, codonP, codonA])
                                            })
         return tricodon_table
 
     @staticmethod
-    def get_tripeptide_from_tricodon(codon_list):
+    def get_peptide_from_codon_list(codon_list):
         return '-'.join([Codons.CODON_TABLE[codon] for codon in codon_list]) +\
                ' (' + ''.join([Codons.AMINO_ACID_SINGLELETTER_TABLE[Codons.CODON_TABLE[codon]] for codon in codon_list]) +\
                ')'
+
+
+    @staticmethod
+    def get_dipeptide_list():
+        dipeptide_list = list()
+        for aaP in Codons.AMINO_ACID_TABLE.keys():
+            for aaA in Codons.AMINO_ACID_TABLE.keys():
+                dipeptide_list.append(
+                    '-'.join([aaP, aaA]) +
+                    ' (' +
+                    ''.join([Codons.AMINO_ACID_SINGLELETTER_TABLE.get(aaP),
+                             Codons.AMINO_ACID_SINGLELETTER_TABLE.get(aaA)
+                             ]) +
+                    ')'
+                )
+
+        return dipeptide_list
 
     @staticmethod
     def get_tripeptide_list():
@@ -171,6 +188,18 @@ class Codons:
                     )
 
         return tripeptide_list
+
+    @staticmethod
+    def get_dicodon_full_index():
+        dicodon_index = list()
+        for codonP in Codons.CODON_TABLE.keys():
+            for codonA in Codons.CODON_TABLE.keys():
+                dicodon_index.append(
+                    '-'.join([Codons.CODON_TABLE.get(codonP),
+                              Codons.CODON_TABLE.get(codonA)]) +
+                    '_' +
+                    ''.join(codonP + codonA))
+        return dicodon_index
 
     @staticmethod
     def get_tricodon_full_index():
