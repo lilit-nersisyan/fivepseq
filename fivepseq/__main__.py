@@ -522,7 +522,8 @@ def generate_and_store_fivepseq_counts(plot=False):
                 bam_filter_counts(bam_name, bam_reader.alignment, annotation, fasta_reader.genome,
                                   bam_out_dir, count_folders_gs, success_values,
                                   downsample_constant=outlier_lower,
-                                  filter_name=gs, filter=annotation.gs_transcriptInd_dict[gs])
+                                  filter_name=gs, filter=annotation.gs_transcriptInd_dict[gs],
+                                  is_geneset=True)
 
     # check if all the files in all directories are in place and store a summary of all runs
     fivepseq_out = FivePSeqOut(config.out_dir,
@@ -556,7 +557,7 @@ def generate_and_store_fivepseq_counts(plot=False):
 
 def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
                       count_folders, success_values, downsample_constant=None,
-                      filter_name="protein_coding", filter=None, loci_file=None):
+                      filter_name="protein_coding", is_geneset = False, filter=None, loci_file=None):
     logging.getLogger(config.FIVEPSEQ_LOGGER). \
         info("\n##################\nCounting for sample %s and gene set %s\n##################\n"
              % (bam_name, filter_name))
@@ -572,7 +573,8 @@ def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
     fivepseq_counts = FivePSeqCounts(alignment, annotation, genome,
                                      # outlier_probability=config.args.op,
                                      config=config,
-                                     downsample_constant=downsample_constant)
+                                     downsample_constant=downsample_constant,
+                                     is_geneset = is_geneset)
     fivepseq_counts.loci_file = loci_file
 
     # set up fivepseq out object for this bam

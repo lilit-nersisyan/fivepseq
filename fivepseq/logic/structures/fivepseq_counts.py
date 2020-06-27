@@ -60,14 +60,13 @@ class FivePSeqCounts:
     dipeptide_count_df = None
     tricodon_count_df = None
     tripeptide_count_df = None
-
-
-    outliers = None
-
     start_codon_dict = None
     stop_codon_dict = None
     canonical_transcript_index = None
     transcript_descriptors = None
+    outliers = None
+
+    is_geneset = False
 
     loci_overlaps = None
     READ_LOCATIONS_ALL = "_ALL"
@@ -82,7 +81,7 @@ class FivePSeqCounts:
 
     missing_chroms = []
 
-    def __init__(self, alignment, annotation, genome, config, downsample_constant, transcript_filter=None):
+    def __init__(self, alignment, annotation, genome, config, downsample_constant, is_geneset = False, transcript_filter=None):
         """
         Initializes a FivePSeqCounts object with Alignment and Annotation instances.
 
@@ -104,6 +103,7 @@ class FivePSeqCounts:
         self.start_codon_dict = {}
         self.stop_codon_dict = {}
         self.canonical_transcript_index = []
+        self.is_geneset = is_geneset
 
         self.logger.info("Initiated a FivePSeqCounts object with"
                          "\n\talignment from file %s"

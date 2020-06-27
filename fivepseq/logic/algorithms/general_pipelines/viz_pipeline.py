@@ -49,9 +49,14 @@ class VizPipeline:
     main_dir = None
     png_dir = None
     svg_dir = None
+
     supplement_dir = "supplement"
     supplement_png_dir = None
     supplement_svg_dir = None
+
+    comparison_dir = "comparison"
+    comparison_png_dir = None
+    comparison_svg_dir = None
 
     geneset_dir = "genesets"
     geneset_png_dir = None
@@ -76,6 +81,9 @@ class VizPipeline:
     dipeptide_df_dict = {}
     tricodon_df_dict = {}
     tripeptide_df_dict = {}
+
+    top = 20  # choose this many top multicodons/peptides from each sample to plot
+
     frame_count_term_dict = {}
     frame_count_start_dict = {}
     frame_stats_df_dict = {}
@@ -179,9 +187,16 @@ class VizPipeline:
             raise e
 
         try:
-            self.write_supplement()
+            self.plot_supplement()
         except Exception as e:
             err_msg = "Exception while writing supplements: %s" % str(e)
+            self.logger.error(err_msg)
+            raise e
+
+        try:
+            self.plot_comparison()
+        except Exception as e:
+            err_msg = "Exception while writing comparisons: %s" % str(e)
             self.logger.error(err_msg)
             raise e
 
@@ -276,6 +291,13 @@ class VizPipeline:
             except Exception as e:
                 raise Exception("Output directory %s could not be created: %s" % (self.supplement_dir, str(e)))
 
+        self.comparison_dir = os.path.join(self.args.o, "comparison")
+        if not os.path.exists(self.comparison_dir):
+            try:
+                os.mkdir(self.comparison_dir)
+            except Exception as e:
+                raise Exception("Output directory %s could not be created: %s" % (self.comparison_dir, str(e)))
+
         if self.gs_transcriptInd_dict is not None:
             self.geneset_dir = os.path.join(self.args.o, "genesets")
             if not os.path.exists(self.geneset_dir):
@@ -298,6 +320,20 @@ class VizPipeline:
                     os.mkdir(os.path.join(self.supplement_dir, "svg"))
                 except Exception as e:
                     raise Exception("Output directory %s could not be created: %s" % (self.supplement_svg_dir, str(e)))
+
+            self.comparison_png_dir = os.path.join(self.comparison_dir, "png")
+            if not os.path.exists(self.comparison_png_dir):
+                try:
+                    os.mkdir(os.path.join(self.comparison_dir, "png"))
+                except Exception as e:
+                    raise Exception("Output directory %s could not be created: %s" % (self.comparison_png_dir, str(e)))
+
+            self.comparison_svg_dir = os.path.join(self.comparison_dir, "svg")
+            if not os.path.exists(os.path.join(self.comparison_dir, "svg")):
+                try:
+                    os.mkdir(os.path.join(self.comparison_dir, "svg"))
+                except Exception as e:
+                    raise Exception("Output directory %s could not be created: %s" % (self.comparison_svg_dir, str(e)))
 
             if self.gs_transcriptInd_dict is not None:
                 self.geneset_png_dir = os.path.join(self.geneset_dir, "png")
@@ -361,6 +397,7 @@ class VizPipeline:
                                                                   file=fivepseq_out.get_file_path(
                                                                       FivePSeqOut.DIPEPTIDE_PAUSES_FILE),
                                                                   basesort=False)})
+
         self.tricodon_df_dict.update({sample: self.read_codon_df(fivepseq_out,
                                                                  file=fivepseq_out.get_file_path(
                                                                      FivePSeqOut.TRICODON_PAUSES_FILE),
@@ -534,7 +571,7 @@ class VizPipeline:
 
         self.logger.info("Wrote geneset-specific plots")
 
-    def write_supplement(self):
+    def plot_supplement(self):
         # codon pauses
         self.logger.info("Generating supplement plots: codon pauses")
         codon_title = self.title + "_codon_heatmaps"
@@ -592,6 +629,7 @@ class VizPipeline:
                              self.get_heatmap_plot(tricodon_title, self.tricodon_df_dict, scale=True),
                              ],
                             os.path.join(self.supplement_dir, codon_title + ".html"), 1)
+
         # amino acid line-charts
         self.logger.info("Generating supplement plots: amino acid line-charts")
         aa_linecharts = []
@@ -648,18 +686,79 @@ class VizPipeline:
                                         png_dir=self.supplement_png_dir,
                                         svg_dir=self.supplement_svg_dir))
 
-                if self.combine:
-                    codon_linecharts.append(
-                        self.get_line_chart(plot_name=codon_name,
-                                            region="codon", count_dict=codon_count_dict,
-                                            scale=True,
-                                            combine_weighted=True,
-                                            combine_color=self.combine_weighted_color,
-                                            png_dir=self.supplement_png_dir,
-                                            svg_dir=self.supplement_svg_dir))
-
         bokeh_composite(self.title + "_codon_linecharts", codon_linecharts,
                         os.path.join(self.supplement_dir, self.title + "_codon_linecharts.html"), 2)
+
+        # peptide line-charts
+        self.make_peptide_line_charts(self.dicodon_df_dict, "dicodon")
+        self.make_peptide_line_charts(self.dipeptide_df_dict, "dipeptide")
+        self.make_peptide_line_charts(self.tricodon_df_dict, "tricodon")
+        self.make_peptide_line_charts(self.tripeptide_df_dict, "tripeptide")
+
+    def make_peptide_line_charts(self, codon_count_dict, peptide_type):
+        self.logger.info("Generating supplementary plots: %s line-charts" % peptide_type)
+        peptide_linecharts = []
+        for peptide in self.get_top_codon_list(codon_count_dict):
+
+            self.logger.info("Line charts for %s" % peptide)
+
+            peptide_count_dict = {}
+
+            for sample in self.samples:
+                peptide_df_full = codon_count_dict[sample]
+                if peptide in peptide_df_full.index:
+                    peptide_df = pd.DataFrame(
+                        data={'D': list(map(int, peptide_df_full.columns)),
+                              'C': peptide_df_full.loc[peptide, :]})
+                    peptide_df = peptide_df.reset_index(drop=True)
+                else:
+                    peptide_df = None
+                peptide_count_dict.update({sample: peptide_df})
+
+            peptide_linecharts.append(
+                self.get_line_chart(plot_name=peptide,
+                                    region=peptide_type, count_dict=peptide_count_dict,
+                                    scale=True,
+                                    png_dir=self.supplement_png_dir,
+                                    svg_dir=self.supplement_svg_dir))
+
+            # no combined plots, as some samples won't have all peptide counts
+
+        bokeh_composite(self.title + "_" + peptide_type + "_linecharts", peptide_linecharts,
+                        os.path.join(self.supplement_dir, self.title + "_" + peptide_type + "_linecharts.html"), 2)
+
+    def plot_comparison(self):
+        # codon pauses
+        name = "differential_heatmaps"
+        self.logger.info("Comparison plots: %s" % name)
+
+        # TODO generate figure_list
+        figure_list = []
+        figure_list.append(self.get_differential_heatmaps(self.amino_acid_df_dict, "amino_acid"))
+        figure_list.append(self.get_differential_heatmaps(self.codon_df_dict, "codon"))
+
+        # TODO compose bokeh report
+        bokeh_composite("%s_%s" % (self.title, name), figure_list,
+                        os.path.join(self.comparison_dir, "%s_%s.html" % (self.title, name)), 1)
+
+    def get_differential_heatmaps(self, codon_df_dict, codon_type):
+        def scale(df):
+            for i in range(df.shape[0]):
+                df.iloc[i, :] /= sum(df.iloc[i, :]) + 1
+            return df
+
+        dif_df_dict = {}
+
+        for i in range(len(self.samples) - 1):
+            for j in range(1, len(self.samples)):
+                if j != i:
+                    dif_df = scale(codon_df_dict[self.samples[j]]) - scale(codon_df_dict[self.samples[i]])
+                    dif_df_dict.update({'_vs_'.join([self.samples[j], self.samples[i]]): dif_df})
+
+        return self.get_heatmap_plot("%s_differential_heatmaps" % codon_type,
+                                     dif_df_dict, scale=False,
+                                     png_dir=self.comparison_png_dir,
+                                     svg_dir=self.comparison_svg_dir)
 
     def is_phantomjs_installed(self):
         if self.phantomjs_installed is not None:
@@ -1517,3 +1616,14 @@ class VizPipeline:
                                   combine_color=combine_color,
                                   png_dir=png_dir, svg_dir=svg_dir)
         return p
+
+    def get_top_codon_list(self, codon_df_dict):
+        """
+        Take top codons/peptides from each sample in the dictionary and return a unique list
+
+        :return: [str] list of codons/peptides
+        """
+        codon_list = []
+        for codon_df in codon_df_dict.values():
+            codon_list += list(codon_df.index[range(self.top)])
+        return list(np.unique(codon_list))

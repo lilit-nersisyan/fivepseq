@@ -6,11 +6,11 @@ from fivepseq.logic.structures.annotation import Annotation
 
 
 def get_version():
-    #version_path = os.path.abspath(os.path.join(os.curdir, "version.txt"))
-    #if not os.path.exists(version_path):
+    # version_path = os.path.abspath(os.path.join(os.curdir, "version.txt"))
+    # if not os.path.exists(version_path):
     #    version_path = os.path.abspath(os.path.join(os.curdir, "fivepseq", "version.txt"))
-    #f = open(version_path, 'r')
-    #version = f.read()
+    # f = open(version_path, 'r')
+    # version = f.read()
 
     return fivepseq.__version__
 
@@ -110,7 +110,6 @@ def get_html_body(viz_pipeline):
         else:
             dipeptide_pos = "%d (default)" % FivePSeqCounts.DIPEPTIDE_POS
 
-
         if hasattr(args, "tripeptide_pos"):
             tripeptide_pos = args.tripeptide_pos
         else:
@@ -143,8 +142,8 @@ def get_html_body(viz_pipeline):
                                  op=args.op,
                                  ds=args.ds,
                                  mask=mask,
-                                 tripeptide_pos = tripeptide_pos,
-                                 dipeptide_pos = dipeptide_pos,
+                                 tripeptide_pos=tripeptide_pos,
+                                 dipeptide_pos=dipeptide_pos,
                                  lib_size_table=get_libsize_table(viz_pipeline),
                                  main_report=os.path.join("main", viz_pipeline.title + "_main.html"),
                                  combined_report=combined_report,
@@ -157,6 +156,22 @@ def get_html_body(viz_pipeline):
                                  suppl_codon_report=os.path.join(
                                      "supplement",
                                      viz_pipeline.title + "_codon_heatmaps.html"),
+                                 suppl_dipeptide_linecharts=os.path.join(
+                                     "supplement",
+                                     viz_pipeline.title + "_dipeptide_linecharts.html"),
+                                 suppl_tripeptide_linecharts=os.path.join(
+                                     "supplement",
+                                     viz_pipeline.title + "_tripeptide_linecharts.html"),
+                                 suppl_dicodon_linecharts=os.path.join(
+                                     "supplement",
+                                     viz_pipeline.title + "_dicodon_linecharts.html"),
+                                 suppl_tricodon_linecharts=os.path.join(
+                                     "supplement",
+                                     viz_pipeline.title + "_tricodon_linecharts.html"),
+                                 differential_heatmaps=os.path.join(
+                                     "comparison",
+                                     viz_pipeline.title + "_differential_heatmaps.html"
+                                 ),
                                  geneset_sample_per_gs_report=input_geneset_sample_per_gs_report,
                                  geneset_genesets_per_sample_report=input_geneset_genesets_per_sample_report)
 

@@ -174,7 +174,8 @@ def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, 
         count_series = count_series_dict.get(key)
 
         if count_series is None:
-            return None
+            #return None
+            continue
 
         key_title = get_key_title(title, key)
         p_key_png = None
