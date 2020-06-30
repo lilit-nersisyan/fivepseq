@@ -1,31 +1,29 @@
 from __future__ import print_function
 from __future__ import print_function
-import copy
+
 import logging
 import os
 import random
-import urllib
 
+import colorlover as cl
 import matplotlib as mpl
 import matplotlib.cm as cm
 import numpy as np
-import bokeh
+import pandas as pd
 from bokeh.colors import RGB
-from bokeh.embed import file_html
 from bokeh.io import output_file, save, export_svgs, export_png
 from bokeh.io import show
 from bokeh.layouts import gridplot, row, widgetbox
-from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearColorMapper, FactorRange, TableColumn, \
-    DataTable, PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div, Legend, Panel, Tabs, LabelSet
+from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearColorMapper, FactorRange, DataTable, \
+    PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div, Legend, Panel, Tabs, LabelSet
 from bokeh.plotting import figure
 from bokeh.transform import transform
-from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
+from sklearn.decomposition import PCA
 
 from fivepseq import config
+from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
 from fivepseq.logic.structures import codons
 from fivepseq.logic.structures.fivepseq_counts import CountManager
-import colorlover as cl
-
 from fivepseq.viz.header_html import get_div_logo, get_div_footer, get_div_title
 
 tools = [PanTool(), BoxZoomTool(), WheelZoomTool(), SaveTool(), ResetTool()]
@@ -38,7 +36,7 @@ COMBINED = "combined"
 def bokeh_composite(title, figure_list, filename, ncols=2):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making composite plot")
 
-    output_file(title + ".html", title = title)
+    output_file(title + ".html", title=title)
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Title provided as: %s" % title)
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of figures: %d" % len(figure_list))
@@ -46,9 +44,10 @@ def bokeh_composite(title, figure_list, filename, ncols=2):
 
     p = gridplot(figure_list, ncols=ncols, toolbar_location="left")
     div_logo = Div(text=get_div_logo())
-    div_title = Div(text = get_div_title(title))
+    div_title = Div(text=get_div_title(title))
     div_footer = Div(text=get_div_footer())
-    save([div_logo,div_title,p,div_footer], filename=filename)
+    save([div_logo, div_title, p, div_footer], filename=filename)
+
 
 def bokeh_table(title, table_df_dict):
     output_file(title + ".html")
@@ -71,10 +70,10 @@ def bokeh_table(title, table_df_dict):
 
 
 def bokeh_tabbed_line_chart(title, region, group_count_series_dict_dict, color_dict,
-                              scale=False, lib_size_dict_dict=None,
-                              combine_sum=False, combine_weighted=False,
-                              combine_color=None,
-                              png_dir=None, svg_dir=None):
+                            scale=False, lib_size_dict_dict=None,
+                            combine_sum=False, combine_weighted=False,
+                            combine_color=None,
+                            png_dir=None, svg_dir=None):
     if group_count_series_dict_dict is None:
         return None
 
@@ -93,9 +92,9 @@ def bokeh_tabbed_line_chart(title, region, group_count_series_dict_dict, color_d
             lib_size_dict = None
 
         p_group = bokeh_line_chart(title, region, count_series_dict_gs, color_dict, scale=scale,
-                                     combine_sum=combine_sum, combine_weighted=combine_weighted,
-                                     combine_color=combine_color,
-                                     lib_size_dict=lib_size_dict, png_dir=png_dir, svg_dir=svg_dir)
+                                   combine_sum=combine_sum, combine_weighted=combine_weighted,
+                                   combine_color=combine_color,
+                                   lib_size_dict=lib_size_dict, png_dir=png_dir, svg_dir=svg_dir)
         tab_list.append(Panel(child=p_group, title=group))
 
     tabs = Tabs(tabs=tab_list)
@@ -103,8 +102,8 @@ def bokeh_tabbed_line_chart(title, region, group_count_series_dict_dict, color_d
 
 
 def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, lib_size_dict=None,
-                       combine_sum=False,
-                       combine_weighted=False, combine_color=None, png_dir=None, svg_dir=None):
+                     combine_sum=False,
+                     combine_weighted=False, combine_color=None, png_dir=None, svg_dir=None):
     if count_series_dict is None:
         return None
 
@@ -117,7 +116,7 @@ def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, 
     if combine_weighted:
         suffix = COMBINED + "-weighted"
         count_series_dict = {suffix: CountManager.combine_count_series(count_series_dict,
-                                                                       lib_size_dict= lib_size_dict,
+                                                                       lib_size_dict=lib_size_dict,
                                                                        scale=scale)}
 
     elif combine_sum:
@@ -139,12 +138,12 @@ def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, 
         color_dict = {suffix: c}
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count line chart %s with options: scaled(%s), "
-                                                        "combine_sum(%s), comine_weighted(%s): " % (title + ": " +
-                                                                                                    region,
-                                                                                                    str(scale),
-                                                                                                    str(combine_sum),
-                                                                                                    str(
-                                                                                                        combine_weighted)))
+                                                   "combine_sum(%s), comine_weighted(%s): " % (title + ": " +
+                                                                                               region,
+                                                                                               str(scale),
+                                                                                               str(combine_sum),
+                                                                                               str(
+                                                                                                   combine_weighted)))
 
     output_file(title + ".png")
 
@@ -174,7 +173,7 @@ def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, 
         count_series = count_series_dict.get(key)
 
         if count_series is None:
-            #return None
+            # return None
             continue
 
         key_title = get_key_title(title, key)
@@ -192,7 +191,7 @@ def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, 
             if scale and not combine_weighted:
                 if lib_size_dict is None:
                     logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Lib size not specified: local counts will "
-                                                                           "be used instead")
+                                                                      "be used instead")
                     lib_size = sum(count_series.C) + 1
                 else:
                     lib_size = lib_size_dict.get(key)
@@ -316,11 +315,11 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
         color_dict = {suffix: c}
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count line chart %s with options: "
-                                                        "combine_sum(%s), comine_weighted(%s): "
-                                                        % (title + ": " +
-                                                           align_region,
-                                                           str(combine_sum),
-                                                           str(combine_weighted)))
+                                                   "combine_sum(%s), comine_weighted(%s): "
+                                                   % (title + ": " +
+                                                      align_region,
+                                                      str(combine_sum),
+                                                      str(combine_weighted)))
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making FFT signal line chart: " + align_region)
     output_file(title + ".html")
@@ -396,7 +395,7 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
 
 
 def bokeh_normalized_meta_line_chart(title, transcript_count_list_dict, color_dict,
-                                       x_max, show_plot=False, png_dir=None, svg_dir=None):
+                                     x_max, show_plot=False, png_dir=None, svg_dir=None):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Plotting normalized full-length meta counts. ")
     output_file(title + ".html", mode="cdn")
 
@@ -442,7 +441,7 @@ def bokeh_normalized_meta_line_chart(title, transcript_count_list_dict, color_di
 
 
 def bokeh_transcript_line_chart(title, transcript_count_list_dict, transcript_assembly, color_dict,
-                                  align_to, span_size, index_filter, min_count=0, max_count=1000, save_plot=True):
+                                align_to, span_size, index_filter, min_count=0, max_count=1000, save_plot=True):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info(
         "Plotting transcript specific counts. %d filtered transcript indices specified" % len(index_filter))
     output_file(title + "_minCount-" + str(min_count) + "_maxCount-" + str(max_count) + ".html", mode="cdn")
@@ -676,10 +675,10 @@ def get_empty_triangle_canvas(title):
         data=dict(x=[triangle_transform(*f1)[0], triangle_transform(*f2)[0], triangle_transform(*f0)[0]],
                   y=[triangle_transform(*f1)[1], triangle_transform(*f2)[1], triangle_transform(*f0)[1]],
                   text=['F1', 'F0', 'F2'],
-                  x_offset=[0,0,-20]))
-    p.add_layout(LabelSet(x='x', y = 'y', text = 'text',
+                  x_offset=[0, 0, -20]))
+    p.add_layout(LabelSet(x='x', y='y', text='text',
                           x_offset='x_offset',
-                          source=source, level = 'glyph', render_mode='canvas'))
+                          source=source, level='glyph', render_mode='canvas'))
     return p
 
 
@@ -763,14 +762,14 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
 
     for key in amino_acid_df_dict.keys():
         logging.getLogger(config.FIVEPSEQ_LOGGER).info(key)
-        amino_acid_df = amino_acid_df_dict.get(key).copy(deep = True)
+        amino_acid_df = amino_acid_df_dict.get(key).copy(deep=True)
         if amino_acid_df is not None and len(amino_acid_df) > 0:
             if scale:
                 for i in range(amino_acid_df.shape[0]):
                     amino_acid_df.iloc[i, :] /= sum(amino_acid_df.iloc[i, :]) + 1
-#                    amino_acid_df.iloc[i, :] -= amino_acid_df.iloc[i, :].min()
-#                    if amino_acid_df.iloc[i,:].max() > 0:
-#                        amino_acid_df.iloc[i, :] /= amino_acid_df.iloc[i,:].max()
+            #                    amino_acid_df.iloc[i, :] -= amino_acid_df.iloc[i, :].min()
+            #                    if amino_acid_df.iloc[i,:].max() > 0:
+            #                        amino_acid_df.iloc[i, :] /= amino_acid_df.iloc[i,:].max()
 
             colormap = cm.get_cmap("viridis")
             bokehpalette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
@@ -824,7 +823,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
 
 
 def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_stats_df_dict_dict, color_dict,
-                                lib_size_dict_dict=None, combine_sum=False,
+                                scale = False, lib_size_dict_dict=None, combine_sum=False,
                                 combine_weighted=False, combine_color=None,
                                 png_dir=None, svg_dir=None):
     if group_frame_df_dict_dict is None:
@@ -850,7 +849,8 @@ def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_sta
             lib_size_dict = None
 
         p_group = bokeh_frame_barplots(title, frame_df_dict, frame_stats_df_dict, color_dict,
-                                       lib_size_dict=lib_size_dict, combine_sum=combine_sum,
+                                       lib_size_dict=lib_size_dict, scale = scale,
+                                       combine_sum=combine_sum,
                                        combine_weighted=combine_weighted,
                                        png_dir=png_dir,
                                        svg_dir=svg_dir)
@@ -860,7 +860,7 @@ def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_sta
 
 
 def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color_dict,
-                         lib_size_dict=None,
+                         lib_size_dict=None, scale=False,
                          combine_sum=False,
                          combine_weighted=False, combine_color=None,
                          png_dir=None, svg_dir=None):
@@ -894,10 +894,9 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
         color_dict = {suffix: c}
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making frame barplot %s with options: "
-                                                        "combine_sum(%s), combine_weighted(%s): " % (title_prefix,
-                                                                                                     str(combine_sum),
-                                                                                                     str(
-                                                                                                         combine_weighted)))
+                                                   "combine_sum(%s), combine_weighted(%s): " % (title_prefix,
+                                                                                                str(combine_sum),
+                                                                                                str(combine_weighted)))
 
     mainLayout = row(row(), name=title_prefix + ' frame histograms')
 
@@ -925,25 +924,33 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
     for key in frame_df_dict.keys():
         legend_items = []
         color = color_dict.get(key)
-        counts = counts_dict.get(key)
+        counts = counts_dict.get(key).copy()
         if counts is None:
             # mainLayout.children[0].children.append(None)
             logging.getLogger(config.FIVEPSEQ_LOGGER).warn("Frame counts stats not found for sample %s" % key)
         else:
             frames = ["F0", "F1", "F2"]
+            if scale:
+                counts /= sum(counts)
+                counts *= 100
+                max_y = 100
+                y_label = "% of genome-wide total counts on the frame"
+            else:
+                max_y = count_max
+                y_label = "Genome-wide total counts on the frame"
             key_title = get_key_title(title_prefix, key)
-            p = figure(x_range=frames, y_range=(0, count_max),
+            p = figure(x_range=frames, y_range=(0, max_y),
                        plot_height=500, title=key_title,
-                       y_axis_label="Genome-wide total counts on the frame")
+                       y_axis_label=y_label)
 
             # figures for export
             p_png = None
             p_svg = None
             if png_dir is not None:
-                p_png = figure(x_range=frames, y_range=(0, count_max),
+                p_png = figure(x_range=frames, y_range=(0, max_y),
                                plot_height=1000, plot_width=1000, title=title_prefix)
             if svg_dir is not None:
-                p_svg = figure(x_range=frames, y_range=(0, count_max),
+                p_svg = figure(x_range=frames, y_range=(0, max_y),
                                plot_height=500, title=title_prefix)
 
             bars = p.vbar(x=frames, width=0.8, top=counts, bottom=0,
@@ -1029,6 +1036,77 @@ def bokeh_aa_pause_linechart(title, amino_acid_df):
     p.legend.click_policy = "hide"
     return p
 
+def bokeh_pca_plot(title, codon_df_dict, color_dict, start_pos = '-20', end_pos = '-2',
+                   png_dir=None, svg_dir=None):
+    """Some problems with implementation -- will solve later"""
+    def scale(df):
+        sdf = df.copy(deep = True)
+        for i in range(sdf.shape[0]):
+            sdf.iloc[i, :] /= sum(sdf.iloc[i, :]) + 1
+        return sdf
+
+    def mat_to_vec(sdf):
+        vec = []
+        vecnames = []
+        for j in range(sdf.shape[0]):
+            start_ind = [i for i, j in enumerate(sdf.columns) if j == start_pos][0]
+            stop_ind = [i for i, j in enumerate(sdf.columns) if j == end_pos][0]
+            vec += list(sdf.iloc[j, start_ind:stop_ind])
+            vecnames += [sdf.index[j] + codon for codon in list(sdf.columns[start_ind:stop_ind])]
+        return vec, vecnames
+
+    vec_list = []
+    vecnames = None
+    colors = []
+    names = []
+    for s in codon_df_dict.keys():
+        colors.append(color_dict.get(s))
+        names.append(s)
+        vec, vecnames = mat_to_vec(scale(codon_df_dict[s]))
+        vec_list.append(vec)
+
+    data = pd.DataFrame(vec_list, columns=vecnames)
+    pca = PCA(n_components=2)
+
+    principalComponents = pca.fit_transform(data)
+    principalDf = pd.DataFrame(data=principalComponents, columns=['PC1', 'PC2'])
+
+    source = ColumnDataSource(data = dict(
+        x = principalDf['PC1'],
+        y = principalDf['PC2'],
+        col = colors,
+        sample = names
+    ))
+
+    # draw
+    pc1_var = list(pca.explained_variance_ratio_)[0] * 100
+    pc2_var = list(pca.explained_variance_ratio_)[1] * 100
+
+    p = figure(title=title, height=500,
+               x_axis_label="PC1 (%.2f %% variance)" % pc1_var,
+               y_axis_label="PC2 (%.2f %% variance)" % pc2_var)
+
+    circles = p.circle('x', 'y', color='col', legend='sample',
+                       fill_alpha=0.8, size=20, line_color=None,
+                       source=source)
+    hover = HoverTool(tooltips = [('sample', '@sample')], renderers = [circles])
+    p.add_tools(hover)
+    p.legend.click_policy = "hide"
+
+    if png_dir is not None:
+        p_png = figure(title = title, height = 500)
+        p_png.circle('x', 'y', color=colors, legend_group='sample',
+                       fill_alpha=0.8, size=20, line_color=None,
+                       source=source)
+        export_images(p_png, title, png_dir=png_dir)
+
+    if svg_dir is not None:
+        p_svg = figure(title = title, height = 500)
+        p_svg.circle('x', 'y', color=colors, legend_group='sample',
+                       fill_alpha=0.8, size=20, line_color=None,
+                       source=source)
+        export_images(p_svg, title, svg_dir=svg_dir)
+    return p
 
 def export_images(p, title, png_dir=None, svg_dir=None):
     if png_dir is not None:
@@ -1039,7 +1117,7 @@ def export_images(p, title, png_dir=None, svg_dir=None):
             export_png(p, filename=png_f)
         except Exception as e:
             logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Problem exporting figure %s. Reason: %s"
-                                                                   % (title, str(e)))
+                                                              % (title, str(e)))
     if svg_dir is not None:
         try:
             svg_f = os.path.join(svg_dir, title + ".svg")
@@ -1047,10 +1125,10 @@ def export_images(p, title, png_dir=None, svg_dir=None):
             export_svgs(p, filename=svg_f)
         except Exception as e:
             logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Problem exporting figure %s. Reason: %s"
-                                                                   % (title, str(e)))
+                                                              % (title, str(e)))
 
 
-def get_key_title(title, key, scale = False):
+def get_key_title(title, key, scale=False):
     return key + "-" + title
 
 

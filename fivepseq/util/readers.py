@@ -266,7 +266,7 @@ class AnnotationReader(TopReader):
 
         self.logger.debug("Transcript assembly read to memory, with %d valid transcripts" % index)
 
-        self.save_assembly_to_pickle(transcript_assembly, biotype = biotype)
+        self.save_assembly_to_pickle(transcript_assembly, biotype = biotype, break_after=break_after)
 
         return transcript_assembly
 

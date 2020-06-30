@@ -123,7 +123,7 @@ class FivepseqArguments:
                               default=False,
                               required=False)
 
-        optional.add_argument("--transcript-type",
+        optional.add_argument("-transcript-type",
                               help="choose transcript type (attribute biotype) to analyze",
                               type=str,
                               default=Annotation.default_filter,
@@ -135,7 +135,13 @@ class FivepseqArguments:
                               default=False,
                               required=False)
 
-        advanced.add_argument("--codon-mask-size",
+        optional.add_argument("-subset",
+                              help="Use a given size subset of transcripts",
+                              required=False,
+                              type=int
+                              )
+
+        advanced.add_argument('-ms',"-codon-mask-size",
                               help="a number {0, >3} specifying how many positions to mask from transcript start and end when counting codon-relative counts",
                               type=int,
                               required=False,
@@ -143,7 +149,7 @@ class FivepseqArguments:
                               choices=range(3, 50),
                               metavar="[3:50)")
 
-        advanced.add_argument("--dipeptide-pos",
+        advanced.add_argument('-dp',"-dipeptide-pos",
                               help="counts in which position {-27:6} from A site should be ordered to output top stalled dipeptides",
                               type=int,
                               required=False,
@@ -152,7 +158,7 @@ class FivepseqArguments:
                               metavar="[-27:6)"
                               )
 
-        advanced.add_argument("--tripeptide-pos",
+        advanced.add_argument('-tp', "-tripeptide-pos",
                               help="counts in which position {-24:9} from A site should be ordered to output top stalled tripeptides",
                               type=int,
                               required=False,
@@ -172,7 +178,7 @@ class FivepseqArguments:
                               type=float,
                               required=False)
 
-        advanced.add_argument('--op', '--outlier_probability',
+        advanced.add_argument('-op', '-outlier_probability',
                               help="probablity threshold for poisson distribution: points less than this value will be downsampled"
                                    "as outliers",
                               type=float,
@@ -299,6 +305,8 @@ class FivepseqArguments:
             if config.args.t is not None:
                 print("%s%s" % (pad_spaces("\tOutput file title:"), config.args.t + ".html"))
 
+            if hasattr(config.args, "subset") and config.args.subset is not None:
+                print("Number of transcripts to subset: %s" % config.args.subset)
             # optional arguments
             if hasattr(config.args, "transcript_type"):
                 print("%s%s" % (pad_spaces("\tTranscript type:"), config.args.transcript_type))
@@ -469,7 +477,10 @@ def generate_and_store_fivepseq_counts(plot=False):
 
     # set up annotation
 
-    annotation_reader = AnnotationReader(config.annot, transcript_type=config.args.transcript_type)
+    if hasattr(config.args, "subset") and config.args.subset is not None:
+        annotation_reader = AnnotationReader(config.annot, transcript_type=config.args.transcript_type, break_after=config.args.subset)
+    else:
+        annotation_reader = AnnotationReader(config.annot, transcript_type=config.args.transcript_type)
 
     # set the break for human
     annotation = annotation_reader.annotation

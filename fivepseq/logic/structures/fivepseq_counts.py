@@ -1528,6 +1528,7 @@ class CountManager:
         if os.stat(file_path).st_size == 0:
             counts = []
         else:
+            logging.getLogger("Reading in count distribution (this may last a few minutes for large libraries)")
             counts = pd.read_csv(file_path, header=None)
             counts = list(map(int, counts.iloc[:, 0]))
 

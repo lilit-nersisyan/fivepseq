@@ -15,7 +15,7 @@ from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCoun
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_line_chart, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
     bokeh_composite, bokeh_fft_plot, bokeh_tabbed_line_chart, bokeh_tabbed_triangle_plot, \
-    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot
+    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot, bokeh_pca_plot
 from fivepseq.viz.header_html import write_fivepseq_header
 
 
@@ -413,18 +413,19 @@ class VizPipeline:
         self.count_vector_list_start_dict.update({sample: self.read_count_vector_list_start(fivepseq_out)})
         self.count_vector_list_term_dict.update({sample: self.read_count_vector_list_term(fivepseq_out)})
 
-        self.loci_meta_counts_dict_ALL.update({sample: self.read_loci_meta_counts(
-            fivepseq_out, file=fivepseq_out.get_file_path(
-                FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_ALL + ".txt"))})
-        self.loci_meta_counts_dict_3UTR.update({sample: self.read_loci_meta_counts(
-            fivepseq_out, file=fivepseq_out.get_file_path(
-                FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_3UTR + ".txt"))})
-        self.loci_meta_counts_dict_5UTR.update({sample: self.read_loci_meta_counts(
-            fivepseq_out, file=fivepseq_out.get_file_path(
-                FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_5UTR + ".txt"))})
-        self.loci_meta_counts_dict_CDS.update({sample: self.read_loci_meta_counts(
-            fivepseq_out, file=fivepseq_out.get_file_path(
-                FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_CDS + ".txt"))})
+        if hasattr(self.args, "loci_file") and self.args.loci_file is not None:
+            self.loci_meta_counts_dict_ALL.update({sample: self.read_loci_meta_counts(
+                fivepseq_out, file=fivepseq_out.get_file_path(
+                    FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_ALL + ".txt"))})
+            self.loci_meta_counts_dict_3UTR.update({sample: self.read_loci_meta_counts(
+                fivepseq_out, file=fivepseq_out.get_file_path(
+                    FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_3UTR + ".txt"))})
+            self.loci_meta_counts_dict_5UTR.update({sample: self.read_loci_meta_counts(
+                fivepseq_out, file=fivepseq_out.get_file_path(
+                    FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_5UTR + ".txt"))})
+            self.loci_meta_counts_dict_CDS.update({sample: self.read_loci_meta_counts(
+                fivepseq_out, file=fivepseq_out.get_file_path(
+                    FivePSeqOut.LOCI_PAUSES_FILE_PREFIX + FivePSeqCounts.READ_LOCATIONS_CDS + ".txt"))})
 
         # TODO remove transcript filter
         if hasattr(self.args, "tf") and self.args.tf is not None:
@@ -470,24 +471,26 @@ class VizPipeline:
         self.figure_list += [self.get_line_chart(region=FivePSeqCounts.START, scale=True),
                              self.get_line_chart(region=FivePSeqCounts.TERM, scale=True)]
         self.figure_list += [self.get_frame_barplot(), None]
+        self.figure_list += [self.get_frame_barplot(scale=True), None]
         self.figure_list += [self.get_triangle_plot(), None]  # self.p_triangle_start]
         self.figure_list += [self.get_fft_plot(region=FivePSeqCounts.START),
                              self.get_fft_plot(region=FivePSeqCounts.TERM)]
         self.figure_list += [self.get_heatmap_plot(), None]
         self.figure_list += [self.get_heatmap_plot(scale=True), None]
 
-        if self.loci_meta_counts_dict_ALL is not None:
-            self.figure_list += [self.get_line_chart(plot_name="ALL_metacounts_relative_to", region="loci",
-                                                     count_dict=self.loci_meta_counts_dict_ALL, scale=True)]
-        if self.loci_meta_counts_dict_3UTR is not None:
-            self.figure_list += [self.get_line_chart(plot_name="ALL_metacounts_relative_to", region="loci",
-                                                     count_dict=self.loci_meta_counts_dict_3UTR, scale=True)]
-        if self.loci_meta_counts_dict_5UTR is not None:
-            self.figure_list += [self.get_line_chart(plot_name="5UTR_metacounts_relative_to", region="loci",
-                                                     count_dict=self.loci_meta_counts_dict_5UTR, scale=True)]
-        if self.loci_meta_counts_dict_CDS is not None:
-            self.figure_list += [self.get_line_chart(plot_name="CDS_metacounts_relative_to", region="loci",
-                                                     count_dict=self.loci_meta_counts_dict_CDS, scale=True)]
+        if hasattr(self.args, "loci_file") and self.args.loci_file is not None:
+            if self.loci_meta_counts_dict_ALL is not None:
+                self.figure_list += [self.get_line_chart(plot_name="ALL_metacounts_relative_to", region="loci",
+                                                         count_dict=self.loci_meta_counts_dict_ALL, scale=True)]
+            if self.loci_meta_counts_dict_3UTR is not None:
+                self.figure_list += [self.get_line_chart(plot_name="ALL_metacounts_relative_to", region="loci",
+                                                         count_dict=self.loci_meta_counts_dict_3UTR, scale=True)]
+            if self.loci_meta_counts_dict_5UTR is not None:
+                self.figure_list += [self.get_line_chart(plot_name="5UTR_metacounts_relative_to", region="loci",
+                                                         count_dict=self.loci_meta_counts_dict_5UTR, scale=True)]
+            if self.loci_meta_counts_dict_CDS is not None:
+                self.figure_list += [self.get_line_chart(plot_name="CDS_metacounts_relative_to", region="loci",
+                                                         count_dict=self.loci_meta_counts_dict_CDS, scale=True)]
 
         bokeh_composite(self.title + "_main",
                         self.figure_list,
@@ -732,28 +735,62 @@ class VizPipeline:
         name = "differential_heatmaps"
         self.logger.info("Comparison plots: %s" % name)
 
-        # TODO generate figure_list
         figure_list = []
-        figure_list.append(self.get_differential_heatmaps(self.amino_acid_df_dict, "amino_acid"))
-        figure_list.append(self.get_differential_heatmaps(self.codon_df_dict, "codon"))
 
-        # TODO compose bokeh report
+        if len(self.samples) > 4:
+            key_start = 0
+            for key_stop in range(4, len(self.samples)+4, 4):
+                figure_list.append(self.get_differential_heatmaps(
+                    dict(list(self.amino_acid_df_dict.items())[key_start: key_stop]),
+                    "amino_acid"))
+                key_start += 4
+        else:
+            figure_list.append(self.get_differential_heatmaps(
+                self.amino_acid_df_dict,
+                "amino_acid"))
+
+        if len(self.samples) > 4:
+            key_start = 0
+            for key_stop in range(4, len(self.samples)+4, 4):
+                figure_list.append(
+                    self.get_differential_heatmaps(
+                        dict(list(self.codon_df_dict.items())[key_start: key_stop]),
+                        "codon"))
+                key_start += 4
+        else:
+            figure_list.append(
+                self.get_differential_heatmaps(
+                    self.codon_df_dict,
+                    "codon"))
+
         bokeh_composite("%s_%s" % (self.title, name), figure_list,
                         os.path.join(self.comparison_dir, "%s_%s.html" % (self.title, name)), 1)
 
+        # PCA
+        #name = "PCA_codon-specific_ribosome_protection_patterns"
+        #self.logger.info("Comparison plots: %s" % name)
+        #figure_list = [bokeh_pca_plot(title="%s_%s" % (self.title, name),
+        #                             codon_df_dict=self.codon_df_dict,
+        #                             color_dict=self.colors_dict,
+        #                             png_dir=self.png_dir, svg_dir=self.svg_dir)]
+        #bokeh_composite("%s_%s" % (self.title, name), figure_list,
+        #                os.path.join(self.comparison_dir, "%s_%s.html" % (self.title, name)), 1)
+
+
     def get_differential_heatmaps(self, codon_df_dict, codon_type):
         def scale(df):
-            for i in range(df.shape[0]):
-                df.iloc[i, :] /= sum(df.iloc[i, :]) + 1
-            return df
+            sdf = df.copy(deep = True)
+            for i in range(sdf.shape[0]):
+                sdf.iloc[i, :] /= sum(sdf.iloc[i, :]) + 1
+            return sdf
 
         dif_df_dict = {}
 
-        for i in range(len(self.samples) - 1):
-            for j in range(1, len(self.samples)):
-                if j != i:
-                    dif_df = scale(codon_df_dict[self.samples[j]]) - scale(codon_df_dict[self.samples[i]])
-                    dif_df_dict.update({'_vs_'.join([self.samples[j], self.samples[i]]): dif_df})
+        for key_i in codon_df_dict.keys():
+            for key_j in codon_df_dict.keys():
+                if key_j != key_i:
+                    dif_df = scale(codon_df_dict[key_j]) - scale(codon_df_dict[key_i])
+                    dif_df_dict.update({'__vs__'.join([key_j, key_i]): dif_df})
 
         return self.get_heatmap_plot("%s_differential_heatmaps" % codon_type,
                                      dif_df_dict, scale=False,
@@ -1052,6 +1089,10 @@ class VizPipeline:
                                                     group_frame_stats_df_dict=gs_frame_stats_dict,
                                                     png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
+        plots.append(self.get_tabbed_frame_barplots(group_count_dict=gs_frame_count_term_dict,
+                                                    group_frame_stats_df_dict=gs_frame_stats_dict, scale=True,
+                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
         plots.append(self.get_tabbed_triangle_plot(group_count_dict=gs_frame_count_term_dict,
                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
@@ -1174,6 +1215,11 @@ class VizPipeline:
         plots.append(self.get_tabbed_frame_barplots(group_count_dict=sample_gs_frame_count_term_dict,
                                                     group_frame_stats_df_dict=sample_gs_frame_stats_dict,
                                                     color_dict=gs_colors_dict,
+                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
+
+        plots.append(self.get_tabbed_frame_barplots(group_count_dict=sample_gs_frame_count_term_dict,
+                                                    group_frame_stats_df_dict=sample_gs_frame_stats_dict,
+                                                    color_dict=gs_colors_dict, scale=True,
                                                     png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
         plots.append(self.get_tabbed_triangle_plot(group_count_dict=sample_gs_frame_count_term_dict,
@@ -1470,7 +1516,7 @@ class VizPipeline:
 
     def get_frame_barplot(self, plot_name="global_frame_preference",
                           count_dict=None, frame_stats_df_dict=None,
-                          color_dict=None, scale=True,
+                          color_dict=None, scale=False,
                           lib_size_dict=None,
                           combine_sum=False, combine_weighted=False, combine_color=None,
                           png_dir=png_dir, svg_dir=svg_dir):
@@ -1503,6 +1549,7 @@ class VizPipeline:
                                  frame_df_dict=count_dict,
                                  frame_stats_df_dict=frame_stats_df_dict,
                                  lib_size_dict=lib_size_dict,
+                                 scale=scale,
                                  color_dict=color_dict,
                                  combine_sum=combine_sum,
                                  combine_weighted=combine_weighted,
@@ -1512,7 +1559,7 @@ class VizPipeline:
 
     def get_tabbed_frame_barplots(self, group_count_dict, group_frame_stats_df_dict,
                                   plot_name="global_frame_preference",
-                                  color_dict=None, lib_size_dict_dict=None,
+                                  color_dict=None, lib_size_dict_dict=None, scale=False,
                                   combine_sum=False, combine_weighted=False, combine_color=None,
                                   png_dir=png_dir, svg_dir=svg_dir):
 
@@ -1534,7 +1581,7 @@ class VizPipeline:
         p = bokeh_tabbed_frame_barplots(title=title,
                                         group_frame_df_dict_dict=group_count_dict,
                                         group_frame_stats_df_dict_dict=group_frame_stats_df_dict,
-                                        color_dict=color_dict,
+                                        color_dict=color_dict, scale=scale,
                                         lib_size_dict_dict=lib_size_dict_dict,
                                         combine_sum=combine_sum,
                                         combine_weighted=combine_weighted,
