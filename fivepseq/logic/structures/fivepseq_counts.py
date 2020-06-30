@@ -1,3 +1,4 @@
+import collections
 import logging
 import os
 from math import floor
@@ -36,7 +37,7 @@ class FivePSeqCounts:
     COUNT_THRESHOLD = 100
     logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
-    count_distribution = None
+    count_distribution_dict = None
     outlier_lower = None
     downsample_constant = None
     outlier_probability = None
@@ -157,7 +158,7 @@ class FivePSeqCounts:
                                                             self.NUMBER_READS,
                                                             self.NUMBER_POSITIONS])
 
-        self.count_distribution = []
+        count_distribution_dict = {}
 
         for transcript_ind in range(transcript_count):
             transcript = transcript_assembly[transcript_ind]
@@ -168,7 +169,10 @@ class FivePSeqCounts:
             # NOTE the count distribution does not include values 0 to avoid skewness for outlier detection
             for c in count_vector:
                 if c > 0:
-                    self.count_distribution.append(c)
+                    if c in count_distribution_dict:
+                        count_distribution_dict[c] += 1
+                    else:
+                        count_distribution_dict[c] = 1
 
             start_codon = cds_sequence[0:3]
             stop_codon = cds_sequence[len(cds_sequence) - 3:len(cds_sequence)]
@@ -193,50 +197,52 @@ class FivePSeqCounts:
             else:
                 self.stop_codon_dict.update({stop_codon: 1})
 
+        self.count_distribution_dict = collections.OrderedDict(sorted(count_distribution_dict.items()))
         self.outlier_lower = self.get_outlier_lower()
 
         self.logger.info("The lower bound for outliers set as %f " % self.outlier_lower)
 
         self.logger.info("Done generating transcript descriptors")
 
+    def get_count_distribution_dict(self):
+        return self.count_distribution_dict
+
     def get_count_distribution(self):
-        if self.count_distribution is not None:
-            return self.count_distribution
 
-        else:
+        if self.count_distribution_dict is None:
             self.generate_transcript_descriptors()
-            return self.count_distribution
 
-    @preconditions(lambda count_distribution: isinstance(count_distribution, list))
-    def set_count_distribution(self, count_distribution):
+        count_distribution = []
+        for c, f in self.count_distribution_dict.items():
+            for i in range(f):
+                count_distribution.append(c)
+
+        return count_distribution
+
+    def set_count_distribution_dict(self, count_distribution_dict):
         """
         Sets the count distribution according to the specified count vector.
 
-        :param count_distribution: a vector of counts (should be [int] but [float] is also acceptable)
+        :param count_distribution_dict: an ordered dictionary of count frequencies
         :return:
-        :raise: ValueError if values in the count distribution not convertable to int
         """
-        if len(count_distribution) == 0:
-            self.count_distribution = []
+        if len(count_distribution_dict) == 0:
+            self.count_distribution_dict = None
         else:
-            try:
-                count_distribution = list(map(int, count_distribution))
-                self.count_distribution = count_distribution
-            except Exception as e:
-                raise ValueError("problem converting count distribution values to int: %s" % str(e))
+            self.count_distribution_dict = count_distribution_dict
 
     def get_outlier_lower(self):
         """
         Returns the lower bound for outliers detected as points lying self.downsample_by number times higher than the
         25-75% interquartile range.
 
-        :param count_distribution:
         :return:
         """
         if self.outlier_lower is not None:
             return self.outlier_lower
 
         count_distribution = self.get_count_distribution()
+
         if len(count_distribution) == 0:
             self.outlier_lower = 0
             return 0
@@ -1548,6 +1554,22 @@ class CountManager:
         return outlier_lower
 
     @staticmethod
+    @preconditions(lambda file_path: isinstance(file_path, str))
+    def read_count_dict(file_path):
+        """
+        Reads a tab-delimited file and returns a dictionary of count frequencies.
+
+        :param file_path: a file containing a dictionary of count frequencies
+        :return: float
+        """
+        count_freq_dict = {}
+        dict_mat = pd.read_csv(file_path, header = None, delimiter="\t", index_col=0)
+        for i in range(len(dict_mat)):
+            count_freq_dict[dict_mat.index[i]] = dict_mat.iloc[i,0]
+
+        return collections.OrderedDict(sorted(count_freq_dict.items()))
+
+    @staticmethod
     def filter_fivepseqCountsContainer(fivepseqcountsContainer, transcript_indices, span_size=100):
         """
         Gets a fivepseq_counts instance with non-empty count items and filters each by provided transcript indices
@@ -1675,3 +1697,5 @@ class CountManager:
                 amino_acid_df_combined += count_df
 
         return amino_acid_df_combined
+
+

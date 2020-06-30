@@ -47,13 +47,13 @@ class CountPipeline:
 
             self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_transcript_descriptors(),
                                                self.fivepseq_out.TRANSCRIPT_DESCRIPTORS_FILE)
-            self.fivepseq_out.write_vector(self.fivepseq_counts.get_count_distribution(),
+            self.fivepseq_out.write_dict(self.fivepseq_counts.get_count_distribution_dict(),
                                            self.fivepseq_out.COUNT_DISTRIBUTION_FILE)
 
         else:
-            count_distribution = CountManager.read_count_vector(self.fivepseq_out.get_file_path(
+            count_distribution = CountManager.read_count_dict(self.fivepseq_out.get_file_path(
                 self.fivepseq_out.COUNT_DISTRIBUTION_FILE))
-            self.fivepseq_counts.set_count_distribution(count_distribution)
+            self.fivepseq_counts.set_count_distribution_dict(count_distribution)
 
         count_distribution = self.fivepseq_counts.get_count_distribution()
         if len(count_distribution) == 0:
@@ -62,7 +62,7 @@ class CountPipeline:
             cancel = True
 
         if not cancel:
-            self.fivepseq_out.write_vector(self.fivepseq_counts.get_count_distribution(),
+            self.fivepseq_out.write_dict(self.fivepseq_counts.get_count_distribution_dict(),
                                            self.fivepseq_out.COUNT_DISTRIBUTION_FILE)
             self.fivepseq_out.write_vector([self.fivepseq_counts.get_outlier_lower()],
                                            self.fivepseq_out.OUTLIER_LOWER_FILE)

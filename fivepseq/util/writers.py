@@ -153,8 +153,6 @@ class FivePSeqOut:
             f.close()
             self.logger.debug("File %s saved" % f)
 
-    @preconditions(lambda my_dict: isinstance(my_dict, dict),
-                   lambda file_name: isinstance(file_name, str))
     def write_dict(self, my_dict, file_name):
         """
         Writes the given dictionary to the given file.
@@ -170,7 +168,7 @@ class FivePSeqOut:
             self.logger.info("Storing vector list to file %s..." % f)
             for key in my_dict.keys():
                 count = my_dict.get(key)
-                f.write(key + "\t")
+                f.write(str(key) + "\t")
                 f.write(str(count) + '\n')
             f.close()
             self.logger.debug("File %s saved" % f)
