@@ -33,6 +33,7 @@ class CountStats:
 
     # total stat strings
     TOTAL_NUM_READS = "NumOfReads"
+    TOTAL_NUM_READS_DOWNSAMPLED = "NumOfReadsDownsampled"
     TOTAL_NUM_POSITIONS = "NumOfMapPositions"
     TOTAL_NUM_TRANSCRIPTS = "NumOfTranscripts"
     TOTAL_NUM_MAP_TRANSCRIPTS = "NumOfMapTranscripts"
@@ -43,6 +44,7 @@ class CountStats:
     data_summary_series = None
     # total num
     total_num_reads = 0
+    total_num_reads_downsampled = 0
     total_num_positions = 0
     total_num_map_transcripts = 0
     min_num_reads_per_transcript = 0
@@ -92,12 +94,14 @@ class CountStats:
             self.logger.warning("Transcript descriptors file %s not found. Data summary file will not be generated"
                                 % transcript_descriptors_f)
         else:
-            if os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE)):
+            if os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE)) \
+                    and self.config.args.conflicts == config.ADD_FILES:
                 self.logger.info("Using existing file %s" % FivePSeqOut.DATA_SUMMARY_FILE)
                 self.data_summary_series = pd.read_csv(self.fivepseq_out.get_file_path(FivePSeqOut.DATA_SUMMARY_FILE),
                                                        sep="\t", header=None, index_col=0).iloc[:, 0]
             else:
                 self.data_summary_series = pd.Series(name=(self.TOTAL_NUM_READS,
+                                                           self.TOTAL_NUM_READS_DOWNSAMPLED,
                                                            self.TOTAL_NUM_POSITIONS,
                                                            self.TOTAL_NUM_TRANSCRIPTS,
                                                            self.TOTAL_NUM_MAP_TRANSCRIPTS,
@@ -109,6 +113,8 @@ class CountStats:
 
                 self.data_summary_series[self.TOTAL_NUM_READS] = int(sum(
                     transcript_descriptors.loc[:, FivePSeqCounts.NUMBER_READS]))
+                self.data_summary_series[self.TOTAL_NUM_READS_DOWNSAMPLED] = int(sum(
+                    transcript_descriptors.loc[:, FivePSeqCounts.NUMBER_READS_DOWNSAMPLED]))
                 self.data_summary_series[self.TOTAL_NUM_POSITIONS] = int(sum(
                     transcript_descriptors.loc[:, FivePSeqCounts.NUMBER_POSITIONS]))
                 self.data_summary_series[self.TOTAL_NUM_TRANSCRIPTS] = int(transcript_descriptors.shape[0])

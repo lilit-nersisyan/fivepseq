@@ -32,6 +32,7 @@ class FivePSeqCounts:
     TRANSCRIPT_LENGTH = "len"
     TRANSCRIPT_3NT = "3nt"
     NUMBER_READS = "NumOfReads"
+    NUMBER_READS_DOWNSAMPLED = "NumOfReadsDownsampled"
     NUMBER_POSITIONS = "NumOfMapPositions"
 
     COUNT_THRESHOLD = 100
@@ -156,6 +157,7 @@ class FivePSeqCounts:
                                                             self.TRANSCRIPT_LENGTH,
                                                             self.TRANSCRIPT_3NT,
                                                             self.NUMBER_READS,
+                                                            self.NUMBER_READS_DOWNSAMPLED,
                                                             self.NUMBER_POSITIONS])
 
         count_distribution_dict = {}
@@ -185,7 +187,7 @@ class FivePSeqCounts:
             self.transcript_descriptors.at[transcript_ind, self.TRANSCRIPT_3NT] = str(len(cds_sequence) % 3 == 0)
             self.transcript_descriptors.at[transcript_ind, self.TRANSCRIPT_LENGTH] = len(cds_sequence)
             self.transcript_descriptors.at[transcript_ind, self.NUMBER_READS] = int(np.sum(count_vector))
-            self.transcript_descriptors.loc[transcript_ind, self.NUMBER_POSITIONS] = np.count_nonzero(count_vector)
+            self.transcript_descriptors.at[transcript_ind, self.NUMBER_POSITIONS] = np.count_nonzero(count_vector)
 
             if start_codon in self.start_codon_dict.keys():
                 self.start_codon_dict[start_codon] += 1
@@ -201,6 +203,14 @@ class FivePSeqCounts:
         self.outlier_lower = self.get_outlier_lower()
 
         self.logger.info("The lower bound for outliers set as %f " % self.outlier_lower)
+
+        # also store downsampled transcript counts
+        for transcript_ind in range(transcript_count):
+            transcript = transcript_assembly[transcript_ind]
+
+            count_vector_downsampled = self.get_count_vector(transcript, span_size=0,
+                                                             region=self.FULL_LENGTH, downsample=True)
+            self.transcript_descriptors.at[transcript_ind, self.NUMBER_READS_DOWNSAMPLED] = int(np.sum(count_vector_downsampled))
 
         self.logger.info("Done generating transcript descriptors")
 

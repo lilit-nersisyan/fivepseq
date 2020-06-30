@@ -377,7 +377,7 @@ class VizPipeline:
 
         data_summary = self.read_data_summary(fivepseq_out)
         self.data_summary_dict.update({sample: data_summary})
-        self.lib_size_dict.update({sample: data_summary.iloc[0, 0]})
+        self.lib_size_dict.update({sample: data_summary.iloc[:,0][FivePSeqCounts.NUMBER_READS_DOWNSAMPLED]})
         self.meta_count_start_dict.update({sample: self.read_meta_count_start(fivepseq_out)})
         self.meta_count_term_dict.update({sample: self.read_meta_count_term(fivepseq_out)})
 
