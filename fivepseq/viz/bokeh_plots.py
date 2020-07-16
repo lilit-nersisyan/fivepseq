@@ -91,7 +91,7 @@ def bokeh_tabbed_line_chart(title, region, group_count_series_dict_dict, color_d
         else:
             lib_size_dict = None
 
-        p_group = bokeh_line_chart(title, region, count_series_dict_gs, color_dict, scale=scale,
+        p_group = bokeh_line_chart(get_key_title(title, group), region, count_series_dict_gs, color_dict, scale=scale,
                                    combine_sum=combine_sum, combine_weighted=combine_weighted,
                                    combine_color=combine_color,
                                    lib_size_dict=lib_size_dict, png_dir=png_dir, svg_dir=svg_dir)
@@ -218,21 +218,17 @@ def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, 
 
         # figures for exporting
         if p_key_png is not None:
-            # p_key_png.line(count_series.D, count_series.C, line_color=RGB(c[0], c[1], c[2]), line_width=2)
-            p_key_png.line(count_series.D, count_series.C, line_color=c, line_width=2)
+            p_key_png.line('x', 'y', line_color=c, line_width=2, source=source)
             export_images(p_key_png, key_title, png_dir=png_dir)
         if p_key_svg is not None:
-            # p_key_svg.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
-            p_key_svg.line(count_series.D, y, line_color=c, line_width=2)
+            p_key_svg.line('x', 'y', line_color=c, line_width=2, source=source)
             export_images(p_key_svg, key_title, svg_dir=svg_dir)
 
         if p_png is not None:
-            # line_png = p_png.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
-            line_png = p_png.line(count_series.D, y, line_color=c, line_width=2)
+            line_png = p_png.line('x', 'y', line_color=c, line_width=2, source=source)
             legend_items_png.append((key, [line_png]))
         if p_svg is not None:
-            # line_svg = p_svg.line(count_series.D, y, line_color=RGB(c[0], c[1], c[2]), line_width=2)
-            line_svg = p_svg.line(count_series.D, y, line_color=c, line_width=2)
+            line_svg = p_svg.line('x', 'y', line_color=c, line_width=2, source=source)
             legend_items_svg.append((key, [line_svg]))
 
     legend = Legend(items=legend_items, location=LEGEND_ALIGNMENT)
@@ -271,7 +267,7 @@ def bokeh_tabbed_fft_plot(title, align_region, group_signal_series_dict_dict, co
         else:
             lib_size_dict = None
 
-        p_group = bokeh_fft_plot(title, align_region, signal_series_dict_gs, color_dict, period_max=period_max,
+        p_group = bokeh_fft_plot(get_key_title(title, group), align_region, signal_series_dict_gs, color_dict, period_max=period_max,
                                  lib_size_dict=lib_size_dict,
                                  combine_sum=combine_sum, combine_weighted=combine_weighted,
                                  combine_color=combine_color,
@@ -503,7 +499,7 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
         else:
             lib_size_dict = None
 
-        p_group = bokeh_triangle_plot(title, frame_df_dict, color_dict,
+        p_group = bokeh_triangle_plot(get_key_title(title, group), frame_df_dict, color_dict,
                                       lib_size_dict=lib_size_dict,
                                       combine_sum=combine_sum, combine_weighted=combine_weighted,
                                       combine_color=combine_color,
@@ -515,7 +511,7 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
 
 def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
                         combine_sum=False, combine_weighted=False, combine_color=None,
-                        transcript_index_filter=None, png_dir=None, svg_dir=None):
+                        transcript_index_filter=None, png_dir=None, svg_dir=None, count_threshold = 10): #TODO set this as an option in the future
     if color_dict is None:
         return None
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Plotting triangle plots")
@@ -592,6 +588,8 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
             [a, b, c] = frame_df.iloc[point, :][['F0', 'F1', 'F2']]
             if a == b == c == 0:
                 # TODO why am I passing here (added the == 0 at the end)?
+                pass
+            if sum([a, b, c]) < count_threshold: #TODO makes this an option in the future
                 pass
             else:
                 x[counter] = triangle_transform(a, b, c)[0]
@@ -710,7 +708,7 @@ def bokeh_tabbed_heatmap_grid(title_prefix, group_amino_acid_df_dict_dict,
         else:
             lib_size_dict = None
 
-        p_group = bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=scale,
+        p_group = bokeh_heatmap_grid(get_key_title(title_prefix, group), amino_acid_df_dict, scale=scale,
                                      lib_size_dict=lib_size_dict, combine_sum=combine_sum,
                                      combine_weighted=combine_weighted,
                                      png_dir=png_dir, svg_dir=svg_dir)
@@ -848,7 +846,7 @@ def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_sta
         else:
             lib_size_dict = None
 
-        p_group = bokeh_frame_barplots(title, frame_df_dict, frame_stats_df_dict, color_dict,
+        p_group = bokeh_frame_barplots(get_key_title(title, group), frame_df_dict, frame_stats_df_dict, color_dict,
                                        lib_size_dict=lib_size_dict, scale = scale,
                                        combine_sum=combine_sum,
                                        combine_weighted=combine_weighted,
