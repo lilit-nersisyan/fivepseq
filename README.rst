@@ -118,7 +118,7 @@ Type fivepseq --help to see the list of additional arguments. For a detailed des
 
 
 Preprocessing from FASTQ files
-----------------------------------------
+====================================
 Fastq files need to be preprocessed and aligned to the reference genome before proceeding to fivepseq downstream analysis. Preprocessing proceeds with the following steps:
 
 - quality checks (with FASTQC and MULTIQC),
