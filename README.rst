@@ -113,7 +113,7 @@ Commonly, you will run fivepseq by also providing the name of the **output folde
 Additional arguments
 ---------------------
 
-Type fivepseq --help to see the list of additional arguments. For a detailed description of available arguments, see the User guide at: https://fivepseq.readthedocs.io/en/latest/.
+Type ``fivepseq --help`` to see the list of additional arguments. For a detailed description of available arguments, see the User guide at: https://fivepseq.readthedocs.io/en/latest/.
 
 
 
