@@ -141,6 +141,18 @@ The file should be tab-delimited. With the first column indicating the genes, wh
 
 Advanced arguments 
 ==================
+The gene boundaries are usually masked by 20 nt (default) when counting the distribution of 5'P counts relative to codons and codon-motifs.
+
+You may change this size by setting it in the [3:50) range.
+.. code-block:: shell
+
+    -ms MS, -codon-mask-size MS
+
+Or you may turn masking off altogether, by passing in the following option:
+
+.. code-block:: shell
+
+    --no-mask
 
 Fivepseq reduces noise by detecting 5' counts that our outliers in the background count distribution. The latter is well approximated with Poisson distribution, computed based on the count distribution mean. Counts for which the probability of falling into this distribution is less than a certain threshold (0 by default) are considered as outliers. These outliers are usually down-scaled or down-sampled to the most extreme distribution count possible. However, you may modify this by either of the two options below:
 
@@ -157,7 +169,37 @@ With this option you can omit the distribution-modeled down-sampling described a
 With this option you may change the default probability threshold of Poisson distribution. You may increase it from 0, to be more harsh in allowing high count values. 
 You can also use this option to turn off down-sampling altogether, by setting the probability threshold to -1. 
 
+.. code-block:: shell
 
+    -transcript-type
+
+By default fivepseq filters genes from the annotation file that have mRNA or protein_coding tags. You may change it to your desired type available under 'type' or 'biotype' attributes in your annotation.
+
+.. code-block:: shell
+
+    -subset
+
+Fivepseq will only perform analysis for the first genes, the number being equal to the argument passed to this option.
+
+
+.. code-block:: shell
+
+    -dipeptide-pos
+
+Pass a number in the range [-27:6) to this option to tell fivepseq counts in which position {-27:6} from A site should be ordered to output top stalled dipeptides.
+
+.. code-block:: shell
+
+    -tripeptide-pos
+
+Pass a number in the range [-27:6) to this option to tell fivepseq counts in which position {-24:9} from A site should be ordered to output top stalled tripeptides.
+
+
+.. code-block:: shell
+
+    -triangle_threshold
+
+Count threshold (0:10000) for points in the triangle plot (points with lower counts will not be plotted)
 
 
 Running fivepseq on test data
