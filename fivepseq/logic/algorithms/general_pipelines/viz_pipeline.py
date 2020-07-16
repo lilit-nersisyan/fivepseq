@@ -1687,5 +1687,8 @@ class VizPipeline:
         """
         codon_list = []
         for codon_df in codon_df_dict.values():
-            codon_list += list(codon_df.index[range(self.top)])
+            if codon_df.shape[0] >= self.top:
+                codon_list += list(codon_df.index[range(self.top)])
+            elif codon_df.shape[0] >= 0:
+                codon_list += list(codon_df.index[range(codon_df.shape[0])])
         return list(np.unique(codon_list))
