@@ -164,18 +164,18 @@ else
 
     fastqcdir=`which fastqc`
     if [ -z $fastqcdir ]; then
-	echo "Could not find program FastQC. Make sure you have it installed or loaded."
-	exit -1 
+	    echo "Could not find program FastQC. Make sure you have it installed or loaded."
+	    exit -1
     else
-	echo ""
+	    echo ""
     fi
 
 
     for f in $fastq_dir/*.gz
     do
-	echo "$f: fastqc"
-	fastqc -o $fastqc_dir $f
-	wait
+	    echo "$f: fastqc"
+	    fastqc -o $fastqc_dir $f
+	    wait
     done
     echo "FastQC finished for all fastq files in $fastq_dir. Output written to $out_dir"
 
@@ -253,29 +253,29 @@ else
     echo ""
 
     if [ ! -d $cutadapt_dir ]; then 
-	mkdir $cutadapt_dir
+	    mkdir $cutadapt_dir
     else
-	echo "WARNING: the contents of the directory $cutadapt_dir may be overwritten." 
+	    echo "WARNING: the contents of the directory $cutadapt_dir may be overwritten."
     fi
 
     echo ""
 
     for f in $fastq_dir/*.gz
     do
-	fname=${f##*/}
-	echo ""
-	echo "$f: trimming"
-	cutadapt -a AGATCGGAAGAGCAC --minimum-length 28 -e 0.2 -o 9 --nextseq-trim=20 -o $cutadapt_dir/$fname $f
-	wait
-	success=$?
-
-	if [ $success -eq 0 ]; then 
-	    echo "$f: successfully trimmed"
+	    fname=${f##*/}
 	    echo ""
-	else
-	    echo "Cutadapt finished with non-zero exit status $success for file $f"
-	    exit $success
-	fi
+	    echo "$f: trimming"
+	    cutadapt -a AGATCGGAAGAGCAC --minimum-length 28 -e 0.2 -o 9 --nextseq-trim=20 -o $cutadapt_dir/$fname $f
+	    wait
+	    success=$?
+
+        if [ $success -eq 0 ]; then
+            echo "$f: successfully trimmed"
+            echo ""
+        else
+            echo "Cutadapt finished with non-zero exit status $success for file $f"
+            exit $success
+        fi
     done
 
     echo "Successfully finished adapter trimming for all files"
@@ -300,17 +300,15 @@ else
     echo "################################" 
     echo ""
     
-    module load bioinfo-tools
+    module load bioinfo-tools umi_tools
     wait
-    module load umi_tools
-    wait
-    
+
     umidir=`which umi_tools`
     if [ -z $umidir ]; then
-	echo "Could not find program umi_tools. Make sure you have it installed or loaded."
-	exit -1
+	    echo "Could not find program umi_tools. Make sure you have it installed or loaded."
+	    exit -1
     else
-	echo ""
+	    echo ""
     fi
 
     echo ""
@@ -325,9 +323,9 @@ else
 
 
     if [ ! -d $deumi_dir ]; then 
-	mkdir $deumi_dir
+	    mkdir $deumi_dir
     else
-	echo "WARNING: the contents of the directory $deumi_dir may be overwritten." 
+	    echo "WARNING: the contents of the directory $deumi_dir may be overwritten."
     fi
 
     echo ""
@@ -335,26 +333,26 @@ else
 
     for f in $fastq_dir/*
     do
-	fname=${f##*/}
-	fname=${fname%.*}
-	echo ""
-	echo "$f: extracting UMI"
-	gunzip -c $f | umi_tools extract --bc-pattern NNNNNNNN --log $deumi_dir/$fname.umi.extract.log | gzip -c > $deumi_dir/$fname.gz
-	wait
-	success=$?
+        fname=${f##*/}
+        fname=${fname%.*}
+        echo ""
+        echo "$f: extracting UMI"
+        gunzip -c $f | umi_tools extract --bc-pattern NNNNNNNN --log $deumi_dir/$fname.umi.extract.log | gzip -c > $deumi_dir/$fname.gz
+        wait
+        success=$?
 
-	if [ $success -eq 0 ]; then 
-	    if [ ! -z $deumi_dir/$fname.gz ]; then 
-		echo "$f: successfully extracted UMI"
-		echo ""
-	    else
-		echo "UMI extraction finished with non-zero exit status $success for file $f"
-		exit 2
-	    fi		
-	else
-	    echo "UMI extraction finished with non-zero exit status $success for file $f"
-	    exit $success
-	fi
+        if [ $success -eq 0 ]; then
+            if [ ! -z $deumi_dir/$fname.gz ]; then
+                echo "$f: successfully extracted UMI"
+                echo ""
+            else
+                echo "UMI extraction finished with non-zero exit status $success for file $f"
+                exit 2
+            fi
+        else
+            echo "UMI extraction finished with non-zero exit status $success for file $f"
+            exit $success
+        fi
     done
     echo "UMI extraction finished for all fastq files in $cutadapt_dir. Output written to $deumi_dir"
     fastq_dir=$deumi_dir
@@ -384,11 +382,11 @@ else
     echo ""
 
     if [ ! -d $fastqc_dir ]; then 
-	mkdir $fastqc_dir
+	    mkdir $fastqc_dir
     else
-	echo ""
-	echo "WARNING: the contents of the directory $fastqc_dir may be overwritten." 
-	echo ""
+        echo ""
+        echo "WARNING: the contents of the directory $fastqc_dir may be overwritten."
+        echo ""
     fi
 
     module load bioinfo-tools FastQC
@@ -396,18 +394,18 @@ else
 
     fastqcdir=`which fastqc`
     if [ -z $fastqcdir ]; then
-	echo "Could not find program FastQC. Make sure you have it installed or loaded."
-	exit -1 
+	    echo "Could not find program FastQC. Make sure you have it installed or loaded."
+	    exit -1
     else
-	echo ""
+	    echo ""
     fi
 
 
     for f in $fastq_dir/*.gz
     do
-	echo "$f: fastqc"
-	fastqc -o $fastqc_dir $f
-	wait
+	    echo "$f: fastqc"
+	    fastqc -o $fastqc_dir $f
+	    wait
     done
     echo "FastQC finished for all fastq files in $fastq_dir. Output written to $out_dir"
 
@@ -426,11 +424,11 @@ else
 
 
     if [ ! -d $multiqc_dir ]; then 
-	mkdir $multiqc_dir
+	    mkdir $multiqc_dir
     else
-	echo ""
-	echo "WARNING: the contents of the directory $multiqc_dir may be overwritten." 
-	echo ""
+        echo ""
+        echo "WARNING: the contents of the directory $multiqc_dir may be overwritten."
+        echo ""
     fi
 
     module load bioinfo-tools MultiQC
@@ -438,9 +436,9 @@ else
 
     multiqcdir=`which multiqc`
     if [ -z $multiqcdir ]; then
-	echo "Could not find program MULTIQC. Make sure you have it installed or loaded."
+	    echo "Could not find program MULTIQC. Make sure you have it installed or loaded."
     else
-	echo ""
+	    echo ""
     fi
 
     multiqc -d -o $multiqc_dir $fastqc_dir
@@ -469,17 +467,17 @@ else
     echo ""
 
     if [ -f "$GENOME" ]; then 
-	echo "Genome fasta file: $GENOME"
+	    echo "Genome fasta file: $GENOME"
     else
-	echo "ERROR: Genome fasta file was not supplied or $GENOME does not exist"    
-	exit 1 
+	    echo "ERROR: Genome fasta file was not supplied or $GENOME does not exist"
+	    exit 1
     fi
     
     if [ -f "$ANNOT" ]; then 
-	echo "Genome annotation file: $ANNOT"
+	    echo "Genome annotation file: $ANNOT"
     else
-	echo "ERROR: Genome annotation file was not supplied or $ANNOT does not exist"    
-	exit 1 
+	    echo "ERROR: Genome annotation file was not supplied or $ANNOT does not exist"
+	    exit 1
     fi
 
     module load bioinfo-tools star
@@ -488,10 +486,10 @@ else
     echo "Loading STAR"
     stardir=`which star`
     if [ -z $stardir ]; then
-	echo "ERROR: Could find program star. Make sure you have it installed or loaded."
-	exit 3
+	    echo "ERROR: Could find program star. Make sure you have it installed or loaded."
+	    exit 3
     else
-	echo ""
+	    echo ""
     fi
 
     genome_ind=$out_dir/star_index
@@ -508,17 +506,17 @@ else
 
     
     if [ -d $genome_ind ]; then
-	echo "Index directory $genome_ind already exists. Deleting content."
-	rm $genome_ind/*
-	wait
+	    echo "Index directory $genome_ind already exists. Deleting content."
+	    rm $genome_ind/*
+	    wait
     else
-	echo "Creating directory $genome_ind"
-	mkdir $genome_ind
+	    echo "Creating directory $genome_ind"
+	    mkdir $genome_ind
     fi
 
     if [ ! -d $genome_ind  ]; then
-	echo "ERROR: Could not create directory $genome_ind. Exiting from star.generate.genome.sh"
-	exit 2
+	    echo "ERROR: Could not create directory $genome_ind. Exiting from star.generate.genome.sh"
+	    exit 2
     fi
 
     echo "STAR: generating genome index"
@@ -532,11 +530,11 @@ else
 
     wait
     if [ -f $genome_ind'/SAindex' ]; then
-	echo "Successfully generated STAR genome in directory: $genome_ind"
+	    echo "Successfully generated STAR genome in directory: $genome_ind"
     
     else
-	echo "ERROR: Problem generating STAR index: check the log files."
-	exit 4
+	    echo "ERROR: Problem generating STAR index: check the log files."
+	    exit 4
     fi
 fi
 
@@ -550,8 +548,8 @@ if grep -q 'm' <<<"$skip"; then
     align_dir=$out_dir/star_align
 
     if [ ! -d $align_dir ]; then
-	echo "ERROR: the skip option includes mapping, but the directory $align_dir does not exist"
-	exit 6
+	    echo "ERROR: the skip option includes mapping, but the directory $align_dir does not exist"
+	    exit 6
     fi
 
 else
@@ -563,10 +561,10 @@ else
     module load bioinfo-tools star
     stardir=`which star`
     if [ -z $stardir ]; then
-	echo "ERROR: Could not find program star. Make sure you have it installed or loaded."
-	exit 3
+	    echo "ERROR: Could not find program star. Make sure you have it installed or loaded."
+	    exit 3
     else
-	echo ""
+	    echo ""
     fi
 
     module load samtools
@@ -574,10 +572,10 @@ else
 
     samtoolsdir=`which samtools`
     if [ -z $samtoolsdir ]; then
-	echo "Could not load samtools"
-	exit 3
+	    echo "Could not load samtools"
+	    exit 3
     else
-	echo ""
+	    echo ""
     fi
 
     fastq_dir=$fastq_dir
@@ -589,22 +587,24 @@ else
     echo "  fastq: $fastq_dir"
     echo "  genome index: $genome_ind"
     echo "  output: $align_dir"
-    echo "  options: --alignEndsType Extend5pOfRead1; --outFilterMatchNminOverLread 0.9; --outFilterMultimapNmax 2; --limitBAMsortRAM 100000000000; alignIntronMax 2500"
+    echo "  options: --alignEndsType Extend5pOfRead1; --outFilterMatchNminOverLread 0.9; --outFilterMultimapNmax 3; --limitBAMsortRAM 100000000000; alignIntronMax 2500"
     echo "  comment: primary alignments are chosen separately; unmapped reads are kept in a separate file"
     echo ""
 
     if [ ! -d $align_dir ];then
-	echo "Creating output directory $align_dir"
-	mkdir $align_dir
-	wait
+	    echo "Creating output directory $align_dir"
+	    mkdir $align_dir
+	    wait
     else
-	echo "WARNING:: The output directory $align_dir already exists. It's content will be overwritten.\n"
+	    echo "WARNING:: The output directory $align_dir already exists. It's content will be overwritten.\n"
     fi
 
 
     for f in $fastq_dir/*.gz
     do
 	fname=${f##*/}
+	fname=${fname%.*}
+	fname=${fname%.*}
 	fname=${fname%.*}
 	echo ""
 	echo "$f: STAR alignment"
@@ -621,7 +621,6 @@ else
             --outReadsUnmapped Fastx \
             --limitBAMsortRAM 8000000000 
 
-
 	wait
 
 	success=$?
@@ -634,26 +633,29 @@ else
 	fi
 
 	echo "$f: STAR alignment done. Choosing primary alignments"
-	samtools view -F 0x100 -b $out_prefix'Aligned.sortedByCoord.out.bam' > $out_prefix'Aligned.primary.out.bam'
+	samtools view -F 0x100 -b $out_prefix'Aligned.sortedByCoord.out.bam' > $out_prefix'.bam'
 	wait
+	rm $out_prefix'Aligned.sortedByCoord.out.bam'
+    wait
+    echo "Removed temporary file $out_prefix'Aligned.sortedByCoord.out.bam'"
 
 	# samtools indexing
 
-	if [ ! -f $out_prefix'Aligned.primary.out.bam' ]; then
-	    echo "ERROR: Problem occured during STAR alignment for file $fname"
+	if [ ! -f $out_prefix'.bam' ]; then
+	    echo "ERROR: Problem occurred during STAR alignment for file $fname"
 	    exit 4
 	else
-	    echo "$out_prefix'Aligned.primary.out.bam': indexing"
-	    samtools index $out_prefix'Aligned.primary.out.bam'
+	    echo "$out_prefix'.bam': indexing"
+	    samtools index $out_prefix'.bam'
 	    wait
 	    
 	    success=$?
 	    if [ $success -eq 0 ]; then 
-		echo "$out_prefix'Aligned.primary.out.bam': successfully indexed"
+		    echo "$out_prefix'.bam': successfully indexed"
 		
 	    else
-		echo "Samtools indexing finished with non-zero exit status $success for file $fname"
-		exit $success
+		    echo "Samtools indexing finished with non-zero exit status $success for file $fname"
+		    exit $success
 	    fi
 
 	fi
@@ -686,9 +688,9 @@ else
 
     umidir=`which umi_tools`
     if [ -z $umidir ]; then
-	echo "Could not find program umi_tools. Make sure you have it installed or loaded."
+	    echo "Could not find program umi_tools. Make sure you have it installed or loaded."
     else
-	echo ""
+	    echo ""
     fi
 
     module load samtools
@@ -696,9 +698,9 @@ else
 
     samtoolsdir=`which samtools`
     if [ -z $samtoolsdir ]; then
-	echo "Could not find program samtools. Make sure you have it installed or loaded."
+	    echo "Could not find program samtools. Make sure you have it installed or loaded."
     else
-	echo ""
+	    echo ""
     fi
 
 
@@ -711,30 +713,69 @@ else
     echo ""
 
     if [ ! -d $dedup_dir ];then
-	echo "Creating output directory $dedup_dir"
-	mkdir $dedup_dir
-	wait
+	    echo "Creating output directory $dedup_dir"
+	    mkdir $dedup_dir
+	    wait
     else
-	echo "WARNING:: The output directory $dedup_dir already exists. It's content will be overwritten.\n"
+	    echo "WARNING:: The output directory $dedup_dir already exists. It's content will be overwritten.\n"
     fi
 
 
-    for f in $bam_dir/*primary.out.bam
+    for f in $bam_dir/*.bam
     do
-	fname=${f##*/}
-	fname=${fname%.*}
-	echo ""
-	echo "$fname: UMI deduplication"
-	umi_tools dedup -I $f -S $dedup_dir/$fname"_dedup.bam" --log $dedup_dir/$fname".umi.dedup.log"
-	wait
+	    fname=${f##*/}
+	    fname=${fname%.*}
+	    fname=${fname%.*}
+	    fname=${fname%.*}
+	    echo ""
+        echo "$fname: UMI deduplication"
+        umi_tools dedup -I $f -S $dedup_dir/$fname".bam" --log $dedup_dir/$fname".umi.dedup.log"
+        wait
 
-	echo "$dedup_dir/$fname'_dedup.bam': indexing"
-	samtools index $dedup_dir/$fname"_dedup.bam"
-	wait
-	echo "$dedup_dir/$fname'_dedup.bam': successfully indexed"
+        echo "$dedup_dir/$fname'.bam': indexing"
+        samtools index $dedup_dir/$fname".bam"
+        wait
+        echo "$dedup_dir/$fname'.bam': successfully indexed"
     done
     echo "Deduplication finished for all bam files in $bam_dir. Output written to $dedup_dir"
 fi
+
+echo "################################"
+echo "###          BEDGRAPHS       ###"
+echo "################################"
+
+module load bioinfo-tools BEDTools
+wait
+bedtoolsdir=`which bedtools`
+
+if [ -z $bedtoolsdir ]; then
+    echo "Could not load bedtools"
+else
+    echo ""
+fi
+
+bedgraph_dir=$out_dir/bedgraph
+if [ ! -d $bedgraph_dir ];then
+    echo "Creating output directory $bedgraph_dir"
+    mkdir $bedgraph_dir
+    wait
+else
+    echo "WARNING:: The output directory $bedgraph_dir already exists. It's content will be overwritten.\n"
+fi
+
+for f in $dedup_dir/*.bam
+do
+    fname=${f##*/}
+    fname=${fname%.*}
+    echo ""
+    echo "$fname: bedgraphs"
+    bedtools genomecov -bg -5 -strand + -ibam $f > $bedgraph_dir/$fname'_fwd.bedgraph'
+    wait
+    bedtools genomecov -bg -5 -strand - -ibam $f > $bedgraph_dir/$fname'_rev.bedgraph'
+    wait
+
+done
+echo "Bedgraphs generated for all bam files in $dedup_dir. Output written to $bedgraph_dir"
 
 
 echo "################################" 
@@ -807,7 +848,7 @@ do
 done 
 
 echo "Intersecting alignment files"
-for bam in $dedup_dir/*primary*.bam
+for bam in $dedup_dir/*.bam
 do
     bamname=${bam##*/}
     bamname=${bamname%.*}
@@ -815,11 +856,11 @@ do
     
     for rna_type in ${rna_types[@]}
     do
-	bam_rna=$align_rna/$bamname'_'$rna_type'.bam'
-	bedtools intersect -s -abam $bam -b $gff_dir'/'$rna_type'.gff3' -wa > $bam_rna
-	wait
-	num_reads=$(samtools view $bam_rna | wc -l)
-	echo "$bamname|$rna_type|$num_reads" >> $stats_file
+        bam_rna=$align_rna/$bamname'_'$rna_type'.bam'
+        bedtools intersect -s -abam $bam -b $gff_dir'/'$rna_type'.gff3' -wa > $bam_rna
+        wait
+        num_reads=$(samtools view $bam_rna | wc -l)
+        echo "$bamname|$rna_type|$num_reads" >> $stats_file
     done
 done
 
