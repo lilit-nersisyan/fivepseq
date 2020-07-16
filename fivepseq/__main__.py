@@ -167,6 +167,16 @@ class FivepseqArguments:
                               metavar="[-24:9)"
                               )
 
+        advanced.add_argument("-triangle_threshold",
+                              help="count threshold for points in the triangle plot (points with lower counts will not be plotted)",
+                              type=int,
+                              required=False,
+                              default=10,
+                              choices=range(0,10000),
+                              metavar="0:10000"
+                              )
+
+
         advanced.add_argument("--loci-file",
                               help="coordinates of loci relative to which mapping positions are to be plotted",
                               required=False,
@@ -258,6 +268,11 @@ class FivepseqArguments:
             print("%s" % (pad_spaces(
                 "\tDipeptides will be sorted at position %d from the A site:" % config.args.dipeptide_pos)))
 
+            if hasattr(config.args, "triangle_threshold") and config.args.triangle_threshold is not None:
+                print("%s" % (pad_spaces(
+                    "\tGenes with more than %s counts will be included in the triangle plot:" %
+                    config.args.triangle_threshold)))
+
 
         elif config.args.command == 'plot':
             config.args.count_folders = []
@@ -322,6 +337,11 @@ class FivepseqArguments:
 
             if hasattr(config.args, "dipeptide_pos"):
                 print("%s%s" % (pad_spaces("\tSort dipeptides from A site at:"), config.args.dipeptide_pos))
+
+            if hasattr(config.args, "triangle_threshold") and config.args.triangle_threshold is not None:
+                print("%s" % (pad_spaces(
+                    "\tGenes with more than %s counts will be included in the triangle plot:" %
+                    config.args.triangle_threshold)))
 
             if config.args.loci_file is not None:
                 print("%s%s" % (pad_spaces("\tLoci file:"), config.args.loci_file))

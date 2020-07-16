@@ -482,7 +482,7 @@ def bokeh_transcript_line_chart(title, transcript_count_list_dict, transcript_as
 def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
                                lib_size_dict_dict=None,
                                combine_sum=False, combine_weighted=False, combine_color=None,
-                               png_dir=None, svg_dir=None):
+                               png_dir=None, svg_dir=None, count_threshold = 10):
     if group_frame_df_dict_dict is None:
         return None
 
@@ -503,7 +503,8 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
                                       lib_size_dict=lib_size_dict,
                                       combine_sum=combine_sum, combine_weighted=combine_weighted,
                                       combine_color=combine_color,
-                                      png_dir=png_dir, svg_dir=svg_dir)
+                                      png_dir=png_dir, svg_dir=svg_dir,
+                                      count_threshold=count_threshold)
         tab_list.append(Panel(child=p_group, title=group))
     tabs = Tabs(tabs=tab_list)
     return tabs
@@ -511,7 +512,7 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
 
 def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
                         combine_sum=False, combine_weighted=False, combine_color=None,
-                        transcript_index_filter=None, png_dir=None, svg_dir=None, count_threshold = 10): #TODO set this as an option in the future
+                        transcript_index_filter=None, png_dir=None, svg_dir=None, count_threshold = 10):
     if color_dict is None:
         return None
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Plotting triangle plots")

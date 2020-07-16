@@ -82,6 +82,7 @@ class VizPipeline:
     tricodon_df_dict = {}
     tripeptide_df_dict = {}
 
+    triangle_threshold = None
     top = 20  # choose this many top multicodons/peptides from each sample to plot
 
     frame_count_term_dict = {}
@@ -176,6 +177,13 @@ class VizPipeline:
             self.initialize_data()
         except Exception as e:
             err_msg = "Exception while reading data: %s" % str(e)
+            self.logger.error(err_msg)
+            raise e
+
+        try:
+            self.process_args()
+        except Exception as e:
+            err_msg = "Exception while processing arguments: %s" % str(e)
             self.logger.error(err_msg)
             raise e
 
@@ -371,6 +379,10 @@ class VizPipeline:
             except Exception as e:
                 err_msg = "Could not combine data counts: %s. Combined plots will not be generated" % str(e)
                 self.logger.warn(err_msg)
+
+    def process_args(self):
+        if hasattr(self.args, "triangle_threshold") and self.args.triangle_threshold is not None:
+            self.triangle_threshold = self.args.triangle_threshold
 
     def update_dicts(self, sample, directory):
         self.logger.info("reading counts for sample: %s" % sample)
@@ -1417,7 +1429,8 @@ class VizPipeline:
                                 combine_sum=combine_sum,
                                 combine_weighted=combine_weighted,
                                 combine_color=combine_color,
-                                png_dir=png_dir, svg_dir=svg_dir)
+                                png_dir=png_dir, svg_dir=svg_dir,
+                                count_threshold=self.triangle_threshold)
         return p
 
     def get_tabbed_triangle_plot(self, group_count_dict,
@@ -1448,7 +1461,8 @@ class VizPipeline:
                                        combine_sum=combine_sum,
                                        combine_weighted=combine_weighted,
                                        combine_color=combine_color,
-                                       png_dir=png_dir, svg_dir=svg_dir)
+                                       png_dir=png_dir, svg_dir=svg_dir,
+                                       count_threshold=self.triangle_threshold)
         return p
 
     def get_heatmap_plot(self, plot_name="amino_acid_relative_counts",
