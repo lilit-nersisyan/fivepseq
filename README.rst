@@ -82,7 +82,7 @@ The ``fivepseq --help`` command will show fivepseq usage and will list all the a
  usage: fivepseq -b B -g G -a A [optional arguments]
 
 Required arguments
-==================
+---------------------
 
 .. code-block:: shell
 
@@ -111,7 +111,7 @@ Commonly, you will run fivepseq by also providing the name of the **output folde
 *Note: this is a single commandline, the backslashes are used to move to a new line for cozy representation: either copy-paste like this or use a single line without the backslashes.*
 
 Additional arguments
-==================
+---------------------
 
 Type fivepseq --help to see the list of additional arguments. For a detailed description of available arguments, see the User guide at: https://fivepseq.readthedocs.io/en/latest/.
 
