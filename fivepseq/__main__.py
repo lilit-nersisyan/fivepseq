@@ -149,7 +149,7 @@ class FivepseqArguments:
                               choices=range(3, 50),
                               metavar="[3:50)")
 
-        advanced.add_argument('-dp',"-dipeptide-pos",
+        advanced.add_argument("-dipeptide-pos",
                               help="counts in which position {-27:6} from A site should be ordered to output top stalled dipeptides",
                               type=int,
                               required=False,
@@ -158,7 +158,7 @@ class FivepseqArguments:
                               metavar="[-27:6)"
                               )
 
-        advanced.add_argument('-tp', "-tripeptide-pos",
+        advanced.add_argument("-tripeptide-pos",
                               help="counts in which position {-24:9} from A site should be ordered to output top stalled tripeptides",
                               type=int,
                               required=False,
