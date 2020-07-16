@@ -60,9 +60,17 @@
 │   ├── supplement
 │       ├── png
 │       ├── svg
-│       ├── yeast_eIF5A_amino_acid_scatterplots.html
+│       ├── yeast_eIF5A_amino_acid_linecharts.html
 │       ├── yeast_eIF5A_codon_heatmaps.html
-│       ├── yeast_eIF5A_codon_scatterplots.html
+│       ├── yeast_eIF5A_codon_linecharts.html
+│       ├── yeast_eIF5A_dicodon_linecharts.html
+│       ├── yeast_eIF5A_dipeptide_linecharts.html
+│       ├── yeast_eIF5A_tricodon_linecharts.html
+│       ├── yeast_eIF5A_tripeptide_linecharts.html
+│   ├── comparison
+│       ├── png
+│       ├── svg
+│       ├── yeast_eIF5A_differential_heatmaps.html
 │   ├── genesets
 │       ├── png
 │       ├── svg
@@ -73,7 +81,7 @@
 ├── count_summary.txt
 </pre></div>
 </div>
-<p>You may directly download the report files <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/yeast_eIF5A_fivepseq_reports/">from here</a>.</p>
+<p>You may directly download the report files <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b5/yeast_eIF5A_fivepseq_reports/">from here</a>.</p>
 </div>
 <div class="section" id="entry-point-fivepseq-plots-runname-html">
 <h2>Entry point: fivepseq_plots/RUNNAME.html<a class="headerlink" href="#entry-point-fivepseq-plots-runname-html" title="Permalink to this headline">¶</a></h2>
@@ -134,7 +142,7 @@ Usually you may want to focus your attention on peaks relative to start/stop pos
 </div>
 <div class="section" id="global-frame-preference">
 <h3>Global frame preference<a class="headerlink" href="#global-frame-preference" title="Permalink to this headline">¶</a></h3>
-<p>For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts. At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log<sub>2</sub>(2F<sub>i</sub>/(F<sub>total</sub>- F<sub>i</sub>)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each pair of frames with a t test, and for each frame, the maximum p-value between two possible comparisons is displayed.</p>
+<p>For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts (or the percentage in the plots below). At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log<sub>2</sub>(2F<sub>i</sub>/(F<sub>total</sub>- F<sub>i</sub>)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each pair of frames with a t test, and for each frame, the maximum p-value between two possible comparisons is displayed.</p>
 <img alt="_images/global_frame_preference.png" src="_images/global_frame_preference.png" />
 </div>
 <div class="section" id="gene-frame-preference">
@@ -145,6 +153,7 @@ Usually you may want to focus your attention on peaks relative to start/stop pos
 <p>y = (sqrt(3) / 2) * (f<sub>0</sub>/ (f<sub>0</sub>+ f<sub>1</sub>+ f<sub>2</sub>))</p>
 </div></blockquote>
 <p>Using these transformations, each gene is represented as a point within a triangle, where it is placed near its frame of preference. If all the frames are equally preferred the point will be closer to the center, while if either of the frames is preferred, it will lean towards its tip.</p>
+<p>Note that only the genes having counts greater than 10 are displayed by default. This threshold may be changed at input.</p>
 <img alt="_images/gene_frame_preference.png" src="_images/gene_frame_preference.png" />
 </div>
 <div class="section" id="fourier-transform-start-and-stop">
@@ -155,7 +164,7 @@ Most of the times the patterns will not differ much whether the transcripts are 
 </div>
 <div class="section" id="amino-acid-relative-count-heatmaps">
 <h3>Amino acid relative count heatmaps<a class="headerlink" href="#amino-acid-relative-count-heatmaps" title="Permalink to this headline">¶</a></h3>
-<p>The amino acid heatmaps highlight the cumulative metacounts relative to the distance from each amino acid (or termination codons). These are computed by summing up the counts at certain distance from a certain amino acid across all the transcripts. In these heatmaps, the columns correspond to the relative distance from each amino acid, while the rows represent each amino acid. The values in the heatmaps are either the raw cumulative counts (top charts) or those scaled in each row (bottom charts). The values are then colored on the blue-to-yellow scale, with yellow corresponding to higher values.</p>
+<p>The amino acid heatmaps highlight the cumulative counts in the gene body (discarding the start and termination regions) relative to the distance from each codon representing an amino acid or termination. These are computed by summing up the counts at certain distance from a certain amino acid across all the transcripts. In these heatmaps, the columns correspond to the relative distance from each amino acid, while the rows represent each amino acid. The values in the heatmaps are either the raw cumulative counts (top charts) or those scaled in each row (bottom charts). The values are then colored on the blue-to-yellow scale, with yellow corresponding to higher values.</p>
 <img alt="_images/amino_acid_heatmaps.png" src="_images/amino_acid_heatmaps.png" />
 </div>
 </div>
@@ -166,16 +175,33 @@ Most of the times the patterns will not differ much whether the transcripts are 
 </div>
 <div class="section" id="supplement-fivepseq-plots-supplement-runname-amino-acid-linecharts-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_amino_acid_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-amino-acid-linecharts-html" title="Permalink to this headline">¶</a></h2>
-<p>This report contains linecharts for metacounts relative to each amino acid for individual samples (left) or the samples combined (right). Samples are combined by accounting for their library size. The read counts are normalized to reads per million (RPM). In essence, these are the same data seen in amino acid heatmaps in the main report, in a different format.</p>
+<p>This report contains linecharts for cumulative counts in the gene body (discarding the start and termination regions) relative to the distance from each codon representing an amino acid or termination for individual samples (left) or the samples combined (right). Samples are combined by accounting for their library size. The read counts are normalized to reads per million (RPM). In essence, these are the same data seen in amino acid heatmaps in the main report, in a different format.</p>
 <img alt="_images/PRO_linecharts.png" src="_images/PRO_linecharts.png" />
 </div>
 <div class="section" id="supplement-fivepseq-plots-supplement-runname-codon-linecharts-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_codon_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-codon-linecharts-html" title="Permalink to this headline">¶</a></h2>
-<p>This report contains the same charts as the one for amino acids, but for each codon separately. Note: as there are 64*2 charts in this report, loading the file in your browser will take most of the time.</p>
+<p>This report contains the same charts as the one for amino acids, but for each codon separately. Note: as there are 64 charts in this report, loading the file in your browser may take long.</p>
 </div>
 <div class="section" id="supplement-fivepseq-plots-supplement-runname-codon-heatmaps-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_codon_heatmaps.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-codon-heatmaps-html" title="Permalink to this headline">¶</a></h2>
-<p>The heatmaps in this report are the same as amino acid heatmaps in the main report, but are expanded for each codon individually and also expanded to the distance from -50 to +5. The top charts contain raw counts, the second line is scaled for each row. The third and the forth lines contain raw and scaled heatmaps too, but there the rows are sorted alphabetically, based on codons.</p>
+<p>The heatmaps in this report are the same as amino acid heatmaps in the main report, but are expanded for each codon individually and also expanded to the distance from -30 to +6. The top charts contain raw counts, the second line is scaled for each row. The third and the forth lines contain raw and scaled heatmaps too, but there the rows are sorted alphabetically, based on codons.</p>
+<p>Then follow heatmaps for counts relative to dicodons, dipeptides, tricodons and tripeptides. For each, first the raw counts are shown, then those scaled by row. Note that each sample may differ by the codon motifs presented and their order, because only top 50 motifs sorted by relative counts in position (-14 nt) and (-11 nt) are included, unless these positions are modified at input.</p>
+</div>
+<div class="section" id="supplement-fivepseq-plots-supplement-runname-dicodon-linecharts-html">
+<h2>Supplement: fivepseq_plots/supplement/RUNNAME_dicodon_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-dicodon-linecharts-html" title="Permalink to this headline">¶</a></h2>
+<p>This report contains overlaid linecharts for top 20 dicodon motifs for each sample. Note, as top 20 motifs may not be the same for each sample, some of the linecharts may not include all of the samples and the number of linecharts will usually exceed 20.</p>
+</div>
+<div class="section" id="supplement-fivepseq-plots-supplement-runname-dipeptide-linecharts-html">
+<h2>Supplement: fivepseq_plots/supplement/RUNNAME_dipeptide_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-dipeptide-linecharts-html" title="Permalink to this headline">¶</a></h2>
+<p>The same for dipeptide motifs.</p>
+</div>
+<div class="section" id="supplement-fivepseq-plots-supplement-runname-tricodon-linecharts-html">
+<h2>Supplement: fivepseq_plots/supplement/RUNNAME_tricodon_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-tricodon-linecharts-html" title="Permalink to this headline">¶</a></h2>
+<p>The same for tricodon motifs.</p>
+</div>
+<div class="section" id="supplement-fivepseq-plots-supplement-runname-tripeptide-linecharts-html">
+<h2>Supplement: fivepseq_plots/supplement/RUNNAME_tripeptide_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-tripeptide-linecharts-html" title="Permalink to this headline">¶</a></h2>
+<p>The same for tripeptide motifs.</p>
 </div>
 <div class="section" id="genesets-fivepseq-plots-genesets-runname-genesets-per-sample-html">
 <h2>Genesets: fivepseq_plots/genesets/RUNNAME_genesets_per_sample.html<a class="headerlink" href="#genesets-fivepseq-plots-genesets-runname-genesets-per-sample-html" title="Permalink to this headline">¶</a></h2>
@@ -238,6 +264,10 @@ Most of the times the patterns will not differ much whether the transcripts are 
 <li class="toctree-l2"><a class="reference internal" href="#supplement-fivepseq-plots-supplement-runname-amino-acid-linecharts-html">Supplement: fivepseq_plots/supplement/RUNNAME_amino_acid_linecharts.html</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#supplement-fivepseq-plots-supplement-runname-codon-linecharts-html">Supplement: fivepseq_plots/supplement/RUNNAME_codon_linecharts.html</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#supplement-fivepseq-plots-supplement-runname-codon-heatmaps-html">Supplement: fivepseq_plots/supplement/RUNNAME_codon_heatmaps.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#supplement-fivepseq-plots-supplement-runname-dicodon-linecharts-html">Supplement: fivepseq_plots/supplement/RUNNAME_dicodon_linecharts.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#supplement-fivepseq-plots-supplement-runname-dipeptide-linecharts-html">Supplement: fivepseq_plots/supplement/RUNNAME_dipeptide_linecharts.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#supplement-fivepseq-plots-supplement-runname-tricodon-linecharts-html">Supplement: fivepseq_plots/supplement/RUNNAME_tricodon_linecharts.html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#supplement-fivepseq-plots-supplement-runname-tripeptide-linecharts-html">Supplement: fivepseq_plots/supplement/RUNNAME_tripeptide_linecharts.html</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#genesets-fivepseq-plots-genesets-runname-genesets-per-sample-html">Genesets: fivepseq_plots/genesets/RUNNAME_genesets_per_sample.html</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#genesets-fivepseq-plots-genesets-runname-samples-per-geneset-html">Genesets: fivepseq_plots/genesets/RUNNAME_samples_per_geneset.html</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#text-output">Text output</a></li>

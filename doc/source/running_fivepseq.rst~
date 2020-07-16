@@ -215,7 +215,7 @@ Count threshold (0:10000) for points in the triangle plot (points with lower cou
 
 Running fivepseq on test data
 -----------------------------
-To run fivepseq on test alignment files, download the dataset `from here <http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b5/yeat_eIF5A/>`_. 
+To run fivepseq on test alignment files, download the dataset `from here <http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/yeat_eIF5A/>`_. 
 
 The test data folder also contains source files for running fivepseq. There is a script for a quick test (**src/fivepseq_quick.sh** in the test_data folder), where only a small subset of transcripts is chosen. This test does not produce reasonable plots, but if it runs successfully you will know that everything is set up properly. Navigate to the test dataset directory (yeast_eIF5A) and run the **./src/fivepseq_quick.sh** script, or copy paste this code to the command line:
     

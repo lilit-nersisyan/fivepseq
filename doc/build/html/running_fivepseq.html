@@ -148,6 +148,25 @@ YFL039C   DNA repair
 </div>
 <div class="section" id="advanced-arguments">
 <h3>Advanced arguments<a class="headerlink" href="#advanced-arguments" title="Permalink to this headline">¶</a></h3>
+<p><strong>Options for codon-specific counts</strong></p>
+<p>The gene boundaries are usually masked by 20 nt (default) when counting the distribution of 5’P counts relative to codons and codon-motifs. You may change the mask size by setting it in the [3:50) range.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-ms <span class="o">[</span>mask size<span class="o">]</span>,  -codon-mask-size <span class="o">[</span>mask size<span class="o">]</span>
+</pre></div>
+</div>
+<p>Or you may turn masking off altogether, by passing in the following option:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>--no-mask
+</pre></div>
+</div>
+<p>After analyzing di/tri-codon/peptide specific counts <em>fivepseq</em> chooses top 50 motifs that have highest pausing at the position which corresponds to ribosome protected fragments when the last codon of the motif is in the A site, which is -14nt for di-peptides(codons) and -11nt for tri-peptides(codons). You may change these positions with the following options:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-dipeptide-pos
+</pre></div>
+</div>
+<p>Pass a number in the range [-27:6) to this option to tell fivepseq counts in which position {-27:6} from A site should be ordered to output top stalled dipeptides.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-tripeptide-pos
+</pre></div>
+</div>
+<p>Pass a number in the range [-24:9) to this option to tell fivepseq counts in which position {-24:9} from A site should be ordered to output top stalled tripeptides.</p>
+<p><strong>Noise removal</strong></p>
 <p>Fivepseq reduces noise by detecting 5’ counts that our outliers in the background count distribution. The latter is well approximated with Poisson distribution, computed based on the count distribution mean. Counts for which the probability of falling into this distribution is less than a certain threshold (0 by default) are considered as outliers. These outliers are usually down-scaled or down-sampled to the most extreme distribution count possible. However, you may modify this by either of the two options below:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>--ds DS, --downsample DS
 </pre></div>
@@ -158,11 +177,26 @@ YFL039C   DNA repair
 </div>
 <p>With this option you may change the default probability threshold of Poisson distribution. You may increase it from 0, to be more harsh in allowing high count values.
 You can also use this option to turn off down-sampling altogether, by setting the probability threshold to -1.</p>
+<p><strong>Transcript features</strong></p>
+<p>By default fivepseq filters genes from the annotation file that have mRNA or protein_coding tags. You may change it to your desired type available under ‘type’ or ‘biotype’ attributes in your annotation.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-transcript-type
+</pre></div>
+</div>
+<p><strong>Subset</strong></p>
+<p>Fivepseq will only perform analysis for the first genes, the number being equal to the argument passed to this option.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-subset
+</pre></div>
+</div>
+<p><strong>Plotting options</strong></p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>-triangle_threshold
+</pre></div>
+</div>
+<p>Count threshold (0:10000) for points in the triangle plot (points with lower counts will not be plotted)</p>
 </div>
 </div>
 <div class="section" id="running-fivepseq-on-test-data">
 <h2>Running fivepseq on test data<a class="headerlink" href="#running-fivepseq-on-test-data" title="Permalink to this headline">¶</a></h2>
-<p>To run fivepseq on test alignment files, download the dataset <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/yeat_eIF5A/">from here</a>.</p>
+<p>To run fivepseq on test alignment files, download the dataset <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b5/yeat_eIF5A/">from here</a>.</p>
 <p>The test data folder also contains source files for running fivepseq. There is a script for a quick test (<strong>src/fivepseq_quick.sh</strong> in the test_data folder), where only a small subset of transcripts is chosen. This test does not produce reasonable plots, but if it runs successfully you will know that everything is set up properly. Navigate to the test dataset directory (yeast_eIF5A) and run the <strong>./src/fivepseq_quick.sh</strong> script, or copy paste this code to the command line:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>fivepseq <span class="se">\</span>
    -g genome/* <span class="se">\</span>
@@ -194,9 +228,15 @@ You can also use this option to turn off down-sampling altogether, by setting th
 │   ├── supplement
 │       ├── png
 │       ├── svg
-│       ├── yeast_quick_test_amino_acid_scatterplots.html
+│       ├── yeast_quick_test_amino_acid_linecharts.html
 │       ├── yeast_quick_test_codon_heatmaps.html
-│       ├── yeast_quick_test_codon_scatterplots.html
+│       ├── yeast_quick_test_codon_linecharts.html
+│       ├── yeast_quick_test_dicodon_linecharts.html
+│       ├── yeast_quick_test_dipeptide_linecharts.html
+│       ├── yeast_quick_test_tricodon_linecharts.html
+│       ├── yeast_quick_test_tripeptide_linecharts.html
+│   ├── comparison
+│       ├── yeast_quick_test_differential_heatmaps.html
 │   ├── yeast_quick_test.html   <span class="c1"># &lt;&lt;-- this is the main entry point for all the reports</span>
 ├── log
 │   ├── fivepseq.log

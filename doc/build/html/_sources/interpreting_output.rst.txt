@@ -37,9 +37,17 @@ This will produce a filetree that looks like this:
     │   ├── supplement
     │       ├── png
     │       ├── svg
-    │       ├── yeast_eIF5A_amino_acid_scatterplots.html
+    │       ├── yeast_eIF5A_amino_acid_linecharts.html
     │       ├── yeast_eIF5A_codon_heatmaps.html
-    │       ├── yeast_eIF5A_codon_scatterplots.html
+    │       ├── yeast_eIF5A_codon_linecharts.html
+    │       ├── yeast_eIF5A_dicodon_linecharts.html
+    │       ├── yeast_eIF5A_dipeptide_linecharts.html
+    │       ├── yeast_eIF5A_tricodon_linecharts.html
+    │       ├── yeast_eIF5A_tripeptide_linecharts.html
+    │   ├── comparison
+    │       ├── png
+    │       ├── svg
+    │       ├── yeast_eIF5A_differential_heatmaps.html
     │   ├── genesets
     │       ├── png
     │       ├── svg
@@ -49,7 +57,7 @@ This will produce a filetree that looks like this:
     ├── log
     ├── count_summary.txt
 
-You may directly download the report files `from here <http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/yeast_eIF5A_fivepseq_reports/>`_.  
+You may directly download the report files `from here <http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b5/yeast_eIF5A_fivepseq_reports/>`_.  
 
 ============================================
 Entry point: fivepseq_plots/RUNNAME.html
@@ -139,7 +147,7 @@ Usually you may want to focus your attention on peaks relative to start/stop pos
 Global frame preference
 _________________________________
 
-For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts. At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each pair of frames with a t test, and for each frame, the maximum p-value between two possible comparisons is displayed.
+For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts (or the percentage in the plots below). At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each pair of frames with a t test, and for each frame, the maximum p-value between two possible comparisons is displayed.
 
 .. image:: _static/global_frame_preference.png 
 
@@ -154,6 +162,8 @@ The read 5’ endpoints in each frame can be counted for each gene transcript se
 
 Using these transformations, each gene is represented as a point within a triangle, where it is placed near its frame of preference. If all the frames are equally preferred the point will be closer to the center, while if either of the frames is preferred, it will lean towards its tip. 
 
+Note that only the genes having counts greater than 10 are displayed by default. This threshold may be changed at input. 
+
 .. image:: _static/gene_frame_preference.png
 
 Fourier transform (START and STOP)
@@ -167,7 +177,7 @@ Most of the times the patterns will not differ much whether the transcripts are 
 Amino acid relative count heatmaps 
 ___________________________________
 
-The amino acid heatmaps highlight the cumulative metacounts relative to the distance from each amino acid (or termination codons). These are computed by summing up the counts at certain distance from a certain amino acid across all the transcripts. In these heatmaps, the columns correspond to the relative distance from each amino acid, while the rows represent each amino acid. The values in the heatmaps are either the raw cumulative counts (top charts) or those scaled in each row (bottom charts). The values are then colored on the blue-to-yellow scale, with yellow corresponding to higher values. 
+The amino acid heatmaps highlight the cumulative counts in the gene body (discarding the start and termination regions) relative to the distance from each codon representing an amino acid or termination. These are computed by summing up the counts at certain distance from a certain amino acid across all the transcripts. In these heatmaps, the columns correspond to the relative distance from each amino acid, while the rows represent each amino acid. The values in the heatmaps are either the raw cumulative counts (top charts) or those scaled in each row (bottom charts). The values are then colored on the blue-to-yellow scale, with yellow corresponding to higher values.
 
 .. image:: _static/amino_acid_heatmaps.png
 
@@ -182,7 +192,7 @@ This report contains the same set of charts, as those found in main, but it merg
 Supplement: fivepseq_plots/supplement/RUNNAME_amino_acid_linecharts.html
 =========================================================================
 
-This report contains linecharts for metacounts relative to each amino acid for individual samples (left) or the samples combined (right). Samples are combined by accounting for their library size. The read counts are normalized to reads per million (RPM). In essence, these are the same data seen in amino acid heatmaps in the main report, in a different format.
+This report contains linecharts for cumulative counts in the gene body (discarding the start and termination regions) relative to the distance from each codon representing an amino acid or termination for individual samples (left) or the samples combined (right). Samples are combined by accounting for their library size. The read counts are normalized to reads per million (RPM). In essence, these are the same data seen in amino acid heatmaps in the main report, in a different format.
 
 
 .. image:: _static/PRO_linecharts.png
@@ -191,13 +201,39 @@ This report contains linecharts for metacounts relative to each amino acid for i
 Supplement: fivepseq_plots/supplement/RUNNAME_codon_linecharts.html
 ====================================================================
 
-This report contains the same charts as the one for amino acids, but for each codon separately. Note: as there are 64*2 charts in this report, loading the file in your browser will take most of the time. 
+This report contains the same charts as the one for amino acids, but for each codon separately. Note: as there are 64 charts in this report, loading the file in your browser may take long. 
 
 ====================================================================
 Supplement: fivepseq_plots/supplement/RUNNAME_codon_heatmaps.html
 ====================================================================
 
-The heatmaps in this report are the same as amino acid heatmaps in the main report, but are expanded for each codon individually and also expanded to the distance from -50 to +5. The top charts contain raw counts, the second line is scaled for each row. The third and the forth lines contain raw and scaled heatmaps too, but there the rows are sorted alphabetically, based on codons. 
+The heatmaps in this report are the same as amino acid heatmaps in the main report, but are expanded for each codon individually and also expanded to the distance from -30 to +6. The top charts contain raw counts, the second line is scaled for each row. The third and the forth lines contain raw and scaled heatmaps too, but there the rows are sorted alphabetically, based on codons.
+
+Then follow heatmaps for counts relative to dicodons, dipeptides, tricodons and tripeptides. For each, first the raw counts are shown, then those scaled by row. Note that each sample may differ by the codon motifs presented and their order, because only top 50 motifs sorted by relative counts in position (-14 nt) and (-11 nt) are included, unless these positions are modified at input. 
+
+======================================================================
+Supplement: fivepseq_plots/supplement/RUNNAME_dicodon_linecharts.html
+======================================================================
+
+This report contains overlaid linecharts for top 20 dicodon motifs for each sample. Note, as top 20 motifs may not be the same for each sample, some of the linecharts may not include all of the samples and the number of linecharts will usually exceed 20. 
+
+=======================================================================
+Supplement: fivepseq_plots/supplement/RUNNAME_dipeptide_linecharts.html
+=======================================================================
+
+The same for dipeptide motifs. 
+
+======================================================================
+Supplement: fivepseq_plots/supplement/RUNNAME_tricodon_linecharts.html
+======================================================================
+
+The same for tricodon motifs. 
+
+========================================================================
+Supplement: fivepseq_plots/supplement/RUNNAME_tripeptide_linecharts.html
+========================================================================
+
+The same for tripeptide motifs. 
 
 ====================================================================
 Genesets: fivepseq_plots/genesets/RUNNAME_genesets_per_sample.html

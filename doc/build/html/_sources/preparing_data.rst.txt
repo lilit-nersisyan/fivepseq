@@ -38,6 +38,7 @@ Fastq files need to be preprocessed and aligned to the reference genome before p
 - UMI extraction (if the library was generated with UMIs),
 - mapping to reference
 - read deduplication (if the library was generated with UMIs),
+- generation of bedgraph files to visualize 5'P counts in genome viewer
 
 An example of pre\-processing pipeline can be found in the **preprocess_scripts/fivepseq_preprocess.sh** directory in your fivepseq installation folder, and can also be downloaded from `here <https://github.com/lilit-nersisyan/fivepseq/blob/master/preprocess_scripts/fivepseq_preprocess.sh>`_. 
 
@@ -82,7 +83,7 @@ In addition to performing the steps described above, it also evaluates the distr
 Test data
 ---------
 
-You may download the preprocessing test dataset for yeast `from here <http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/preprocess/>`_ to start with the following fastq to bam preprocessing pipeline. The archive contains subsetted fastq files from Saccharomyces Cerevisiae (first 100K reads), as well as genome fasta and annotation gff files. If you use another organism, you may refer to the following section to find needed genome files. 
+You may download the preprocessing test dataset for yeast `from here <http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b5/preprocess/>`_ to start with the following fastq to bam preprocessing pipeline. The archive contains subsetted fastq files from Saccharomyces Cerevisiae (first 100K reads), as well as genome fasta and annotation gff files. If you use another organism, you may refer to the following section to find needed genome files. 
 
 The src folder in the test data contains a script named **preprocess_test.sh**, which contains the following command: 
 
@@ -106,3 +107,4 @@ Navigate to the test data directory and give it a try by running ``./src/preproc
 :align_dedup: alignment bam files after UMI-based deduplication. These are the final files you should give as input to fivepseq. 
 :filtered_gff: annotation files filtered by RNA content, used for overlapping with bam files to analyze RNA content (see below). 
 :align_rna: bam files, filtered for the {"rRNA" "mRNA" "tRNA" "snoRNA" "snRNA" "ncRNA"} classes of RNA and the **rna.stats.txt** file that summarized the read counts for each RNA class. 
+:bedgraph: two bedtraph files for 5'P endpoints mapping to fwd and rev strands for each bam file 

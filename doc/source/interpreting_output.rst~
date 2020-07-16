@@ -147,7 +147,7 @@ Usually you may want to focus your attention on peaks relative to start/stop pos
 Global frame preference
 _________________________________
 
-For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts (or the percentage in the plots below). At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each pair of frames with a t test, and for each frame, the maximum p-value between two possible comparisons is displayed.
+For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts. At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each pair of frames with a t test, and for each frame, the maximum p-value between two possible comparisons is displayed.
 
 .. image:: _static/global_frame_preference.png 
 

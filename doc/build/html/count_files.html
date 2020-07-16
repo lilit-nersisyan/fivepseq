@@ -50,6 +50,8 @@ The files you should find inside each of these folders are listed below.</p>
 │           ├── counts_START.txt
 │           ├── counts_TERM.txt
 │           ├── data_summary.txt
+│           ├── dicodon_pauses.txt
+│           ├── dipeptide_pauses.txt
 │           ├── fft_signals_start.txt
 │           ├── fft_signals_term.txt
 │           ├── fft_stats.txt
@@ -70,6 +72,8 @@ The files you should find inside each of these folders are listed below.</p>
 │           ├── transcript_descriptors.txt
 │           ├── transcript_fft.txt
 │           ├── transcript_frame_prefs.txt
+│           ├── tricodon_pauses.txt
+│           ├── tripeptide_pauses.txt
 │   ├── 2_WT_R3
 │   ├── 3_eIF5A_mut_R1
 ├── fivepseq_plots
@@ -82,6 +86,7 @@ The files you should find inside each of these folders are listed below.</p>
 <p>This file contains general statistics on the number of reads in the protein coding regions (or the geneset) used by fivepseq.</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>NumOfReads:                     Number of reads in the coding regions, accounting <span class="k">for</span> transcript filters
 NumOfMapPositions:              Number of genome positions with at leads one mapping reads <span class="o">(</span>more than one reads in the same position are counted as one<span class="o">)</span>
+NumOfReadsDownsampled:          Number of reads in the coding regions after downsampling <span class="o">(</span>noise removal<span class="o">)</span>
 NumOfTranscripts:               Number of transcripts in the given annotation <span class="k">for</span> the given filter
 NumOfMapTranscripts:            Number of transcripts with at least one mapping <span class="nb">read</span>
 MinNumOfReadsPerTranscript:     Minumum number of reads per transcript
@@ -142,7 +147,7 @@ TAA     <span class="m">3138</span>
 </div>
 <div class="section" id="count-distribution">
 <h3>count_distribution<a class="headerlink" href="#count-distribution" title="Permalink to this headline">¶</a></h3>
-<p>This file simply lists the read 5’ endpoint counts per genomic position if those counts are greater than 0.</p>
+<p>This file describes the distribution of read 5’ endpoint counts (those greater than 0).</p>
 </div>
 <div class="section" id="outlier-lower">
 <h3>outlier_lower<a class="headerlink" href="#outlier-lower" title="Permalink to this headline">¶</a></h3>
@@ -188,15 +193,15 @@ There are two columns - the first one keeps the relative positions, the second o
 </div>
 <div class="section" id="meta-count-peaks-start">
 <h3>meta_count_peaks_START<a class="headerlink" href="#meta-count-peaks-start" title="Permalink to this headline">¶</a></h3>
-<p>This file provides significance p-values of the peaks observed in the meta-counts at the start. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.
-The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.
-There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.</p>
+<p>This file provides significance p-values of the peaks observed in the meta-counts at the start. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.</p>
+<p>The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.</p>
+<p>There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.</p>
 </div>
 <div class="section" id="meta-count-peaks-term">
 <h3>meta_count_peaks_TERM<a class="headerlink" href="#meta-count-peaks-term" title="Permalink to this headline">¶</a></h3>
-<p>This file provides significance p-values of the peaks observed in the meta-counts at the termination. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.
-The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.
-There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.</p>
+<p>This file provides significance p-values of the peaks observed in the meta-counts at the termination. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.</p>
+<p>The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.</p>
+<p>There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.</p>
 </div>
 <div class="section" id="frame-counts-start">
 <h3>frame_counts_START<a class="headerlink" href="#frame-counts-start" title="Permalink to this headline">¶</a></h3>
@@ -278,7 +283,23 @@ signal:     the strength of the FFT signal at that periodicity
 </div>
 <div class="section" id="codon-pauses">
 <h3>codon_pauses<a class="headerlink" href="#codon-pauses" title="Permalink to this headline">¶</a></h3>
-<p>Cumulative raw counts at certain distance (columns -30 to +5) from each codon(rows) are indicated. The distance is counted from the first nucleotide of each codon as, with the first nucleotide considered as position 0.</p>
+<p>Cumulative raw counts at certain distance (columns -30 to +5) from each codon(rows) are indicated. The distance is counted from the first nucleotide of each codon, with the first nucleotide considered as position 0.</p>
+</div>
+<div class="section" id="dicodon-pauses">
+<h3>dicodon_pauses<a class="headerlink" href="#dicodon-pauses" title="Permalink to this headline">¶</a></h3>
+<p>Cumulative raw counts at certain distance (columns -27 to +5) from the top 50 dicodons (rows) are indicated. The distance is counted from the first nucleotide of each dicodon, with the first nucleotide considered as position 0. The dicodons are sorted from highest to lowest based on counts in the -14nt distance (if not changed at input) relative to the background counts in the range.</p>
+</div>
+<div class="section" id="dipeptide-pauses">
+<h3>dipeptide_pauses<a class="headerlink" href="#dipeptide-pauses" title="Permalink to this headline">¶</a></h3>
+<p>Cumulative raw counts at certain distance (columns -27 to +5) from the top 50 dipeptides (rows) are indicated. The distance is counted from the first nucleotide of each dipeptide motif, with the first nucleotide considered as position 0. The dipeptides are sorted from highest to lowest based on counts in the -14nt distance (if not changed at input) relative to the background counts in the range.</p>
+</div>
+<div class="section" id="tricodon-pauses">
+<h3>tricodon_pauses<a class="headerlink" href="#tricodon-pauses" title="Permalink to this headline">¶</a></h3>
+<p>Cumulative raw counts at certain distance (columns -24 to +8) from the top 50 tricodons (rows) are indicated. The distance is counted from the first nucleotide of each tricodon, with the first nucleotide considered as position 0. The tricodons are sorted from highest to lowest based on counts in the -11nt distance (if not changed at input) relative to the background counts in the range.</p>
+</div>
+<div class="section" id="tripeptide-pauses">
+<h3>tripeptide_pauses<a class="headerlink" href="#tripeptide-pauses" title="Permalink to this headline">¶</a></h3>
+<p>Cumulative raw counts at certain distance (columns -24 to +8) from the top 50 tripeptides (rows) are indicated. The distance is counted from the first nucleotide of each tripeptide motif, with the first nucleotide considered as position 0. The tripeptides are sorted from highest to lowest based on counts in the -11nt distance (if not changed at input) relative to the background counts in the range.</p>
 </div>
 </div>
 </div>

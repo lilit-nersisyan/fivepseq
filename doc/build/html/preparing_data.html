@@ -62,6 +62,7 @@ For this reason, your genomic sequence and annotation files should be retrieved 
 <li>UMI extraction (if the library was generated with UMIs),</li>
 <li>mapping to reference</li>
 <li>read deduplication (if the library was generated with UMIs),</li>
+<li>generation of bedgraph files to visualize 5’P counts in genome viewer</li>
 </ul>
 <p>An example of pre-processing pipeline can be found in the <strong>preprocess_scripts/fivepseq_preprocess.sh</strong> directory in your fivepseq installation folder, and can also be downloaded from <a class="reference external" href="https://github.com/lilit-nersisyan/fivepseq/blob/master/preprocess_scripts/fivepseq_preprocess.sh">here</a>.</p>
 <p>In order to run this pipeline, you need to have access to common bioinformatics software such as <a class="reference external" href="https://github.com/alexdobin/STAR">STAR</a>, <a class="reference external" href="https://github.com/CGATOxford/UMI-tools">UMI-tools</a>, <a class="reference external" href="https://bedtools.readthedocs.io/en/latest/">bedtools</a>, <a class="reference external" href="http://www.htslib.org/">Samtools</a>, <a class="reference external" href="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/">FastQC</a>, <a class="reference external" href="https://multiqc.info/">MultiQC</a> and <a class="reference external" href="https://github.com/marcelm/cutadapt">cutadapt</a>.</p>
@@ -91,7 +92,7 @@ For this reason, your genomic sequence and annotation files should be retrieved 
 </div>
 <div class="section" id="test-data">
 <h2>Test data<a class="headerlink" href="#test-data" title="Permalink to this headline">¶</a></h2>
-<p>You may download the preprocessing test dataset for yeast <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/preprocess/">from here</a> to start with the following fastq to bam preprocessing pipeline. The archive contains subsetted fastq files from Saccharomyces Cerevisiae (first 100K reads), as well as genome fasta and annotation gff files. If you use another organism, you may refer to the following section to find needed genome files.</p>
+<p>You may download the preprocessing test dataset for yeast <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b5/preprocess/">from here</a> to start with the following fastq to bam preprocessing pipeline. The archive contains subsetted fastq files from Saccharomyces Cerevisiae (first 100K reads), as well as genome fasta and annotation gff files. If you use another organism, you may refer to the following section to find needed genome files.</p>
 <p>The src folder in the test data contains a script named <strong>preprocess_test.sh</strong>, which contains the following command:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>./src/fivepseq_preprocess.sh <span class="se">\</span>
     -f fastq <span class="se">\</span>
@@ -124,6 +125,8 @@ For this reason, your genomic sequence and annotation files should be retrieved 
 <tr class="field-odd field"><th class="field-name">filtered_gff:</th><td class="field-body">annotation files filtered by RNA content, used for overlapping with bam files to analyze RNA content (see below).</td>
 </tr>
 <tr class="field-even field"><th class="field-name">align_rna:</th><td class="field-body">bam files, filtered for the {“rRNA” “mRNA” “tRNA” “snoRNA” “snRNA” “ncRNA”} classes of RNA and the <strong>rna.stats.txt</strong> file that summarized the read counts for each RNA class.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">bedgraph:</th><td class="field-body">two bedtraph files for 5’P endpoints mapping to fwd and rev strands for each bam file</td>
 </tr>
 </tbody>
 </table>

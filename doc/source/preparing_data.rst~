@@ -83,7 +83,7 @@ In addition to performing the steps described above, it also evaluates the distr
 Test data
 ---------
 
-You may download the preprocessing test dataset for yeast `from here <http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b5/preprocess/>`_ to start with the following fastq to bam preprocessing pipeline. The archive contains subsetted fastq files from Saccharomyces Cerevisiae (first 100K reads), as well as genome fasta and annotation gff files. If you use another organism, you may refer to the following section to find needed genome files. 
+You may download the preprocessing test dataset for yeast `from here <http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/preprocess/>`_ to start with the following fastq to bam preprocessing pipeline. The archive contains subsetted fastq files from Saccharomyces Cerevisiae (first 100K reads), as well as genome fasta and annotation gff files. If you use another organism, you may refer to the following section to find needed genome files. 
 
 The src folder in the test data contains a script named **preprocess_test.sh**, which contains the following command: 
 

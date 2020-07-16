@@ -63,7 +63,6 @@ This file contains general statistics on the number of reads in the protein codi
 
  NumOfReads:                     Number of reads in the coding regions, accounting for transcript filters
  NumOfMapPositions:              Number of genome positions with at leads one mapping reads (more than one reads in the same position are counted as one)
- NumOfReadsDownsampled:          Number of reads in the coding regions after downsampling (noise removal)
  NumOfTranscripts:               Number of transcripts in the given annotation for the given filter
  NumOfMapTranscripts:            Number of transcripts with at least one mapping read
  MinNumOfReadsPerTranscript:     Minumum number of reads per transcript
@@ -305,25 +304,5 @@ Cumulative raw counts at certain distance (columns -50 to -1) from each amino ac
 codon_pauses
 _____________________________
 
-Cumulative raw counts at certain distance (columns -30 to +5) from each codon(rows) are indicated. The distance is counted from the first nucleotide of each codon, with the first nucleotide considered as position 0.
-
-dicodon_pauses
-_____________________________
-
-Cumulative raw counts at certain distance (columns -27 to +5) from the top 50 dicodons (rows) are indicated. The distance is counted from the first nucleotide of each dicodon, with the first nucleotide considered as position 0. The dicodons are sorted from highest to lowest based on counts in the -14nt distance (if not changed at input) relative to the background counts in the range.
-
-dipeptide_pauses
-_____________________________
-
-Cumulative raw counts at certain distance (columns -27 to +5) from the top 50 dipeptides (rows) are indicated. The distance is counted from the first nucleotide of each dipeptide motif, with the first nucleotide considered as position 0. The dipeptides are sorted from highest to lowest based on counts in the -14nt distance (if not changed at input) relative to the background counts in the range.
-
-tricodon_pauses
-_____________________________
-
-Cumulative raw counts at certain distance (columns -24 to +8) from the top 50 tricodons (rows) are indicated. The distance is counted from the first nucleotide of each tricodon, with the first nucleotide considered as position 0. The tricodons are sorted from highest to lowest based on counts in the -11nt distance (if not changed at input) relative to the background counts in the range.
-
-tripeptide_pauses
-_____________________________
-
-Cumulative raw counts at certain distance (columns -24 to +8) from the top 50 tripeptides (rows) are indicated. The distance is counted from the first nucleotide of each tripeptide motif, with the first nucleotide considered as position 0. The tripeptides are sorted from highest to lowest based on counts in the -11nt distance (if not changed at input) relative to the background counts in the range.
+Cumulative raw counts at certain distance (columns -30 to +5) from each codon(rows) are indicated. The distance is counted from the first nucleotide of each codon as, with the first nucleotide considered as position 0.
 
