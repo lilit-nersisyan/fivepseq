@@ -193,12 +193,13 @@ class VizPipeline:
             self.logger.error(err_msg)
             raise e
 
-        try:
-            self.plot_comparison()
-        except Exception as e:
-            err_msg = "Exception while writing comparisons: %s" % str(e)
-            self.logger.error(err_msg)
-            raise e
+        if len(self.samples) > 1:
+            try:
+                self.plot_comparison()
+            except Exception as e:
+                err_msg = "Exception while writing comparisons: %s" % str(e)
+                self.logger.error(err_msg)
+                raise e
 
         try:
             if self.gs_transcriptInd_dict is not None:
