@@ -23,8 +23,8 @@ class CountStats:
     FRAME_COUNT = "f_count"
     FRAME_PERC = "f_perc"
     FPI = "fpi"
-    PVAL_PAIR = "p_val_pair"
-    PVAL_PAIR_MAX = "p_val_pair_max"
+    PVAL_PAIR = "p_adj_pair"
+    PVAL_PAIR_MAX = "p_adj_pair_max"
     PVAL_FPI = "p_val_fpi"
 
     FFT_PERIOD = "period"
@@ -229,7 +229,7 @@ class CountStats:
             self.logger.info("Skipping frame stats calculation: file %s exists" % FivePSeqOut.META_COUNT_START_PEAKS_FILE)
         else:
             meta_count_series = self.fivepseq_counts.get_meta_count_series(FivePSeqCounts.START).copy(deep = True)
-            self.meta_count_peaks_start_df = self.poisson_df_from_meta_count_series(meta_count_series)
+            self.meta_count_peaks_start_df = CountStats.poisson_df_from_count_series(meta_count_series)
             self.fivepseq_out.write_df_to_file(self.meta_count_peaks_start_df, FivePSeqOut.META_COUNT_START_PEAKS_FILE)
 
         if config.args.conflicts == config.ADD_FILES and os.path.exists(
@@ -237,11 +237,12 @@ class CountStats:
             self.logger.info("Skipping frame stats calculation: file %s exists" % FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)
         else:
             meta_count_series = self.fivepseq_counts.get_meta_count_series(FivePSeqCounts.TERM).copy(deep = True)
-            self.meta_count_peaks_term_df = self.poisson_df_from_meta_count_series(meta_count_series)
+            self.meta_count_peaks_term_df = self.poisson_df_from_count_series(meta_count_series)
             self.fivepseq_out.write_df_to_file(self.meta_count_peaks_term_df, FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)
 
 
-    def poisson_df_from_meta_count_series(self, meta_count_series):
+    @staticmethod
+    def poisson_df_from_count_series(meta_count_series):
         """
         Given meta count series as input, compute the mean as the lambda parameter of Poisson distribution,
         and compute the probability of each count falling into the distribution. Concatenate the the column with
@@ -304,7 +305,7 @@ class CountStats:
 
             frame_names = [self.F0, self.F1, self.F2]
             frame_stats_df = pd.DataFrame(index=[self.FRAME_COUNT, self.FRAME_PERC, self.FPI,
-                                                 self.PVAL_PAIR, self.PVAL_FPI,
+                                                 self.PVAL_PAIR,
                                                  self.PVAL_PAIR_MAX],
                                           columns=frame_names)
 
@@ -325,15 +326,21 @@ class CountStats:
                             float(sum(frame_counts_df.iloc[:, i])) /
                             ((total_counts - sum(frame_counts_df.iloc[:, i])) / 2.))
 
-                    frame_stats_df.loc[self.PVAL_PAIR, frame_names[i]] = stats.ttest_ind \
-                        (frame_counts_df.iloc[:, i],
-                         frame_counts_df.iloc[:, (i + 1) % 3]
-                         ).pvalue
+                    fi = frame_counts_df.iloc[:, i]
+                    fi_1 = frame_counts_df.iloc[:, (i + 1) % 3]
 
-                    frame_stats_df.loc[self.PVAL_FPI, frame_names[i]] = stats.ttest_ind \
-                        (frame_counts_df.iloc[:, i],
-                         list(frame_counts_df.iloc[:, (i + 1) % 3]) + list(frame_counts_df.iloc[:, (i + 2) % 3])
-                         ).pvalue
+                    padj = np.nan
+                    logratio = []
+                    for a, b in zip(fi, fi_1):
+                        if a >0 and b >0:
+                            logratio.append(np.log2(a/b))
+
+                    if len(logratio) > 0:
+                        padj = 3*stats.ttest_1samp(logratio, 0).pvalue # perform a multiple test correction by 3*
+                        if padj > 1:
+                            padj = 1
+
+                    frame_stats_df.loc[self.PVAL_PAIR, frame_names[i]] = padj
 
                 for i in range(3):
                     frame_stats_df.loc[self.PVAL_PAIR_MAX, frame_names[i]] = np.max(

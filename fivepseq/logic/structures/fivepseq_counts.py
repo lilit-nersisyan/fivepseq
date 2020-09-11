@@ -471,7 +471,24 @@ class FivePSeqCounts:
 
         return count_vector
 
+    def get_sequence(self, transcript, transcript_span_size, desired_span_size):
+        if desired_span_size > transcript_span_size:
+            raise ValueError("Desired span size %d bigger than the transcript span size %d"
+                             % (desired_span_size, transcript_span_size))
+
+        try:
+            sequence = transcript.get_sequence(self.genome.genome_dict)
+            desired_seq = sequence[transcript.cds_start + transcript_span_size - desired_span_size:
+                                   transcript.cds_end + transcript_span_size + desired_span_size]
+        except:
+            t_len = transcript.cds_end - transcript.cds_start
+            desired_seq = ''.join(['N'] * t_len + 2 * desired_span_size)
+
+        return desired_seq
+
     def get_cds_sequence_safe(self, transcript, span_size):
+        #NOTE a dangerous code here. Works correctly only if the input span size is the same as in the transcript.
+        # TOCHANGE
         try:
             sequence = transcript.get_sequence(self.genome.genome_dict)
             cds_sequence = sequence[transcript.cds_start + span_size: transcript.cds_end + span_size]

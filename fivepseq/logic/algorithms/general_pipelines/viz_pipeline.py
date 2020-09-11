@@ -15,7 +15,7 @@ from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCoun
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_line_chart, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
     bokeh_composite, bokeh_fft_plot, bokeh_tabbed_line_chart, bokeh_tabbed_triangle_plot, \
-    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot, bokeh_pca_plot
+    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot
 from fivepseq.viz.header_html import write_fivepseq_header
 
 
@@ -88,6 +88,7 @@ class VizPipeline:
     frame_count_term_dict = {}
     frame_count_start_dict = {}
     frame_stats_df_dict = {}
+    transcript_names_dict = {}
     fft_signal_start_dict = {}
     fft_signal_term_dict = {}
     loci_meta_counts_dict = {}
@@ -390,13 +391,14 @@ class VizPipeline:
 
         data_summary = self.read_data_summary(fivepseq_out)
         self.data_summary_dict.update({sample: data_summary})
-        self.lib_size_dict.update({sample: data_summary.iloc[:,0][FivePSeqCounts.NUMBER_READS_DOWNSAMPLED]})
+        self.lib_size_dict.update({sample: data_summary.iloc[:, 0][FivePSeqCounts.NUMBER_READS_DOWNSAMPLED]})
         self.meta_count_start_dict.update({sample: self.read_meta_count_start(fivepseq_out)})
         self.meta_count_term_dict.update({sample: self.read_meta_count_term(fivepseq_out)})
 
         self.frame_count_term_dict.update({sample: self.read_frame_count_term(fivepseq_out)})
         self.frame_count_start_dict.update({sample: self.read_frame_count_start(fivepseq_out)})
         self.frame_stats_df_dict.update({sample: self.read_frame_stats_df(fivepseq_out)})
+        self.transcript_names_dict.update({sample:self.read_transcript_names(fivepseq_out)})
         self.amino_acid_df_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=False)})
         self.amino_acid_df_full_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=True)})
         self.codon_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=False)})
@@ -752,7 +754,7 @@ class VizPipeline:
 
         if len(self.samples) > 4:
             key_start = 0
-            for key_stop in range(4, len(self.samples)+4, 4):
+            for key_stop in range(4, len(self.samples) + 4, 4):
                 figure_list.append(self.get_differential_heatmaps(
                     dict(list(self.amino_acid_df_dict.items())[key_start: key_stop]),
                     "amino_acid"))
@@ -764,7 +766,7 @@ class VizPipeline:
 
         if len(self.samples) > 4:
             key_start = 0
-            for key_stop in range(4, len(self.samples)+4, 4):
+            for key_stop in range(4, len(self.samples) + 4, 4):
                 figure_list.append(
                     self.get_differential_heatmaps(
                         dict(list(self.codon_df_dict.items())[key_start: key_stop]),
@@ -780,19 +782,18 @@ class VizPipeline:
                         os.path.join(self.comparison_dir, "%s_%s.html" % (self.title, name)), 1)
 
         # PCA
-        #name = "PCA_codon-specific_ribosome_protection_patterns"
-        #self.logger.info("Comparison plots: %s" % name)
-        #figure_list = [bokeh_pca_plot(title="%s_%s" % (self.title, name),
+        # name = "PCA_codon-specific_ribosome_protection_patterns"
+        # self.logger.info("Comparison plots: %s" % name)
+        # figure_list = [bokeh_pca_plot(title="%s_%s" % (self.title, name),
         #                             codon_df_dict=self.codon_df_dict,
         #                             color_dict=self.colors_dict,
         #                             png_dir=self.png_dir, svg_dir=self.svg_dir)]
-        #bokeh_composite("%s_%s" % (self.title, name), figure_list,
+        # bokeh_composite("%s_%s" % (self.title, name), figure_list,
         #                os.path.join(self.comparison_dir, "%s_%s.html" % (self.title, name)), 1)
-
 
     def get_differential_heatmaps(self, codon_df_dict, codon_type):
         def scale(df):
-            sdf = df.copy(deep = True)
+            sdf = df.copy(deep=True)
             for i in range(sdf.shape[0]):
                 sdf.iloc[i, :] /= sum(sdf.iloc[i, :]) + 1
             return sdf
@@ -943,6 +944,19 @@ class VizPipeline:
         else:
             frame_stats_df = None
         return frame_stats_df
+
+    def read_transcript_names(self, fivepseq_out = None, file = None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.TRANSCRIPT_ASSEMBLY_FILE)
+
+        if os.path.exists(file):
+            transcript_assembly = pd.read_csv(file, sep = "\t", header = 0, index_col=0)
+            transcript_names = list(transcript_assembly.index)
+        else:
+            transcript_names = None
+        return transcript_names
 
     def read_count_vector_list_term(self, fivepseq_out=None, file=None):
         if file is None:
@@ -1246,7 +1260,7 @@ class VizPipeline:
                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
         plots.append(self.get_tabbed_fft_plot(region=FivePSeqCounts.TERM,
-                                              group_count_dict=sample_gs_fft_start_dict,
+                                              group_count_dict=sample_gs_fft_term_dict,
                                               color_dict=gs_colors_dict,
                                               png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
@@ -1397,12 +1411,17 @@ class VizPipeline:
 
     def get_triangle_plot(self, plot_name="gene_frame_preferences",
                           count_dict=None,
-                          color_dict=None, lib_size_dict=None,
+                          color_dict=None,
+                          transcript_names_dict = None,
+                          lib_size_dict=None,
                           combine_sum=False, combine_weighted=False, combine_color=None,
                           png_dir=png_dir, svg_dir=svg_dir):
 
         if count_dict is None:
             count_dict = self.frame_count_start_dict
+
+        if transcript_names_dict is None:
+            transcript_names_dict = self.transcript_names_dict
 
         if color_dict is None:
             color_dict = self.colors_dict
@@ -1424,6 +1443,7 @@ class VizPipeline:
 
         p = bokeh_triangle_plot(title=title,
                                 frame_df_dict=count_dict,
+                                transcript_names_dict=transcript_names_dict,
                                 lib_size_dict=lib_size_dict,
                                 color_dict=color_dict,
                                 combine_sum=combine_sum,
@@ -1431,6 +1451,7 @@ class VizPipeline:
                                 combine_color=combine_color,
                                 png_dir=png_dir, svg_dir=svg_dir,
                                 count_threshold=self.triangle_threshold)
+
         return p
 
     def get_tabbed_triangle_plot(self, group_count_dict,

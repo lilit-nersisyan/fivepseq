@@ -201,6 +201,12 @@ class FivepseqArguments:
                               default="DEBUG",
                               required=False)
 
+        advanced.add_argument("-queue",
+                              #help="perform rq-score analysis with the specified size",
+                              type=int,
+                              #default=30,
+                              required=False)
+
         #        parser.add_argument("-tf", "-transcript_filter",
         #                            help="Name of filter to apply on transcripts",
         #                            type=str,
@@ -339,9 +345,12 @@ class FivepseqArguments:
                 print("%s%s" % (pad_spaces("\tSort dipeptides from A site at:"), config.args.dipeptide_pos))
 
             if hasattr(config.args, "triangle_threshold") and config.args.triangle_threshold is not None:
-                print("%s" % (pad_spaces(
-                    "\tGenes with more than %s counts will be included in the triangle plot:" %
-                    config.args.triangle_threshold)))
+                print("%s%s" % (pad_spaces("\tCounts threshold to include genes in the triangle plot:"),
+                    config.args.triangle_threshold))
+
+            if hasattr(config.args, "queue") and config.args.queue is not None:
+                print("%s%s" % (pad_spaces("\tRibosome queue score will be computed with size:"),
+                    config.args.queue))
 
             if config.args.loci_file is not None:
                 print("%s%s" % (pad_spaces("\tLoci file:"), config.args.loci_file))

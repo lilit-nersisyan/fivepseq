@@ -18,7 +18,7 @@ from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearC
     PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div, Legend, Panel, Tabs, LabelSet
 from bokeh.plotting import figure
 from bokeh.transform import transform
-from sklearn.decomposition import PCA
+#from sklearn.decomposition import PCA
 
 from fivepseq import config
 from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
@@ -480,6 +480,7 @@ def bokeh_transcript_line_chart(title, transcript_count_list_dict, transcript_as
 
 
 def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
+                               transcript_names_dict,
                                lib_size_dict_dict=None,
                                combine_sum=False, combine_weighted=False, combine_color=None,
                                png_dir=None, svg_dir=None, count_threshold = 10):
@@ -500,6 +501,7 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
             lib_size_dict = None
 
         p_group = bokeh_triangle_plot(get_key_title(title, group), frame_df_dict, color_dict,
+                                      transcript_names_dict=transcript_names_dict,
                                       lib_size_dict=lib_size_dict,
                                       combine_sum=combine_sum, combine_weighted=combine_weighted,
                                       combine_color=combine_color,
@@ -510,9 +512,9 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
     return tabs
 
 
-def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
+def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_names_dict, lib_size_dict=None,
                         combine_sum=False, combine_weighted=False, combine_color=None,
-                        transcript_index_filter=None, png_dir=None, svg_dir=None, count_threshold = 10):
+                        transcript_index_filter=None, png_dir=None, svg_dir=None, count_threshold=10):
     if color_dict is None:
         return None
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Plotting triangle plots")
@@ -530,10 +532,13 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
     if combine_weighted:
         suffix = COMBINED + "-w"
         frame_df_dict = {suffix: CountManager.combine_frame_counts(frame_df_dict, lib_size_dict)}
+        transcript_names_dict = {suffix: transcript_names_dict[next(iter(transcript_names_dict))]}
+        #NOTE this may be a problem when the lists do not match (which they should not) - but I'm lazy to check for this
 
     elif combine_sum:
         suffix = COMBINED + "-s"
         frame_df_dict = {suffix: CountManager.combine_frame_counts(frame_df_dict, lib_size_dict)}
+        transcript_names_dict = {suffix: transcript_names_dict[next(iter(transcript_names_dict))]}
 
     if combine_weighted or combine_sum:
         if lib_size_dict is None:
@@ -571,6 +576,8 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
         if svg_dir is not None:
             p_key_svg = get_empty_triangle_canvas(key_title)
 
+        transcript_names = transcript_names_dict.get(key)
+
         frame_df = frame_df_dict.get(key)
         if transcript_index_filter is None:
             transcript_index = range(0, len(frame_df))
@@ -583,6 +590,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
         f0 = [0] * len(frame_df)
         f1 = [0] * len(frame_df)
         f2 = [0] * len(frame_df)
+        sample = [key] * len(frame_df)
         name = [key] * len(frame_df)
         counter = 0
         for point in range(0, len(frame_df)):
@@ -590,7 +598,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
             if a == b == c == 0:
                 # TODO why am I passing here (added the == 0 at the end)?
                 pass
-            if sum([a, b, c]) < count_threshold: #TODO makes this an option in the future
+            if sum([a, b, c]) < count_threshold:  # TODO makes this an option in the future
                 pass
             else:
                 x[counter] = triangle_transform(a, b, c)[0]
@@ -598,12 +606,14 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
                 f0[counter] = frame_df.loc[point, 'F0']
                 f1[counter] = frame_df.loc[point, 'F1']
                 f2[counter] = frame_df.loc[point, 'F2']
+                name[counter] = transcript_names[point]
                 counter = counter + 1
         x = x[0:counter]
         y = y[0:counter]
         f0 = f0[0:counter]
         f1 = f1[0:counter]
         f2 = f2[0:counter]
+        sample = sample[0:counter]
         name = name[0:counter]
 
         source = ColumnDataSource(data=dict(
@@ -613,12 +623,13 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
             F1=f1,
             F2=f2,
             name=name,
+            sample=sample,
         ))
 
         # circles = p.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
         circles = p.circle('x', 'y', color=color_dict.get(key), fill_alpha=0.5, size=5, line_color=None, source=source)
         legend_items.append((key, [circles]))
-        hover = HoverTool(tooltips=[('name', '@name'), ('F0', '@F0'), ('F1', '@F1'), ('F2', '@F2')],
+        hover = HoverTool(tooltips=[('name', '@name'), ('sample', '@sample'), ('F0', '@F0'), ('F1', '@F1'), ('F2', '@F2')],
                           renderers=[circles])
         p.add_tools(hover)
 
@@ -651,7 +662,6 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, lib_size_dict=None,
         export_images(p_svg, title + "_overlay", svg_dir=svg_dir)
 
     return p
-
 
 def get_empty_triangle_canvas(title):
     p = figure(title=title, x_range=(-0.1, 1.1), y_range=(-0.1, 1.1))
@@ -967,7 +977,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
                     np.round(frame_stats_df.loc[CountStats.FPI, CountStats.F2], 2),
                 )
                 legend_items.append((legend_text, [bars]))
-                legend_text = "p-vals: \tF0=%.2f | \tF1=%.2f | \tF2=%.2f" % (
+                legend_text = "p-adj: \tF0=%.2f | \tF1=%.2f | \tF2=%.2f" % (
                     np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F0], 2),
                     np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F1], 2),
                     np.round(frame_stats_df.loc[CountStats.PVAL_PAIR_MAX, CountStats.F2], 2),
@@ -1035,9 +1045,10 @@ def bokeh_aa_pause_linechart(title, amino_acid_df):
     p.legend.click_policy = "hide"
     return p
 
+"""
 def bokeh_pca_plot(title, codon_df_dict, color_dict, start_pos = '-20', end_pos = '-2',
                    png_dir=None, svg_dir=None):
-    """Some problems with implementation -- will solve later"""
+    
     def scale(df):
         sdf = df.copy(deep = True)
         for i in range(sdf.shape[0]):
@@ -1106,6 +1117,7 @@ def bokeh_pca_plot(title, codon_df_dict, color_dict, start_pos = '-20', end_pos 
                        source=source)
         export_images(p_svg, title, svg_dir=svg_dir)
     return p
+"""
 
 def export_images(p, title, png_dir=None, svg_dir=None):
     if png_dir is not None:
@@ -1125,6 +1137,7 @@ def export_images(p, title, png_dir=None, svg_dir=None):
         except Exception as e:
             logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Problem exporting figure %s. Reason: %s"
                                                               % (title, str(e)))
+
 
 
 def get_key_title(title, key, scale=False):

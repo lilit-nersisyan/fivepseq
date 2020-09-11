@@ -49,6 +49,7 @@ class FivePSeqOut:
     FFT_SIGNALS_TERM = "fft_signals_term.txt"
     OUTLIERS_DF = "outliers_df.txt"
     GENESET_FILE = "genesets.txt"
+    QUEUE_STATS_FILE = "queue_stats.txt"
 
 
     FAILED_COUNT_FILES_LIST = "failed_count_files_list.txt"
