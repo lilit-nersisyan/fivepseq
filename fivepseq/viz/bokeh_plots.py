@@ -500,8 +500,13 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
         else:
             lib_size_dict = None
 
+        if group in transcript_names_dict:
+            group_transcript_names_dict = transcript_names_dict[group]
+        else:
+            group_transcript_names_dict = transcript_names_dict
+
         p_group = bokeh_triangle_plot(get_key_title(title, group), frame_df_dict, color_dict,
-                                      transcript_names_dict=transcript_names_dict,
+                                      transcript_names_dict=group_transcript_names_dict,
                                       lib_size_dict=lib_size_dict,
                                       combine_sum=combine_sum, combine_weighted=combine_weighted,
                                       combine_color=combine_color,
@@ -577,6 +582,10 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_names_dict,
             p_key_svg = get_empty_triangle_canvas(key_title)
 
         transcript_names = transcript_names_dict.get(key)
+        if transcript_names is None:
+            print("here: %s" % key)
+        else:
+            print("here: %s" % key)
 
         frame_df = frame_df_dict.get(key)
         if transcript_index_filter is None:

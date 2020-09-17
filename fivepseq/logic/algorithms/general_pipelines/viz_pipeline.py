@@ -29,6 +29,7 @@ class VizPipeline:
     DATA_TYPE_AMINO_ACID_DF = 3
     DATA_TYPE_FRAME_STATS = 4
     DATA_TYPE_LIB_SIZE = 5
+    DATA_TYPE_TRANSCRIPT_NAME = 6
 
     METACOUNTS_TERM = "_metacounts_term"
     METACOUNTS_START = "_metacounts_start"
@@ -398,7 +399,7 @@ class VizPipeline:
         self.frame_count_term_dict.update({sample: self.read_frame_count_term(fivepseq_out)})
         self.frame_count_start_dict.update({sample: self.read_frame_count_start(fivepseq_out)})
         self.frame_stats_df_dict.update({sample: self.read_frame_stats_df(fivepseq_out)})
-        self.transcript_names_dict.update({sample:self.read_transcript_names(fivepseq_out)})
+        self.transcript_names_dict.update({sample: self.read_transcript_names(fivepseq_out)})
         self.amino_acid_df_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=False)})
         self.amino_acid_df_full_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=True)})
         self.codon_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=False)})
@@ -945,14 +946,14 @@ class VizPipeline:
             frame_stats_df = None
         return frame_stats_df
 
-    def read_transcript_names(self, fivepseq_out = None, file = None):
+    def read_transcript_names(self, fivepseq_out=None, file=None):
         if file is None:
             if fivepseq_out is None:
                 raise Exception("Insufficient arguments")
             file = fivepseq_out.get_file_path(FivePSeqOut.TRANSCRIPT_ASSEMBLY_FILE)
 
         if os.path.exists(file):
-            transcript_assembly = pd.read_csv(file, sep = "\t", header = 0, index_col=0)
+            transcript_assembly = pd.read_csv(file, sep="\t", header=0, index_col=0)
             transcript_names = list(transcript_assembly.index)
         else:
             transcript_names = None
@@ -1055,6 +1056,9 @@ class VizPipeline:
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_LIB_SIZE:
                     gs_sample_dict[shortGS].update({sample: self.lib_size_dict.get(sample)})
+                elif data_type == self.DATA_TYPE_TRANSCRIPT_NAME:
+                    gs_transcript_names = [self.transcript_names_dict[sample][i] for i in self.gs_transcriptInd_dict[gs]]
+                    gs_sample_dict[shortGS].update({sample: gs_transcript_names})
 
         return gs_sample_dict
 
@@ -1081,6 +1085,9 @@ class VizPipeline:
                         file=os.path.join(self.sample_folders_dict[sample], gs, filename))})
                 elif data_type == self.DATA_TYPE_LIB_SIZE:
                     sample_gs_dict[sample].update({shortGS: self.lib_size_dict.get(sample)})
+                elif data_type == self.DATA_TYPE_TRANSCRIPT_NAME:
+                    gs_transcript_names = [self.transcript_names_dict[sample][i] for i in self.gs_transcriptInd_dict[gs]]
+                    sample_gs_dict[sample].update({shortGS: gs_transcript_names})
         return sample_gs_dict
 
     def gs_tabbed_plots(self, title):
@@ -1100,6 +1107,7 @@ class VizPipeline:
         gs_fft_start_dict = self.generate_gs_sample_dict(FivePSeqOut.FFT_SIGNALS_START, self.DATA_TYPE_FFT_SIGNALS)
         gs_fft_term_dict = self.generate_gs_sample_dict(FivePSeqOut.FFT_SIGNALS_TERM, self.DATA_TYPE_FFT_SIGNALS)
         gs_lib_size_dict = self.generate_gs_sample_dict(None, self.DATA_TYPE_LIB_SIZE)
+        gs_sample_transcript_names_dict = self.generate_gs_sample_dict(None, self.DATA_TYPE_TRANSCRIPT_NAME)
 
         plots.append(self.get_gs_mapping_div())
         plots.append(self.get_tabbed_line_chart(group_count_dict=gs_meta_count_start_dict,
@@ -1121,6 +1129,7 @@ class VizPipeline:
                                                     png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
         plots.append(self.get_tabbed_triangle_plot(group_count_dict=gs_frame_count_term_dict,
+                                                   transcript_names_dict=gs_sample_transcript_names_dict,
                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
         plots.append(self.get_tabbed_fft_plot(group_count_dict=gs_fft_start_dict,
@@ -1224,6 +1233,8 @@ class VizPipeline:
 
         sample_gs_lib_size_dict = self.generate_sample_gs_dict(None, self.DATA_TYPE_LIB_SIZE)
 
+        sample_gs_transcript_names_dict = self.generate_sample_gs_dict(None, self.DATA_TYPE_TRANSCRIPT_NAME)
+
         gs_colors_dict = dict(
             zip(self.shortGS_gs_dict.keys(),
                 self.gs_colors_list[0:len(self.shortGS_gs_dict.keys())]))
@@ -1251,6 +1262,7 @@ class VizPipeline:
 
         plots.append(self.get_tabbed_triangle_plot(group_count_dict=sample_gs_frame_count_term_dict,
                                                    color_dict=gs_colors_dict,
+                                                   transcript_names_dict=sample_gs_transcript_names_dict,
                                                    lib_size_dict_dict=sample_gs_lib_size_dict,
                                                    png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
 
@@ -1316,6 +1328,7 @@ class VizPipeline:
                                              scale=True, lib_size_dict=sample_gs_lib_size_combined,
                                              png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
             plots.append(self.get_triangle_plot(count_dict=sample_gs_frame_counts_term_combined,
+                                                transcript_names_dict = sample_gs_transcript_names_dict[next(iter(sample_gs_transcript_names_dict))],
                                                 color_dict=gs_colors_dict,
                                                 lib_size_dict=sample_gs_lib_size_combined,
                                                 png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
@@ -1412,7 +1425,7 @@ class VizPipeline:
     def get_triangle_plot(self, plot_name="gene_frame_preferences",
                           count_dict=None,
                           color_dict=None,
-                          transcript_names_dict = None,
+                          transcript_names_dict=None,
                           lib_size_dict=None,
                           combine_sum=False, combine_weighted=False, combine_color=None,
                           png_dir=png_dir, svg_dir=svg_dir):
@@ -1456,7 +1469,9 @@ class VizPipeline:
 
     def get_tabbed_triangle_plot(self, group_count_dict,
                                  plot_name="gene_frame_preferences",
-                                 color_dict=None, lib_size_dict_dict=None,
+                                 color_dict=None,
+                                 transcript_names_dict=None,
+                                 lib_size_dict_dict=None,
                                  combine_sum=False, combine_weighted=False, combine_color=None,
                                  png_dir=png_dir, svg_dir=svg_dir):
 
@@ -1468,6 +1483,9 @@ class VizPipeline:
         if svg_dir is None:
             svg_dir = self.svg_dir
 
+        if transcript_names_dict is None:
+            transcript_names_dict = self.transcript_names_dict
+
         title = plot_name
 
         if combine_weighted:
@@ -1478,6 +1496,7 @@ class VizPipeline:
         p = bokeh_tabbed_triangle_plot(title=title,
                                        group_frame_df_dict_dict=group_count_dict,
                                        color_dict=color_dict,
+                                       transcript_names_dict=transcript_names_dict,
                                        lib_size_dict_dict=lib_size_dict_dict,
                                        combine_sum=combine_sum,
                                        combine_weighted=combine_weighted,
