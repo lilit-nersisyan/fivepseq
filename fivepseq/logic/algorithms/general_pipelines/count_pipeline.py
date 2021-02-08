@@ -36,6 +36,7 @@ class CountPipeline:
             self.run_frame_counts()
             self.run_transcript_indices()
             self.run_codon_counts()
+            self.run_codon_stats()
             self.run_loci_counts()
             self.run_queue_analysis()
 
@@ -198,6 +199,17 @@ class CountPipeline:
         if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TRIPEPTIDE_PAUSES_FILE)):
             self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_tripeptide_pauses(),
                                                self.fivepseq_out.TRIPEPTIDE_PAUSES_FILE)
+    def run_codon_stats(self):
+        #   amino acid stats
+        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.AMINO_ACID_STATS_FILE)):
+            self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_amino_acid_stats(),
+                                               # generate more than needed for visualization
+                                               self.fivepseq_out.AMINO_ACID_STATS_FILE)
+
+        #   codon stats
+        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.CODON_STATS_FILE)):
+            self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_codon_stats(),
+                                               self.fivepseq_out.CODON_STATS_FILE)
 
     def run_loci_counts(self):
         #   loci pauses

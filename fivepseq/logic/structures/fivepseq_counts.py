@@ -43,7 +43,6 @@ class FivePSeqCounts:
     downsample_constant = None
     outlier_probability = None
 
-
     config = None
     alignment = None
     annotation = None
@@ -56,12 +55,19 @@ class FivePSeqCounts:
     meta_count_series_term = None
     frame_counts_df_start = None
     frame_counts_df_term = None
+    codon_genome_usage_df = None
     codon_count_df = None
     amino_acid_count_df = None
     dicodon_count_df = None
     dipeptide_count_df = None
     tricodon_count_df = None
     tripeptide_count_df = None
+    codon_stats_df = None
+    amino_acid_stats_df = None
+
+    codon_genome_usage_df = None
+    amino_acid_genome_usage_df = None
+
     start_codon_dict = None
     stop_codon_dict = None
     canonical_transcript_index = None
@@ -80,10 +86,10 @@ class FivePSeqCounts:
     TRIPEPTIDE_POS = -11
     DIPEPTIDE_POS = -14
 
-
     missing_chroms = []
 
-    def __init__(self, alignment, annotation, genome, config, downsample_constant, is_geneset = False, transcript_filter=None):
+    def __init__(self, alignment, annotation, genome, config, downsample_constant, is_geneset=False,
+                 transcript_filter=None):
         """
         Initializes a FivePSeqCounts object with Alignment and Annotation instances.
 
@@ -210,7 +216,8 @@ class FivePSeqCounts:
 
             count_vector_downsampled = self.get_count_vector(transcript, span_size=0,
                                                              region=self.FULL_LENGTH, downsample=True)
-            self.transcript_descriptors.at[transcript_ind, self.NUMBER_READS_DOWNSAMPLED] = int(np.sum(count_vector_downsampled))
+            self.transcript_descriptors.at[transcript_ind, self.NUMBER_READS_DOWNSAMPLED] = int(
+                np.sum(count_vector_downsampled))
 
         self.logger.info("Done generating transcript descriptors")
 
@@ -487,7 +494,7 @@ class FivePSeqCounts:
         return desired_seq
 
     def get_cds_sequence_safe(self, transcript, span_size):
-        #NOTE a dangerous code here. Works correctly only if the input span size is the same as in the transcript.
+        # NOTE a dangerous code here. Works correctly only if the input span size is the same as in the transcript.
         # TOCHANGE
         try:
             sequence = transcript.get_sequence(self.genome.genome_dict)
@@ -684,7 +691,6 @@ class FivePSeqCounts:
             i += 1
         return sequences
 
-
     def get_amino_acid_pauses(self):
         if self.amino_acid_count_df is None:
             self.compute_codon_pauses()
@@ -745,7 +751,7 @@ class FivePSeqCounts:
 
         if self.config.args.no_mask:
             mask_dist = 0
-            self.logger.info("Transcript boundaries will not be masked" )
+            self.logger.info("Transcript boundaries will not be masked")
         else:
             if hasattr(config.args, "codon_mask_size"):
                 mask_dist = config.args.codon_mask_size
@@ -757,16 +763,21 @@ class FivePSeqCounts:
                                       columns=range(dist_from, dist_to))
 
         dicodon_count_df = pd.DataFrame(data=0, index=Codons.get_dicodon_table().keys(),
-                                         columns=range(dist_from + 3, dist_to + 3))
+                                        columns=range(dist_from + 3, dist_to + 3))
 
         dipeptide_count_df = pd.DataFrame(data=0, index=Codons.get_dipeptide_list(),
-                                           columns=range(dist_from + 3, dist_to + 3))
+                                          columns=range(dist_from + 3, dist_to + 3))
 
         tricodon_count_df = pd.DataFrame(data=0, index=Codons.get_tricodon_table().keys(),
                                          columns=range(dist_from + 6, dist_to + 6))
 
         tripeptide_count_df = pd.DataFrame(data=0, index=Codons.get_tripeptide_list(),
                                            columns=range(dist_from + 6, dist_to + 6))
+
+        self.codon_genome_usage_df = pd.DataFrame(data=0, index=Codons.CODON_TABLE.keys(),
+                                                  columns=['abs', 'fraction'])
+        self.amino_acid_genome_usage_df = pd.DataFrame(data=0, index=Codons.AMINO_ACID_TABLE.keys(),
+                                                       columns=['abs', 'fraction'])
 
         counter = 1
 
@@ -804,6 +815,14 @@ class FivePSeqCounts:
             # v1.0b3 add stretches of 0's to count_vector and N's to cds_sequence to avoid checking vector boundaries
             count_vector = [0] * (-1 * dist_from) + count_vector + [0] * dist_to
             cds_sequence = ''.join('N' * (-1 * dist_from)) + cds_sequence + ''.join('N' * dist_to)
+
+            # store genome usage stats
+            for i in range(0, len(cds_sequence), 3):
+                codon = cds_sequence[i: i + 3].upper()
+                if codon in self.codon_genome_usage_df.index:
+                    self.codon_genome_usage_df.at[codon, "abs"] += 1
+                    amino_acid = Codons.CODON_TABLE.get(codon)
+                    self.amino_acid_genome_usage_df.at[amino_acid, "abs"] += 1
 
             # identify 3nt bins with non-zero counts
             ind = np.array(range(0, len(count_vector), 3))
@@ -849,6 +868,10 @@ class FivePSeqCounts:
                                 self.logger.warn("Index out of range: i: %d, j: %d, p: %d, d: %d. %s"
                                                  % (i, j, p, d, str(e)))
 
+        self.codon_genome_usage_df.loc[:, "fraction"] = self.codon_genome_usage_df.loc[:, "abs"] / sum(
+            self.codon_genome_usage_df.loc[:, "abs"])
+        self.amino_acid_genome_usage_df.loc[:, "fraction"] = self.amino_acid_genome_usage_df.loc[:, "abs"] / sum(
+            self.amino_acid_genome_usage_df.loc[:, "abs"])
         self.amino_acid_count_df = self.codon_to_amino_acid_count_df(codon_count_df)
         self.tripeptide_count_df = self.filter_codon_counts(tripeptide_count_df, self.get_tripeptide_pos())
         self.dipeptide_count_df = self.filter_codon_counts(dipeptide_count_df, self.get_dipeptide_pos())
@@ -881,7 +904,6 @@ class FivePSeqCounts:
 
         return amino_acid_count_df
 
-
     def get_tripeptide_pos(self):
 
         if hasattr(config.args, "tripeptide_pos"):
@@ -900,8 +922,7 @@ class FivePSeqCounts:
 
         return pos
 
-
-    def filter_codon_counts(self, codon_count_df, pos, top = 50):
+    def filter_codon_counts(self, codon_count_df, pos, top=50):
         """
         Filter the di/tricodon (or di/tripeptide) counts to exclude low counts (rowSums less than the specified threshold) and
         to include only the top di/tricodons with highest relative counts at the given position
@@ -916,9 +937,96 @@ class FivePSeqCounts:
                          (top, pos))
 
         codon_filtered_df = codon_count_df[codon_count_df.sum(1) >= self.COUNT_THRESHOLD]
-        pos_rel_counts = codon_filtered_df[pos]/codon_filtered_df.sum(1)
-        codon_filtered_df = codon_filtered_df.iloc[sorted(range(len(pos_rel_counts)), reverse=True, key=lambda k: pos_rel_counts[k])[0:top]]
+        pos_rel_counts = codon_filtered_df[pos] / codon_filtered_df.sum(1)
+        codon_filtered_df = codon_filtered_df.iloc[
+            sorted(range(len(pos_rel_counts)), reverse=True, key=lambda k: pos_rel_counts[k])[0:top]]
         return codon_filtered_df
+
+    def get_amino_acid_stats(self):
+        if self.amino_acid_stats_df is None:
+            self.amino_acid_stats_df = self.compute_codon_stats_amino_acid()
+
+        return self.amino_acid_stats_df
+
+    def get_codon_stats(self):
+        if self.codon_stats_df is None:
+            self.codon_stats_df = self.compute_codon_stats_codon()
+
+        return self.codon_stats_df
+
+    def compute_codon_genome_usage(self):
+        self.codon_genome_usage_df = pd.DataFrame(data=0, index=Codons.CODON_TABLE.keys(),
+                                                  columns=['abs', 'fraction'])
+        self.amino_acid_genome_usage_df = pd.DataFrame(data=0, index=Codons.AMINO_ACID_TABLE.keys(),
+                                                       columns=['abs', 'fraction'])
+
+    def compute_codon_stats_amino_acid(self):
+        return self.compute_codon_stats(self.get_amino_acid_pauses(), self.amino_acid_genome_usage_df)
+
+    def compute_codon_stats_codon(self):
+        return self.compute_codon_stats(self.get_codon_pauses(), self.codon_genome_usage_df)
+
+    def compute_codon_stats(self, codon_counts, codon_genome_usage, until=-3):
+        """
+        Counts usage and frame protection stats for each codon/amino-acid.
+
+        The following dataframe will be generated based on codon counts table:
+
+        codon/aminoacid FPI Frame   peak(pos)   peak(scale) usage(sum of counts)    genome_presence
+
+        :return: dataframe
+        """
+
+        self.logger.info("Counting codon usage statistics")
+
+        try:
+            stop_ind = codon_counts.keys().to_list().index(until)
+            codon_counts = codon_counts.iloc[:, 0:stop_ind]
+            f2 = sum([codon_counts.iloc[:, i] for i in reversed(range(stop_ind - 1, -1, -3))])
+            f1 = sum([codon_counts.iloc[:, i] for i in reversed(range(stop_ind - 2, -1, -3))])
+            f0 = sum([codon_counts.iloc[:, i] for i in reversed(range(stop_ind - 3, -1, -3))])
+
+            codon_stats = pd.DataFrame(list(zip(f0, f1, f2)), columns=['F0', 'F1', 'F2'])
+
+            codon_stats['FPI'] = np.zeros(len(codon_stats))
+            codon_stats['F'] = np.zeros(len(codon_stats))
+            codon_stats['F_perc'] = np.zeros(len(codon_stats))
+
+            for i in range(len(codon_stats)):
+                fpi, fmax, fperc = CountManager.fpi_stats_from_frame_counts(codon_stats.iloc[i, :])
+                codon_stats.loc[i, 'FPI'] = fpi
+                codon_stats.loc[i, 'F'] = fmax
+                codon_stats.loc[i, 'F_perc'] = fperc
+
+            codon_stats['peak_pos'] = [np.argmax(codon_counts.iloc[i, :]) for i in range(len(codon_stats))]
+            codon_stats['peak_scale'] = np.zeros(len(codon_stats))
+
+
+            for i in range(len(codon_stats)):
+                for i in range(len(codon_stats)):
+                    counts = list(codon_counts.iloc[i, :])
+                    if sum(counts) > 0:
+                        frame = int(codon_stats.loc[i, 'F'])
+                        frame_inds = [j for j in reversed(range(len(counts) - 3 + frame, -1, -3))]
+                        frame_counts = [counts[j] for j in frame_inds]
+                        codon_stats.loc[i, 'peak_scale'] = len(frame_counts) * max(frame_counts) / sum(frame_counts)
+                        codon_stats.loc[i, 'peak_pos'] = codon_counts.columns[frame_inds[np.argmax(frame_counts)]]
+
+            codon_stats['usage'] = list(sum([codon_counts.iloc[:, i] for i in range(0, stop_ind)]))
+            codon_stats['genome_usage_abs'] = list(codon_genome_usage.loc[:, 'abs'])
+            codon_stats['genome_usage_fraction'] = list(codon_genome_usage.loc[:, 'fraction'])
+            usage_norm = codon_stats['usage'] / codon_stats['genome_usage_fraction']
+            usage_norm /= sum(usage_norm)
+            codon_stats['usage_normalized'] = usage_norm
+
+            codon_stats.index = codon_counts.index
+
+            return codon_stats
+
+        except:
+            self.logger.warning("Could not compute codon stats. Codon counts dataframe did not have column %d." % until)
+            return None
+        # exclude the counts downstream from -3
 
     @preconditions(lambda loci_file: str)
     def get_pauses_from_loci(self, loci_file, read_locations=READ_LOCATIONS_ALL):
@@ -1590,9 +1698,9 @@ class CountManager:
         :return: float
         """
         count_freq_dict = {}
-        dict_mat = pd.read_csv(file_path, header = None, delimiter="\t", index_col=0)
+        dict_mat = pd.read_csv(file_path, header=None, delimiter="\t", index_col=0)
         for i in range(len(dict_mat)):
-            count_freq_dict[dict_mat.index[i]] = dict_mat.iloc[i,0]
+            count_freq_dict[dict_mat.index[i]] = dict_mat.iloc[i, 0]
 
         return collections.OrderedDict(sorted(count_freq_dict.items()))
 
@@ -1725,4 +1833,30 @@ class CountManager:
 
         return amino_acid_df_combined
 
+    @staticmethod
+    def fpi_stats_from_frame_counts(frame_counts):
+        """
+        Takes as input a vector named [F0, F1, F2] and returns:
+        (fpi, fmax, f_perc)
+        fpi = frame protection index of the maximum frame
+        fmax = the maximum frame
+        f_perc = the fraction of counts in the maximum frame
 
+        :param frame_counts:
+        :return:
+        """
+        f_counts = (frame_counts['F0'], frame_counts['F1'], frame_counts['F2'])
+        fmax = np.argmax(f_counts)
+        nom = f_counts[fmax]
+        if nom == 0:
+            fpi = None
+            f_perc = None
+        else:
+            denom = (sum(f_counts) - nom) / 2.
+            if denom == 0:
+                fpi = np.log2(float(nom) / 0.5)
+            else:
+                fpi = np.log2(float(nom / denom))
+            f_perc = 100 * (float(f_counts[fmax]) / sum(f_counts))
+
+        return fpi, fmax, f_perc

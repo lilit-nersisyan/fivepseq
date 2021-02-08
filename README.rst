@@ -13,6 +13,10 @@ User guide
 Below is a quick manual to get you started.
 For detailed instructions and explanations on fivepseq output, please see the user guide at: https://fivepseq.readthedocs.io/en/latest/.
 
+Citation
+------------
+`Nersisyan L, Ropat M, Pelechano V. Improved computational analysis of ribosome dynamics from 5′P degradome data using fivepseq. NAR Genomics and Bioinformatics, 2:4, 2020. <https://doi.org/10.1093/nargab/lqaa099>`_
+
 Installation
 ------------
 Install dependencies:

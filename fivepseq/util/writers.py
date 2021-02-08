@@ -26,6 +26,8 @@ class FivePSeqOut:
     TRICODON_PAUSES_FILE = "tricodon_pauses.txt"
     TRIPEPTIDE_PAUSES_FILE = "tripeptide_pauses.txt"
     DIPEPTIDE_PAUSES_FILE = "dipeptide_pauses.txt"
+    AMINO_ACID_STATS_FILE = "amino_acid_stats.txt"
+    CODON_STATS_FILE = "codon_stats.txt"
     LOCI_PAUSES_FILE = "loci_pauses.txt"
     LOCI_PAUSES_FILE_PREFIX = "loci_pauses"
     LOCI_OVERLAPS_FILE = "loci_overlaps.txt"
@@ -206,6 +208,9 @@ class FivePSeqOut:
 
         :return:
         """
+        if df is None:
+            return
+
         f = self.open_file_for_writing(file_name)
         if f is not None:
             df.to_csv(f, sep="\t", header=True)

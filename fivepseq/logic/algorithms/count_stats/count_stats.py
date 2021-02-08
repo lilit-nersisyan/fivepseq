@@ -371,23 +371,11 @@ class CountStats:
                                              columns=[self.COUNT, "F", self.FRAME_COUNT,
                                                       self.FRAME_PERC, self.FPI])
             for index, row in frame_counts_df.iterrows():
-                f_counts = (row['F0'], row['F1'], row['F2'])
-                fmax = np.argmax(f_counts)
-                nom = f_counts[fmax]
-                if nom == 0:
-                    fpi = None
-                    f_perc = None
-                else:
-                    denom = (sum(f_counts) - nom) / 2.
-                    if denom == 0:
-                        fpi = np.log2(float(nom) / 0.5)
-                    else:
-                        fpi = np.log2(float(nom / denom))
-                    f_perc = 100 * (float(f_counts[fmax]) / sum(f_counts))
+                fpi, fmax, f_perc = CountManager.fpi_stats_from_frame_counts(row)
 
-                transcript_fpi_df.at[index, self.COUNT] = sum(f_counts)
+                transcript_fpi_df.at[index, self.COUNT] = sum(row)
                 transcript_fpi_df.at[index, 'F'] = fmax
-                transcript_fpi_df.at[index, self.FRAME_COUNT] = f_counts[fmax]
+                transcript_fpi_df.at[index, self.FRAME_COUNT] = row[fmax]
                 transcript_fpi_df.at[index, self.FRAME_PERC] = f_perc
                 transcript_fpi_df.at[index, self.FPI] = fpi
 
