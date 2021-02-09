@@ -18,7 +18,7 @@ from bokeh.models import HoverTool, Arrow, NormalHead, ColumnDataSource, LinearC
     PanTool, BoxZoomTool, WheelZoomTool, SaveTool, ResetTool, Div, Legend, Panel, Tabs, LabelSet
 from bokeh.plotting import figure
 from bokeh.transform import transform
-#from sklearn.decomposition import PCA
+# from sklearn.decomposition import PCA
 
 from fivepseq import config
 from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
@@ -267,7 +267,8 @@ def bokeh_tabbed_fft_plot(title, align_region, group_signal_series_dict_dict, co
         else:
             lib_size_dict = None
 
-        p_group = bokeh_fft_plot(get_key_title(title, group), align_region, signal_series_dict_gs, color_dict, period_max=period_max,
+        p_group = bokeh_fft_plot(get_key_title(title, group), align_region, signal_series_dict_gs, color_dict,
+                                 period_max=period_max,
                                  lib_size_dict=lib_size_dict,
                                  combine_sum=combine_sum, combine_weighted=combine_weighted,
                                  combine_color=combine_color,
@@ -483,7 +484,7 @@ def bokeh_tabbed_triangle_plot(title, group_frame_df_dict_dict, color_dict,
                                transcript_names_dict,
                                lib_size_dict_dict=None,
                                combine_sum=False, combine_weighted=False, combine_color=None,
-                               png_dir=None, svg_dir=None, count_threshold = 10):
+                               png_dir=None, svg_dir=None, count_threshold=10):
     if group_frame_df_dict_dict is None:
         return None
 
@@ -538,7 +539,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_names_dict,
         suffix = COMBINED + "-w"
         frame_df_dict = {suffix: CountManager.combine_frame_counts(frame_df_dict, lib_size_dict)}
         transcript_names_dict = {suffix: transcript_names_dict[next(iter(transcript_names_dict))]}
-        #NOTE this may be a problem when the lists do not match (which they should not) - but I'm lazy to check for this
+        # NOTE this may be a problem when the lists do not match (which they should not) - but I'm lazy to check for this
 
     elif combine_sum:
         suffix = COMBINED + "-s"
@@ -638,8 +639,9 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_names_dict,
         # circles = p.circle(x, y, color=color_dict.get(key), fill_alpha=0.5, size=10, line_color=None)
         circles = p.circle('x', 'y', color=color_dict.get(key), fill_alpha=0.5, size=5, line_color=None, source=source)
         legend_items.append((key, [circles]))
-        hover = HoverTool(tooltips=[('name', '@name'), ('sample', '@sample'), ('F0', '@F0'), ('F1', '@F1'), ('F2', '@F2')],
-                          renderers=[circles])
+        hover = HoverTool(
+            tooltips=[('name', '@name'), ('sample', '@sample'), ('F0', '@F0'), ('F1', '@F1'), ('F2', '@F2')],
+            renderers=[circles])
         p.add_tools(hover)
 
         if p_key_png is not None:
@@ -671,6 +673,7 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_names_dict,
         export_images(p_svg, title + "_overlay", svg_dir=svg_dir)
 
     return p
+
 
 def get_empty_triangle_canvas(title):
     p = figure(title=title, x_range=(-0.1, 1.1), y_range=(-0.1, 1.1))
@@ -841,7 +844,7 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
 
 
 def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_stats_df_dict_dict, color_dict,
-                                scale = False, lib_size_dict_dict=None, combine_sum=False,
+                                scale=False, lib_size_dict_dict=None, combine_sum=False,
                                 combine_weighted=False, combine_color=None,
                                 png_dir=None, svg_dir=None):
     if group_frame_df_dict_dict is None:
@@ -867,7 +870,7 @@ def bokeh_tabbed_frame_barplots(title, group_frame_df_dict_dict, group_frame_sta
             lib_size_dict = None
 
         p_group = bokeh_frame_barplots(get_key_title(title, group), frame_df_dict, frame_stats_df_dict, color_dict,
-                                       lib_size_dict=lib_size_dict, scale = scale,
+                                       lib_size_dict=lib_size_dict, scale=scale,
                                        combine_sum=combine_sum,
                                        combine_weighted=combine_weighted,
                                        png_dir=png_dir,
@@ -1054,7 +1057,91 @@ def bokeh_aa_pause_linechart(title, amino_acid_df):
     p.legend.click_policy = "hide"
     return p
 
-"""
+
+def bokeh_frame_line_charts(title_prefix, count_series_dict, region, w=120,
+                            lib_size_dict=None, png_dir=None, svg_dir=None):
+    if count_series_dict is None:
+        return None
+
+    logging.getLogger(config.FIVEPSEQ_LOGGER).info(
+        "Making frame line charts %s with options: smooting window(%d), " %
+        (title_prefix, w))
+
+    my_x_label = "distance from %s" % region
+    my_y_label = "5' counts per base (averaged over %d nt window), RPM" % w
+
+    mainLayout = row(row(), name=title_prefix + ' frame-charts')
+
+    frame_cols = {"f0": "#ee6677", "f1": "#5ab76f", "f2": "#66ccee"}
+
+    for key in count_series_dict.keys():
+        key_title = get_key_title(title_prefix, key)
+        p = figure(title=key_title, x_axis_label=my_x_label, y_axis_label=my_y_label)
+
+        legend_items = []
+
+        count_series = count_series_dict.get(key)
+
+        if count_series is None:
+            # return None
+            continue
+
+        try:
+            for f in (0, 1, 2):
+                c = frame_cols.get("f" + str(f))
+                f_start_ind = list(np.where([d % 3 == f for d in count_series.D][0:3])[0])[0]
+                f_counts = count_series.C[f_start_ind::3]
+                f_rpm_counts = [10 ** 6 * x / lib_size_dict.get(key) for x in f_counts]
+                y = average_counts_over_window(f_rpm_counts, w)
+                source = ColumnDataSource(
+                    data=dict(
+                        x=list(count_series.D[f_start_ind::3]),
+                        y=list(y),
+                        name=["f" + str(f)]*len(y)
+                    ))
+                line = p.line('x', 'y', line_color=c, line_width=2, source=source)
+                legend_items.append((key + ": F" + str(f), [line]))
+                hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x')], renderers=[line])
+                p.add_tools(hover)
+
+        except Exception as e:
+            print("Error at key %s, reason; %s" % (key, str(e)))
+            return None
+
+        legend = Legend(items=legend_items, location=LEGEND_ALIGNMENT)
+        p.add_layout(legend, LEGEND_POSITION)
+        p.legend.click_policy = "hide"
+
+        mainLayout.children[0].children.append(p)
+
+        # figures for exporting
+        export_images(p, key_title, png_dir, svg_dir)
+
+    return mainLayout
+
+
+def average_counts_over_window(counts, w):
+    """
+    Counts per position averaged over the given window size. The first positions are not averaged.
+
+    :param counts: vector of counts
+    :param w: window size
+    :return: vector of average counts (the same length as the original vector)
+    """
+
+    sum_vec = [0] * len(counts)
+    for i in range(len(counts)):
+        if i < w:
+            counts_range = counts[i:]
+        else:
+            counts_range = counts[i - w: i]
+
+        sum_vec[i] = sum(counts_range)
+
+    av_vec = [c / w for c in sum_vec]
+    return av_vec
+
+    """
 def bokeh_pca_plot(title, codon_df_dict, color_dict, start_pos = '-20', end_pos = '-2',
                    png_dir=None, svg_dir=None):
     
@@ -1128,6 +1215,7 @@ def bokeh_pca_plot(title, codon_df_dict, color_dict, start_pos = '-20', end_pos 
     return p
 """
 
+
 def export_images(p, title, png_dir=None, svg_dir=None):
     if png_dir is not None:
         try:
@@ -1146,7 +1234,6 @@ def export_images(p, title, png_dir=None, svg_dir=None):
         except Exception as e:
             logging.getLogger(config.FIVEPSEQ_LOGGER).warning("Problem exporting figure %s. Reason: %s"
                                                               % (title, str(e)))
-
 
 
 def get_key_title(title, key, scale=False):

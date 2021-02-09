@@ -15,7 +15,7 @@ from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCoun
 from fivepseq.util.writers import FivePSeqOut
 from fivepseq.viz.bokeh_plots import bokeh_line_chart, bokeh_triangle_plot, bokeh_heatmap_grid, bokeh_frame_barplots, \
     bokeh_composite, bokeh_fft_plot, bokeh_tabbed_line_chart, bokeh_tabbed_triangle_plot, \
-    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot
+    bokeh_tabbed_frame_barplots, bokeh_tabbed_heatmap_grid, bokeh_tabbed_fft_plot, bokeh_frame_line_charts
 from fivepseq.viz.header_html import write_fivepseq_header
 
 
@@ -72,6 +72,7 @@ class VizPipeline:
 
     meta_count_term_dict = {}
     meta_count_start_dict = {}
+    count_vector_list_dict = {}
     count_vector_list_start_dict = {}
     count_vector_list_term_dict = {}
     amino_acid_df_dict = {}
@@ -598,6 +599,7 @@ class VizPipeline:
         dipeptide_title = self.title + "_dipeptide_heatmaps"
         tricodon_title = self.title + "_tricodon_heatmaps"
         tripeptide_title = self.title + "_tripeptide_heatmaps"
+        frame_line_chart_title = self.title + "_frame-charts"
 
         if self.combine:
             bokeh_composite(codon_title,
@@ -622,7 +624,7 @@ class VizPipeline:
                              self.get_heatmap_plot(tripeptide_title, self.tripeptide_df_dict, scale=True),
 
                              self.get_heatmap_plot(tricodon_title, self.tricodon_df_dict, scale=False),
-                             self.get_heatmap_plot(tricodon_title, self.tricodon_df_dict, scale=True)
+                             self.get_heatmap_plot(tricodon_title, self.tricodon_df_dict, scale=True),
 
                              ],
                             os.path.join(self.supplement_dir, codon_title + ".html"), 1)
@@ -713,6 +715,18 @@ class VizPipeline:
         self.make_peptide_line_charts(self.dipeptide_df_dict, "dipeptide")
         self.make_peptide_line_charts(self.tricodon_df_dict, "tricodon")
         self.make_peptide_line_charts(self.tripeptide_df_dict, "tripeptide")
+
+        # frame line charts
+        bokeh_composite(self.title + "_frame-linecharts",
+                        [
+                            self.get_frame_line_chart(
+                                frame_line_chart_title + FivePSeqCounts.START,
+                                self.meta_count_start_dict, region=FivePSeqCounts.START),
+                            self.get_frame_line_chart(
+                                frame_line_chart_title + FivePSeqCounts.TERM,
+                                self.meta_count_term_dict, region=FivePSeqCounts.TERM)
+                        ],
+                        os.path.join(self.supplement_dir, self.title + "_frame-linecharts.html"), 1)
 
     def make_peptide_line_charts(self, codon_count_dict, peptide_type):
         self.logger.info("Generating supplementary plots: %s line-charts" % peptide_type)
@@ -1057,7 +1071,8 @@ class VizPipeline:
                 elif data_type == self.DATA_TYPE_LIB_SIZE:
                     gs_sample_dict[shortGS].update({sample: self.lib_size_dict.get(sample)})
                 elif data_type == self.DATA_TYPE_TRANSCRIPT_NAME:
-                    gs_transcript_names = [self.transcript_names_dict[sample][i] for i in self.gs_transcriptInd_dict[gs]]
+                    gs_transcript_names = [self.transcript_names_dict[sample][i] for i in
+                                           self.gs_transcriptInd_dict[gs]]
                     gs_sample_dict[shortGS].update({sample: gs_transcript_names})
 
         return gs_sample_dict
@@ -1086,7 +1101,8 @@ class VizPipeline:
                 elif data_type == self.DATA_TYPE_LIB_SIZE:
                     sample_gs_dict[sample].update({shortGS: self.lib_size_dict.get(sample)})
                 elif data_type == self.DATA_TYPE_TRANSCRIPT_NAME:
-                    gs_transcript_names = [self.transcript_names_dict[sample][i] for i in self.gs_transcriptInd_dict[gs]]
+                    gs_transcript_names = [self.transcript_names_dict[sample][i] for i in
+                                           self.gs_transcriptInd_dict[gs]]
                     sample_gs_dict[sample].update({shortGS: gs_transcript_names})
         return sample_gs_dict
 
@@ -1328,7 +1344,8 @@ class VizPipeline:
                                              scale=True, lib_size_dict=sample_gs_lib_size_combined,
                                              png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
             plots.append(self.get_triangle_plot(count_dict=sample_gs_frame_counts_term_combined,
-                                                transcript_names_dict = sample_gs_transcript_names_dict[next(iter(sample_gs_transcript_names_dict))],
+                                                transcript_names_dict=sample_gs_transcript_names_dict[
+                                                    next(iter(sample_gs_transcript_names_dict))],
                                                 color_dict=gs_colors_dict,
                                                 lib_size_dict=sample_gs_lib_size_combined,
                                                 png_dir=self.geneset_png_dir, svg_dir=self.geneset_svg_dir))
@@ -1717,6 +1734,29 @@ class VizPipeline:
                                   combine_weighted=combine_weighted,
                                   combine_color=combine_color,
                                   png_dir=png_dir, svg_dir=svg_dir)
+        return p
+
+    def get_frame_line_chart(self, plot_name="frame-line_charts",
+                             count_dict=None, region="",
+                             lib_size_dict=None,
+                             png_dir=png_dir, svg_dir=svg_dir):
+
+        if count_dict is None:
+            count_dict = self.count_vector_list_start_dict
+
+        if lib_size_dict is None:
+            lib_size_dict = self.lib_size_dict
+
+        if png_dir is None:
+            png_dir = self.png_dir
+        if svg_dir is None:
+            svg_dir = self.svg_dir
+
+        p = bokeh_frame_line_charts(title_prefix=plot_name,
+                                    count_series_dict=count_dict,
+                                    region=region,
+                                    lib_size_dict=lib_size_dict,
+                                    png_dir=png_dir, svg_dir=svg_dir)
         return p
 
     def get_top_codon_list(self, codon_df_dict):
