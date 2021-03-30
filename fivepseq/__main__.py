@@ -207,6 +207,12 @@ class FivepseqArguments:
                               #default=30,
                               required=False)
 
+        advanced.add_argument("--oof",
+                              #help="compute out-of-frame counts",
+                              action="store_true",
+                              default=False,
+                              required=False)
+
         #        parser.add_argument("-tf", "-transcript_filter",
         #                            help="Name of filter to apply on transcripts",
         #                            type=str,

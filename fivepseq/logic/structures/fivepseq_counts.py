@@ -24,6 +24,7 @@ class FivePSeqCounts:
 
     START = "START"
     TERM = "STOP"
+    MID = "MIDDLE"
     FULL_LENGTH = "full_length"
     ALL = "all"
 
@@ -727,6 +728,73 @@ class FivePSeqCounts:
 
         return self.tripeptide_count_df
 
+    def store_out_of_frame_stats(self, period, asite_frag=None, downsample=True):
+        """
+        Stores the cummulative counts located A-site distance from each codon in-frame and out-of-frame.
+
+        :param: period: int a number indicating the length of the periodicity to search for
+        :param: asite_frag: int length from A site to ribosome protection site (computed from period if not provided)
+        :return: df: pd.DataFrame: a dataframe containing columns ["f0", "f1", "f2"] and rows for each codon
+        """
+
+        logging.info("Counting codon pauses in- and out-of- frame ")
+
+        if asite_frag is None:
+            asite_frag = period - 13  # inferred from 30 and -17 for yeast, but can be changed for other species
+
+        logging.info("Options: A-site distance = %d" % asite_frag)
+
+        out_of_frame_df = pd.DataFrame(data=0, index= Codons.CODON_TABLE.keys(),
+                                       columns=["f0", "f1", "f2"])
+
+
+        span_size = self.annotation.span_size
+        cnt = 0
+        ta = self.annotation.get_transcript_assembly(span_size=span_size)
+        transcript_count = len(ta)
+        for t in range(transcript_count):
+            transcript = ta[t]
+
+            if np.floor(transcript_count / 1000) > 0 and t % 1000 == 0:
+                logging.info("\r>>Transcript count: %d (%d%s)\t" % (
+                    t, floor(100 * (t - 1) / transcript_count), '%',), )
+
+            count_vector = self.get_count_vector(transcript, span_size=0,
+                                                 region=FivePSeqCounts.FULL_LENGTH,
+                                                 downsample=downsample)
+
+            cds_sequence = self.get_cds_sequence_safe(transcript, 0)
+
+            if sum(count_vector) == 0:
+                continue
+
+            if len(cds_sequence) != len(count_vector):
+                self.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
+                                    % (t, len(cds_sequence), len(count_vector)))
+                continue
+
+            for f in [0, 1, 2]:
+
+                # loop through codons in the frame
+                for i in range(f, len(count_vector), 3):
+                    codonA = cds_sequence[i: i + 3].upper()
+
+                    if not codonA in out_of_frame_df.index:
+                        break
+
+                    if i < asite_frag:
+                        continue
+
+                    out_of_frame_df.loc[codonA, "f" + str(f)] += count_vector[i - asite_frag]
+
+        # rename out_of_frame_df indices by adding amino acid names
+        new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in out_of_frame_df.index]
+        out_of_frame_df.index = new_index
+        out_of_frame_df = out_of_frame_df
+
+
+        return out_of_frame_df
+
     # TODO a modification for di-codon counts to me incorporated inseat of get_codon_pauses in the future
     @preconditions(lambda dist_from: isinstance(dist_from, int),
                    lambda dist_from: dist_from < 0,
@@ -742,6 +810,7 @@ class FivePSeqCounts:
         :param dist_from: negative distance from each codon or codon-pair
         :param dist_to: positive distance after each codon or codon-pair
         :param mask_dist: the number of positions to mask in the beginning and end of the gene body
+
         :return:
         """
 
@@ -893,6 +962,109 @@ class FivePSeqCounts:
 
         return
 
+    # TODO a modification for di-codon counts to me incorporated inseat of get_codon_pauses in the future
+    @preconditions(lambda dist_from: isinstance(dist_from, int),
+                   lambda dist_from: dist_from < 0,
+                   lambda dist_to: isinstance(dist_to, int),
+                   lambda dist_to: dist_to >= 0)
+    def get_out_of_frame_codon_pauses(self, dist_from=-30, dist_to=3, downsample=True, fstart = 0):
+        """
+        Counts the meta-number of 5' mapping positions at the given distance from a codon or codon-pair
+        Only transcripts with cds of length multiple of 3 are accounted for.
+        The only frame in these transcripts is considered.
+
+        :param codon:
+        :param dist_from: negative distance from each codon or codon-pair
+        :param dist_to: positive distance after each codon or codon-pair
+        :param mask_dist: the number of positions to mask in the beginning and end of the gene body
+        :param fstart: for -1 frame, fstart = 2; for +1 it is 1
+        :return:
+        """
+
+        self.logger.info(
+            "Counting out of frame codon specific pauses within %d to %d nt distance from the first nucleotide of each codon" %
+            (dist_from, dist_to))
+
+        if self.config.args.no_mask:
+            mask_dist = 0
+            self.logger.info("Transcript boundaries will not be masked")
+        else:
+            if hasattr(config.args, "codon_mask_size"):
+                mask_dist = config.args.codon_mask_size
+            else:
+                mask_dist = self.MASK_DIST
+            self.logger.info("Transcript boundaries will be masked by %d nucleotides" % mask_dist)
+
+        codon_count_df = pd.DataFrame(data=0, index=Codons.CODON_TABLE.keys(),
+                                      columns=range(dist_from, dist_to))
+
+        counter = 1
+
+        transcript_assembly = self.annotation.get_transcript_assembly(
+            span_size=0)  # don't take more than the gene body (different from previous versions)
+        transcript_count = len(transcript_assembly)
+        for t in range(transcript_count):
+            transcript = transcript_assembly[t]
+            if np.floor(transcript_count / 1000) > 0 and counter % 1000 == 0:
+                self.logger.info("\r>>Transcript count: %d (%d%s)\t" % (
+                    counter, floor(100 * (counter - 1) / transcript_count), '%',), )
+            counter += 1
+
+            count_vector = self.get_count_vector(transcript, span_size=0,
+                                                 region=FivePSeqCounts.FULL_LENGTH,
+                                                 downsample=downsample)
+
+            cds_sequence = self.get_cds_sequence_safe(transcript, 0)
+
+            if sum(count_vector) == 0:
+                continue
+
+            if len(cds_sequence) != len(count_vector):
+                self.logger.warning("Transcript num %d: cds sequence length %d not equal to count vector length %d"
+                                    % (counter, len(cds_sequence), len(count_vector)))
+                continue
+
+            # mask the first and last 20 counts to avoid initiation affecting codon-specific counts
+            if mask_dist >= 3:
+                count_vector[0:mask_dist] = [0] * mask_dist
+                cds_sequence = cds_sequence[0:len(cds_sequence) - mask_dist] + ''.join(
+                    'N' * (mask_dist - 3)) + cds_sequence[len(cds_sequence) - 3:len(cds_sequence)]
+
+            count_vector = [0] * (-1 * dist_from) + count_vector + [0] * dist_to
+            cds_sequence = ''.join('N' * (-1 * dist_from)) + cds_sequence + ''.join('N' * dist_to)
+
+            # identify 3nt bins with non-zero counts
+            ind = np.array(range(fstart, len(count_vector), 3))
+            hits = [sum(count_vector[i:i + 3]) > 0 for i in ind]
+            non_empty_ind = ind[hits]
+
+            # loop through non-empty triplets only
+            for i in non_empty_ind:
+                # loop through all codons dist_from nucleotides downstream and dist_to nucleotides upstream
+                j_range = list(np.arange(i, i - dist_to, -3))[::-1] + list(np.arange(i + 3, i + 3 - dist_from, 3))
+                for j in j_range:
+                    if j < 0:
+                        continue
+                    if j + 3 > len(cds_sequence):
+                        break
+                    codonA = cds_sequence[j: j + 3].upper()
+
+                    if (len(codonA) == 3) & (codonA in Codons.CODON_TABLE.keys()):
+                        for p in range(0, 3):
+                            d = i - j + p
+                            try:
+                                codon_count_df.at[codonA, d] += count_vector[i + p]
+                            except Exception as e:
+                                self.logger.warn("Index out of range: i: %d, j: %d, p: %d, d: %d. %s"
+                                                 % (i, j, p, d, str(e)))
+
+        # rename codon_count_df indices by adding amino acid names
+        new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in codon_count_df.index]
+        codon_count_df.index = new_index
+        codon_count_df = codon_count_df
+
+        return codon_count_df
+
     def codon_to_amino_acid_count_df(self, codon_count_df):
 
         amino_acid_count_df = pd.DataFrame(data=0, index=Codons.AMINO_ACID_TABLE.keys(),
@@ -951,7 +1123,6 @@ class FivePSeqCounts:
     def get_codon_stats(self):
         if self.codon_stats_df is None:
             self.codon_stats_df = self.compute_codon_stats_codon()
-
         return self.codon_stats_df
 
     def compute_codon_genome_usage(self):
@@ -1001,7 +1172,6 @@ class FivePSeqCounts:
             codon_stats['peak_pos'] = [np.argmax(codon_counts.iloc[i, :]) for i in range(len(codon_stats))]
             codon_stats['peak_scale'] = np.zeros(len(codon_stats))
 
-
             for i in range(len(codon_stats)):
                 for i in range(len(codon_stats)):
                     counts = list(codon_counts.iloc[i, :])
@@ -1042,6 +1212,7 @@ class FivePSeqCounts:
         :param padding: int: padding, bp (not to count the first and last regions in the transcripts)
         :param loci_file: str: full path to the file specifying the loci.
         :return:
+
         """
 
         self.logger.info(
@@ -1445,6 +1616,9 @@ class CountManager:
         elif region == FivePSeqCounts.TERM:
             d = np.arange(-(len(count_vector) - tail - 3), tail + 3)
 
+        elif region == FivePSeqCounts.MID:
+            d = np.arange(0, len(count_vector))
+
         else:
             error_message = "Invalid region %s specified: should be either %s or %s" \
                             % (region, FivePSeqCounts.START, FivePSeqCounts.TERM)
@@ -1539,6 +1713,44 @@ class CountManager:
         for i in range(0, len(df)):
             count_vector_list[i] = list(map(int, df.iloc[i, 0].split("\t")))
         return count_vector_list
+
+    @staticmethod
+    @preconditions(lambda count_vec_list: isinstance(count_vec_list, list))
+    def extract_mid_counts(count_vec_list, size=600, tail=100):
+        """
+        Extract the middle parts of each vector in the given list
+        and returns the list of extracted same-length vectors.
+
+        The frame is preserved and adjusted by the tail length.
+
+        :param count_vec_list: list of full size vectors
+        :param size: the size of the middle part to extract
+        :param tail: the distance spanning from CDS start and end in the given list of vectors
+        :return: a list of frame-adjusted length sized vectors from the middle part of each vector
+        """
+
+        mid_vec_list = [[]] * len(count_vec_list)
+
+        size = size - size % 3
+
+        for i in range(len(count_vec_list)):
+            vec = count_vec_list[i]
+            # determine start, putting 0 at the first nucleotide of the start codon
+            cds_vec = vec[0 + tail: len(vec) - tail - 3: 1]  # TODO check this
+
+            if (len(cds_vec) < size):
+                mid_vec = [0] * (floor((size - len(cds_vec)) / 6) * 3) + \
+                          cds_vec + \
+                          [0] * int(np.ceil((size - len(cds_vec)) / 6) * 3)
+
+            else:
+                num_f0_bases = len(cds_vec[0: len(cds_vec): 3])
+                mid_start = int(np.ceil(num_f0_bases - size / 3) / 2) * 3
+                mid_vec = cds_vec[mid_start:mid_start + size]
+
+            mid_vec_list[i] = mid_vec
+
+        return mid_vec_list
 
     @staticmethod
     @preconditions(lambda file: isinstance(file, str))

@@ -23,7 +23,7 @@ from bokeh.transform import transform
 from fivepseq import config
 from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
 from fivepseq.logic.structures import codons
-from fivepseq.logic.structures.fivepseq_counts import CountManager
+from fivepseq.logic.structures.fivepseq_counts import CountManager, FivePSeqCounts
 from fivepseq.viz.header_html import get_div_logo, get_div_footer, get_div_title
 
 tools = [PanTool(), BoxZoomTool(), WheelZoomTool(), SaveTool(), ResetTool()]
@@ -1058,66 +1058,79 @@ def bokeh_aa_pause_linechart(title, amino_acid_df):
     return p
 
 
-def bokeh_frame_line_charts(title_prefix, count_series_dict, region, w=120,
+def bokeh_frame_line_charts(title_prefix, region_count_series_dict, w=20,
                             lib_size_dict=None, png_dir=None, svg_dir=None):
-    if count_series_dict is None:
+    if region_count_series_dict is None:
         return None
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info(
-        "Making frame line charts %s with options: smooting window(%d), " %
+        "Making frame line charts %s with options: smoothing window(%d), " %
         (title_prefix, w))
 
-    my_x_label = "distance from %s" % region
-    my_y_label = "5' counts per base (averaged over %d nt window), RPM" % w
 
-    mainLayout = row(row(), name=title_prefix + ' frame-charts')
+    my_y_label = "5' counts per base (averaged over %d codon window), RPM" % w
+
+    figure_list = []
 
     frame_cols = {"f0": "#ee6677", "f1": "#5ab76f", "f2": "#66ccee"}
 
-    for key in count_series_dict.keys():
-        key_title = get_key_title(title_prefix, key)
-        p = figure(title=key_title, x_axis_label=my_x_label, y_axis_label=my_y_label)
+    key0 = list(region_count_series_dict)[0]
 
-        legend_items = []
+    for sample_ind in range(len(region_count_series_dict.get(key0))):
+        sample = list(region_count_series_dict.get(key0))[sample_ind]
+        sample_title = get_key_title(title_prefix, sample)
+        sample_charts = row(row(), name=sample_title)
 
-        count_series = count_series_dict.get(key)
+        for region in [FivePSeqCounts.START, FivePSeqCounts.MID, FivePSeqCounts.TERM]:
+            my_x_label = "distance from %s" % region
 
-        if count_series is None:
-            # return None
-            continue
+            p = figure(title=sample_title + "_" + region, x_axis_label=my_x_label, y_axis_label=my_y_label)
 
-        try:
-            for f in (0, 1, 2):
-                c = frame_cols.get("f" + str(f))
-                f_start_ind = list(np.where([d % 3 == f for d in count_series.D][0:3])[0])[0]
-                f_counts = count_series.C[f_start_ind::3]
-                f_rpm_counts = [10 ** 6 * x / lib_size_dict.get(key) for x in f_counts]
-                y = average_counts_over_window(f_rpm_counts, w)
-                source = ColumnDataSource(
-                    data=dict(
-                        x=list(count_series.D[f_start_ind::3]),
-                        y=list(y),
-                        name=["f" + str(f)]*len(y)
-                    ))
-                line = p.line('x', 'y', line_color=c, line_width=2, source=source)
-                legend_items.append((key + ": F" + str(f), [line]))
-                hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x')], renderers=[line])
-                p.add_tools(hover)
+            legend_items = []
 
-        except Exception as e:
-            print("Error at key %s, reason; %s" % (key, str(e)))
-            return None
+            count_series = region_count_series_dict.get(region).get(sample)
 
-        legend = Legend(items=legend_items, location=LEGEND_ALIGNMENT)
-        p.add_layout(legend, LEGEND_POSITION)
-        p.legend.click_policy = "hide"
+            if count_series is None:
+                # return None
+                continue
 
-        mainLayout.children[0].children.append(p)
+            try:
+                for f in (0, 1, 2):
+                    c = frame_cols.get("f" + str(f))
+                    # adjust the frame so that the position 0 corresponds to frame 0, 1 to 1 and 2 to 2.
+                    f_start_ind = list(np.where([d % 3 == f for d in count_series.D][0:3])[0])[0]
+                    f_counts = count_series.C[f_start_ind::3]
+                    f_rpm_counts = [10 ** 6 * x / lib_size_dict.get(sample) for x in f_counts]
+                    y = average_counts_over_window(f_rpm_counts, w)
+                    source = ColumnDataSource(
+                        data=dict(
+                            x=list(count_series.D[f_start_ind::3]),
+                            y=list(y),
+                            name=["f" + str(f)]*len(y)
+                        ))
+                    line = p.line('x', 'y', line_color=c, line_width=2, source=source)
+                    legend_items.append((sample + ": F" + str(f), [line]))
+                    hover = HoverTool(tooltips=[('name', '@name'), ('position', '@x')], renderers=[line])
+                    p.add_tools(hover)
 
-        # figures for exporting
-        export_images(p, key_title, png_dir, svg_dir)
+            except Exception as e:
+                print("Error at key %s, reason; %s" % (sample, str(e)))
+                return None
 
-    return mainLayout
+            legend = Legend(items=legend_items, location=LEGEND_ALIGNMENT)
+            p.add_layout(legend, LEGEND_POSITION)
+            p.legend.click_policy = "hide"
+
+            sample_charts.children[0].children.append(p)
+
+            # figures for exporting
+            export_images(p, sample_title + "-" + region, png_dir, svg_dir)
+
+        figure_list.append(sample_charts)
+
+    frame_grid = gridplot(figure_list, ncols=1)
+
+    return frame_grid
 
 
 def average_counts_over_window(counts, w):
@@ -1129,19 +1142,22 @@ def average_counts_over_window(counts, w):
     :return: vector of average counts (the same length as the original vector)
     """
 
-    sum_vec = [0] * len(counts)
+    av_vec = [0] * len(counts)
     for i in range(len(counts)):
-        if i < w:
-            counts_range = counts[i:]
+        if i < w/2:
+            if len(counts) > 2*i:
+                av_vec[i] = sum(counts[:2*i+1])/(2*i+1)
+            else:
+                av_vec[i] = sum(counts) / len(counts)
         else:
-            counts_range = counts[i - w: i]
+            if len(counts) >= i + int(np.ceil(w/2)):
+                av_vec[i] = sum(counts[i - int(np.floor(w / 2)): i + int(np.ceil(w / 2))]) / w
+            else:
+                av_vec[i] = sum(counts[i:])/(len(counts)-i)
 
-        sum_vec[i] = sum(counts_range)
-
-    av_vec = [c / w for c in sum_vec]
     return av_vec
 
-    """
+"""
 def bokeh_pca_plot(title, codon_df_dict, color_dict, start_pos = '-20', end_pos = '-2',
                    png_dir=None, svg_dir=None):
     

@@ -72,12 +72,16 @@ class VizPipeline:
 
     meta_count_term_dict = {}
     meta_count_start_dict = {}
+    meta_count_mid_dict = {}
     count_vector_list_dict = {}
     count_vector_list_start_dict = {}
     count_vector_list_term_dict = {}
+    count_vector_list_mid = {}
     amino_acid_df_dict = {}
     amino_acid_df_full_dict = {}
     codon_df_dict = {}
+    codon_df_f0_dict = {}
+    codon_df_f2_dict = {}
     codon_basesorted_df_dict = {}
     dicodon_df_dict = {}
     dipeptide_df_dict = {}
@@ -396,6 +400,7 @@ class VizPipeline:
         self.lib_size_dict.update({sample: data_summary.iloc[:, 0][FivePSeqCounts.NUMBER_READS_DOWNSAMPLED]})
         self.meta_count_start_dict.update({sample: self.read_meta_count_start(fivepseq_out)})
         self.meta_count_term_dict.update({sample: self.read_meta_count_term(fivepseq_out)})
+        self.meta_count_mid_dict.update({sample: self.get_meta_count_mid(fivepseq_out)})
 
         self.frame_count_term_dict.update({sample: self.read_frame_count_term(fivepseq_out)})
         self.frame_count_start_dict.update({sample: self.read_frame_count_start(fivepseq_out)})
@@ -404,6 +409,11 @@ class VizPipeline:
         self.amino_acid_df_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=False)})
         self.amino_acid_df_full_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=True)})
         self.codon_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=False)})
+        if "oof" in config.args and config.args.oof is True:
+            self.codon_df_f0_dict.update({sample: self.read_codon_df(fivepseq_out, file=fivepseq_out.get_file_path(
+                FivePSeqOut.CODON_PAUSES_F0_FILE), basesort=False)})
+            self.codon_df_f2_dict.update({sample: self.read_codon_df(fivepseq_out, file=fivepseq_out.get_file_path(
+                FivePSeqOut.CODON_PAUSES_F2_FILE), basesort=False)})
         self.codon_basesorted_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=True)})
 
         self.dicodon_df_dict.update({sample: self.read_codon_df(fivepseq_out,
@@ -429,6 +439,7 @@ class VizPipeline:
 
         self.count_vector_list_start_dict.update({sample: self.read_count_vector_list_start(fivepseq_out)})
         self.count_vector_list_term_dict.update({sample: self.read_count_vector_list_term(fivepseq_out)})
+        self.count_vector_list_mid.update({sample: self.read_count_vector_list_mid(fivepseq_out)})
 
         if hasattr(self.args, "loci_file") and self.args.loci_file is not None:
             self.loci_meta_counts_dict_ALL.update({sample: self.read_loci_meta_counts(
@@ -465,12 +476,18 @@ class VizPipeline:
                                                         for i in self.transcript_index]
             self.count_vector_list_start_dict[sample] = [self.count_vector_list_start_dict[sample][i]
                                                          for i in self.transcript_index]
+            self.count_vector_list_mid[sample] = [self.count_vector_list_mid[sample][i]
+                                                  for i in self.transcript_index]
+
             self.meta_count_term_dict[sample] = CountManager.count_vector_to_df(
                 CountManager.compute_meta_counts(self.count_vector_list_term_dict[sample]),
                 FivePSeqCounts.TERM, self.args.span)
             self.meta_count_start_dict[sample] = CountManager.count_vector_to_df(
                 CountManager.compute_meta_counts(self.count_vector_list_start_dict[sample]),
                 FivePSeqCounts.TERM, self.args.span)
+            self.meta_count_mid_dict[sample] = CountManager.count_vector_to_df(
+                CountManager.compute_meta_counts(self.count_vector_list_mid[sample]),
+                FivePSeqCounts.FULL_LENGTH, self.args.span)
 
             # TODO amino acids pauses not subsettable
 
@@ -651,6 +668,21 @@ class VizPipeline:
                              ],
                             os.path.join(self.supplement_dir, codon_title + ".html"), 1)
 
+        # out-of-frame heatmaps
+        if "oof" in config.args and config.args.oof is True:
+            for f in [0, 2]:
+                self.logger.info("Generating supplement plots: codon heatmaps frame F%d" % f)
+                if f == 0:
+                    codon_df_dict = self.codon_df_f0_dict
+                else:
+                    codon_df_dict = self.codon_df_f2_dict
+
+                bokeh_composite(
+                    codon_title + "_F%d" % f,
+                    [self.get_heatmap_plot(codon_title, codon_df_dict, scale=False),
+                     self.get_heatmap_plot(codon_title, codon_df_dict, scale=True)],
+                    os.path.join(self.supplement_dir, codon_title + "_F%d.html" % f), 1)
+
         # amino acid line-charts
         self.logger.info("Generating supplement plots: amino acid line-charts")
         aa_linecharts = []
@@ -710,6 +742,40 @@ class VizPipeline:
         bokeh_composite(self.title + "_codon_linecharts", codon_linecharts,
                         os.path.join(self.supplement_dir, self.title + "_codon_linecharts.html"), 2)
 
+        # out-of-frame codon line-charts
+        if "oof" in config.args and config.args.oof is True:
+            for f in [0, 2]:
+                self.logger.info("Generating supplement plots: F%d codon line-charts" % f)
+                codon_linecharts = []
+                for aa in Codons.AMINO_ACID_TABLE.keys():
+                    for codon in Codons.AMINO_ACID_TABLE[aa]:
+                        self.logger.info("Plotting line charts for F%d %s counts" % (f, codon))
+
+                        codon_count_dict = {}
+
+                        for sample in self.samples:
+                            if f == 0:
+                                codon_df_full = self.codon_df_f0_dict[sample]
+                            else:
+                                codon_df_full = self.codon_df_f2_dict[sample]
+                            codon_df = pd.DataFrame(
+                                data={'D': list(map(int, codon_df_full.columns)),
+                                      'C': codon_df_full.loc[Codons.CODON_TABLE[codon] + "_" + codon, :]})
+                            codon_df = codon_df.reset_index(drop=True)
+                            codon_count_dict.update({sample: codon_df})
+
+                        codon_name = codon + "(" + Codons.CODON_TABLE[codon] + ")"
+                        codon_linecharts.append(
+                            self.get_line_chart(plot_name=codon_name,
+                                                region="codon", count_dict=codon_count_dict,
+                                                scale=True,
+                                                png_dir=self.supplement_png_dir,
+                                                svg_dir=self.supplement_svg_dir))
+
+                bokeh_composite(self.title + "_codon_F%d_linecharts" % f, codon_linecharts,
+                                os.path.join(self.supplement_dir, self.title +
+                                             "_codon_F%d_linecharts.html" % f), 2)
+
         # peptide line-charts
         self.make_peptide_line_charts(self.dicodon_df_dict, "dicodon")
         self.make_peptide_line_charts(self.dipeptide_df_dict, "dipeptide")
@@ -718,14 +784,9 @@ class VizPipeline:
 
         # frame line charts
         bokeh_composite(self.title + "_frame-linecharts",
-                        [
-                            self.get_frame_line_chart(
-                                frame_line_chart_title + FivePSeqCounts.START,
-                                self.meta_count_start_dict, region=FivePSeqCounts.START),
-                            self.get_frame_line_chart(
-                                frame_line_chart_title + FivePSeqCounts.TERM,
-                                self.meta_count_term_dict, region=FivePSeqCounts.TERM)
-                        ],
+                        [self.get_frame_line_chart(frame_line_chart_title,
+                                                   png_dir=self.supplement_png_dir,
+                                                   svg_dir=self.supplement_svg_dir)],
                         os.path.join(self.supplement_dir, self.title + "_frame-linecharts.html"), 1)
 
     def make_peptide_line_charts(self, codon_count_dict, peptide_type):
@@ -857,6 +918,18 @@ class VizPipeline:
                 "Files may not be exported in svg and png formats, while html will still be available for viewing."
                 "To install phantomjs, run 'conda install phantomjs selenium pillow'")
         return self.phantomjs_installed
+
+    def get_meta_count_mid(self, fivepseq_out=None, file=None):
+        try:
+            meta_count_mid = CountManager.count_vector_to_df(
+                CountManager.compute_meta_counts(
+                    self.read_count_vector_list_mid(fivepseq_out, file)),
+                FivePSeqCounts.MID,
+                self.args.span)
+        except:
+            self.logger.warn("The file %s not found, plots for this will be skipped." % str(file))
+            meta_count_mid = None
+        return meta_count_mid
 
     def read_meta_count_term(self, fivepseq_out=None, file=None):
         if file is None:
@@ -998,6 +1071,21 @@ class VizPipeline:
             self.logger.warn("The file %s not found, plots for this will be skipped." % str(file))
             count_vector_list_start = None
         return count_vector_list_start
+
+    def read_count_vector_list_mid(self, fivepseq_out=None, file=None):
+        if file is None:
+            if fivepseq_out is None:
+                raise Exception("Insufficient arguments")
+            file = fivepseq_out.get_file_path(FivePSeqOut.COUNT_FULL_FILE)
+
+        try:
+            count_vector_list_full = CountManager.read_counts_as_list(file)
+            # extract the middle parts
+            count_vector_list_mid = CountManager.extract_mid_counts(count_vector_list_full)
+        except:
+            self.logger.warn("The file %s not found, plots for this will be skipped." % str(file))
+            count_vector_list_mid = None
+        return count_vector_list_mid
 
     def read_loci_meta_counts(self, fivepseq_out=None, file=None):
         if file is None:
@@ -1737,12 +1825,14 @@ class VizPipeline:
         return p
 
     def get_frame_line_chart(self, plot_name="frame-line_charts",
-                             count_dict=None, region="",
+                             region_count_dict=None,
                              lib_size_dict=None,
                              png_dir=png_dir, svg_dir=svg_dir):
 
-        if count_dict is None:
-            count_dict = self.count_vector_list_start_dict
+        if region_count_dict is None:
+            region_count_dict = {FivePSeqCounts.START: self.meta_count_start_dict,
+                                 FivePSeqCounts.MID: self.meta_count_mid_dict,
+                                 FivePSeqCounts.TERM: self.meta_count_term_dict}
 
         if lib_size_dict is None:
             lib_size_dict = self.lib_size_dict
@@ -1753,8 +1843,7 @@ class VizPipeline:
             svg_dir = self.svg_dir
 
         p = bokeh_frame_line_charts(title_prefix=plot_name,
-                                    count_series_dict=count_dict,
-                                    region=region,
+                                    region_count_series_dict=region_count_dict,
                                     lib_size_dict=lib_size_dict,
                                     png_dir=png_dir, svg_dir=svg_dir)
         return p

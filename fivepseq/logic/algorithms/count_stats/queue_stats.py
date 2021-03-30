@@ -1,6 +1,10 @@
 import logging
+from math import floor
+
 import pandas as pd
 import numpy as np
+from fivepseq.logic.structures.codons import Codons
+
 from fivepseq.logic.algorithms.count_stats.count_stats import CountStats
 from fivepseq.logic.structures.fivepseq_counts import FivePSeqCounts, CountManager
 
@@ -11,10 +15,10 @@ class QueueStats:
     config = None
     logger = None
 
-    l_coef = 2              # the minimum length of the desired fragments: length = l_coef*period (default: 2)
-    wm = 3                  # window multiplier for the seeds (default: 3)
-    ft = 20                 # FFT signal threshold (default: 10)
-    tolerance_coef = 0.12   # fraction of allowed variability from desired periodicity (default: 0.12)
+    l_coef = 2  # the minimum length of the desired fragments: length = l_coef*period (default: 2)
+    wm = 3  # window multiplier for the seeds (default: 3)
+    ft = 20  # FFT signal threshold (default: 10)
+    tolerance_coef = 0.12  # fraction of allowed variability from desired periodicity (default: 0.12)
 
     def __init__(self, fivepseq_counts, fivepseq_out, config):
         self.fivepseq_counts = fivepseq_counts
@@ -22,13 +26,12 @@ class QueueStats:
         self.config = config
         self.logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
-    def store_periods(self, period, asite_frag = None):
+    def store_periods(self, period, asite_frag=None):
         """Stores the periods detected by detect_periods() function and stores those in the given dataframe (in-place?).
 
-        :param: vec: [int] a vector of int counts
         :param: period: int a number indicating the length of the periodicity to search for
-        :param: asite_frag: int length from A site to ribosome protection site
-        :param: df: pd.DataFrame: a dataframe containing columns ["tnum", "start", "stop", "period", "score", "length", "pos"]
+        :param: asite_frag: int length from A site to ribosome protection site (computed from period if not provided)
+        :return: df: pd.DataFrame: a dataframe containing columns ["tnum", "start", "stop", "period", "score", "length", "pos"]
                 tnum = transcript number
                 start = start of the periodicity window
                 stop = stop of the periodicity window
@@ -58,7 +61,7 @@ class QueueStats:
         count_vector_list = self.fivepseq_counts.get_count_vector_list(FivePSeqCounts.FULL_LENGTH)
         span_size = self.fivepseq_counts.annotation.span_size
         cnt = 0
-        ta = self.fivepseq_counts.annotation.get_transcript_assembly(span_size = span_size)
+        ta = self.fivepseq_counts.annotation.get_transcript_assembly(span_size=span_size)
         for ivec in range(len(count_vector_list)):
             vec = count_vector_list[ivec]
 
@@ -72,11 +75,11 @@ class QueueStats:
                     e = window[1]
                     peaks = self.get_peaks(vec[s:e], s, e, period)
 
-                    if len(peaks) > 1 or len(peaks) >  len(window) / period / 2:
+                    if len(peaks) > 1 or len(peaks) > len(window) / period / 2:
 
                         real_peaks = [p - span_size for p in peaks]
-                        e = peaks[len(peaks) - 1] # adjust window end to the last peak
-                        s = peaks[0] # adjust window start to the first peak
+                        e = peaks[len(peaks) - 1]  # adjust window end to the last peak
+                        s = peaks[0]  # adjust window start to the first peak
 
                         wl = e - s
                         pos_s = float(s - span_size) / vl
@@ -98,10 +101,10 @@ class QueueStats:
                             context = seq[e:len(seq)]
 
                         if asite_frag is None:
-                            asite_frag = period - 13 # inferred from 30 and -17 for yeast, but can be changed for other species
+                            asite_frag = period - 13  # inferred from 30 and -17 for yeast, but can be changed for other species
 
                         if e + asite_frag <= len(seq):
-                            motif = seq[(e + asite_frag - 6):(e + asite_frag+3)] # [+11 : 20) for -17
+                            motif = seq[(e + asite_frag - 6):(e + asite_frag + 3)]  # [+11 : 20) for -17
                         else:
                             motif = ""
 
@@ -181,7 +184,7 @@ class QueueStats:
         m_s = m_windows[0]
         m_e = m_windows[1]
 
-       # slice on maximum endpoints
+        # slice on maximum endpoints
         s_s = []
         s_e = []
 
@@ -197,7 +200,6 @@ class QueueStats:
                 ps = self.get_fft_signal(vec[s_s[i]:s_e[i]], period)
                 if ps[0] > self.ft:
                     result.append([s_s[i], s_e[i], ps[1], ps[0]])
-
 
         return (result)
 
@@ -364,7 +366,7 @@ class QueueStats:
         peaks = []
         for d1 in sorted(peak_pvalues.D):
             for d2 in sorted(peak_pvalues.D):
-                dif = np.abs(d2-d1)
+                dif = np.abs(d2 - d1)
                 if dif == period or dif == period + 3:
                     if d1 not in peaks:
                         peaks.append(d1)

@@ -39,6 +39,7 @@ class CountPipeline:
             self.run_codon_stats()
             self.run_loci_counts()
             self.run_queue_analysis()
+            self.run_out_of_frame_codon_stats()
 
         # sanity check
         success = self.fivepseq_out.sanity_check_for_counts()
@@ -206,10 +207,20 @@ class CountPipeline:
                                                # generate more than needed for visualization
                                                self.fivepseq_out.AMINO_ACID_STATS_FILE)
 
-        #   codon stats
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.CODON_STATS_FILE)):
-            self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_codon_stats(),
-                                               self.fivepseq_out.CODON_STATS_FILE)
+    def run_out_of_frame_codon_stats(self):
+
+        if "oof" in config.args and config.args.oof is True:
+            #   frame +1
+            self.logger.info("Computing out of frame codon counts (F2)")
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.CODON_PAUSES_F2_FILE)):
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_out_of_frame_codon_pauses (fstart=1),
+                                                   self.fivepseq_out.CODON_PAUSES_F2_FILE)
+            self.logger.info("Computing out of frame codon counts (F0)")
+            # frame -1
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.CODON_PAUSES_F0_FILE)):
+                self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_out_of_frame_codon_pauses(fstart=2),
+                                                   self.fivepseq_out.CODON_PAUSES_F0_FILE)
+
 
     def run_loci_counts(self):
         #   loci pauses
@@ -261,7 +272,8 @@ class CountPipeline:
 
     def run_queue_analysis(self):
         if "queue" in config.args and config.args.queue is not None:
-            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.QUEUE_STATS_FILE)):
+            if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.QUEUE_STATS_FILE))\
+                    and not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.OUT_OF_FRAME_STATS_FILE)):
                 queue_stats = QueueStats(self.fivepseq_counts, self.fivepseq_out, config)
                 try:
                     period = int(config.args.queue)
@@ -271,6 +283,9 @@ class CountPipeline:
                 rq_df = queue_stats.store_periods(period)
                 self.fivepseq_out.write_df_to_file(rq_df, self.fivepseq_out.get_file_path(
                     self.fivepseq_out.QUEUE_STATS_FILE))
+                out_of_frame_df = self.fivepseq_counts.store_out_of_frame_stats(period)
+                self.fivepseq_out.write_df_to_file(out_of_frame_df, self.fivepseq_out.get_file_path(
+                    self.fivepseq_out.OUT_OF_FRAME_STATS_FILE))
 
     def skip(self, file):
         if (self.fivepseq_out.conflict_mode == config.ADD_FILES) & (

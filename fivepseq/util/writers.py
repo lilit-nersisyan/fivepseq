@@ -22,6 +22,8 @@ class FivePSeqOut:
     META_COUNT_START_PEAKS_FILE = "meta_count_peaks_START.txt"
     AMINO_ACID_PAUSES_FILE = "amino_acid_pauses.txt"
     CODON_PAUSES_FILE = "codon_pauses.txt"
+    CODON_PAUSES_F0_FILE = "codon_pauses_f0.txt"
+    CODON_PAUSES_F2_FILE = "codon_pauses_f2.txt"
     DICODON_PAUSES_FILE = "dicodon_pauses.txt"
     TRICODON_PAUSES_FILE = "tricodon_pauses.txt"
     TRIPEPTIDE_PAUSES_FILE = "tripeptide_pauses.txt"
@@ -52,7 +54,7 @@ class FivePSeqOut:
     OUTLIERS_DF = "outliers_df.txt"
     GENESET_FILE = "genesets.txt"
     QUEUE_STATS_FILE = "queue_stats.txt"
-
+    OUT_OF_FRAME_STATS_FILE = "out_of_frame_stats.txt"
 
     FAILED_COUNT_FILES_LIST = "failed_count_files_list.txt"
     BAM_SUCCESS_SUMMARY = "count_run_summary.txt"
