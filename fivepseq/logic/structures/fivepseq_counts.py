@@ -113,6 +113,7 @@ class FivePSeqCounts:
         self.stop_codon_dict = {}
         self.canonical_transcript_index = []
         self.is_geneset = is_geneset
+        self.fpat = None
 
         self.logger.info("Initiated a FivePSeqCounts object with"
                          "\n\talignment from file %s"
@@ -476,6 +477,9 @@ class FivePSeqCounts:
                     logging.getLogger(config.FIVEPSEQ_LOGGER). \
                         debug("Transcript %s at the end of the genome padded with %d zeros"
                               % (FivePSeqOut.get_transcript_attr(transcript, "Name"), diff))
+
+
+        count_vector = self.filter_pattern(transcript, count_vector, span_size)
 
         return count_vector
 
@@ -1388,6 +1392,34 @@ class FivePSeqCounts:
 
         return populated_indices
 
+    def filter_pattern(self, transcript, count_vector, span_size):
+        """
+        Filters out counts proceeding the pattern given in the self.fpat argument.
+        Returns the new count vector.
+
+        :param transcript: transcript instance
+        :param count_vector: [int] array for counts
+        :param span_size: int the span size of the transcript and the count vector (should co-inside)
+        :return: [int] array for filtered out counts
+        """
+
+        if self.fpat is None:
+            pass
+        else:
+            seq = self.get_sequence(transcript, span_size, span_size)
+            if len(seq) != len(count_vector):
+                self.logger.warning("Could not filter transcript %s. Reason: different sequence "
+                                 "and count vector lengths." % transcript.get_name())
+            else:
+                ind = np.arange(len(count_vector))
+                hits = [count_vector[i] > 0 for i in ind]
+                non_empty_ind = ind[hits]
+                for i in non_empty_ind:
+                    if i - len(self.fpat) < 0:
+                        pass
+                    elif seq[i - len(self.fpat):i] == self.fpat:
+                        count_vector[i] = 0
+        return count_vector
 
 class FivePSeqCountsContainer:
     """

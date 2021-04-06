@@ -208,9 +208,14 @@ class FivepseqArguments:
                               required=False)
 
         advanced.add_argument("--oof",
-                              #help="compute out-of-frame counts",
+                              help="compute out-of-frame counts",
                               action="store_true",
                               default=False,
+                              required=False)
+
+        advanced.add_argument("-fpat", "-filter_pattern",
+                              help="reads proceeding this sequence pattern will be skipped",
+                              type=str,
                               required=False)
 
         #        parser.add_argument("-tf", "-transcript_filter",
@@ -361,6 +366,9 @@ class FivepseqArguments:
             if config.args.loci_file is not None:
                 print("%s%s" % (pad_spaces("\tLoci file:"), config.args.loci_file))
 
+            if config.args.fpat is not None:
+                print("%s%s" % (pad_spaces("\tFilter pattern:"), config.args.fpat))
+
         #   if config.args.fivepseq_pickle is not None:
         #       print "%s%s" % (pad_spaces("\tFivepseq pickle path specified:"), config.args.fivepseq_pickle)
 
@@ -390,15 +398,6 @@ def setup_output_dir():
         if config.args.conflicts == config.OVERWRITE:
             print("\nWARNING:\tThe output directory %s already exists.\n"
                   "\tOnly missing files will be added." % output_dir)
-
-            # NOTE the output directory is not removed as previously.
-            # NOTE Only individual files will be overwritten
-            # try:
-            #    shutil.rmtree(output_dir)
-            # except Exception as e:
-            #    error_message = "ERROR:\tCould not remove directory %s. Reason:%s" % (output_dir, e.message)
-            #    raise Exception(error_message)
-            # make_out_dir(output_dir)
 
         elif config.args.conflicts == config.ALT_DIR:
             while os.path.exists(output_dir):
@@ -622,6 +621,7 @@ def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
                                      downsample_constant=downsample_constant,
                                      is_geneset = is_geneset)
     fivepseq_counts.loci_file = loci_file
+    fivepseq_counts.fpat = config.args.fpat
 
     # set up fivepseq out object for this bam
     fivepseq_out = FivePSeqOut(filter_out_dir, config.args.conflicts)
