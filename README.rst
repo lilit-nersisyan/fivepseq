@@ -167,11 +167,4 @@ In the  In addition to performing the steps described above, it also evaluates t
 **!!NOTE!!** This example pipeline treats files as **singl-end** libraries. If you have paired-end reads, you should only supply the first read (\*_R1\* files) to fivepseq.
 
 
-For UPPMAX users only
-------------------------
-
-- Install the latest stable version of fivepseq by
-- - cd /proj/sllstore2017018/lilit/fivepseq_latest:
-- - python setup.py install
-
 Have fun!
