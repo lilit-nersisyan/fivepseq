@@ -95,6 +95,7 @@ class FivepseqArguments:
                               help="the number of bases to span around a genomic position",
                               type=int,
                               required=False,
+                              choices=range(-100, -20),
                               default=100)
 
         optional.add_argument('--conflicts',
@@ -141,7 +142,13 @@ class FivepseqArguments:
                               type=int
                               )
 
-        advanced.add_argument('-ms',"-codon-mask-size",
+        advanced.add_argument('--thrp', '--three-prime',
+                              help="Should the 3' ends used as datapoints instead of 5' default?",
+                              action="store_true",
+                              default=False,
+                              required=False)
+
+        advanced.add_argument('-ms', "-codon-mask-size",
                               help="a number {0, >3} specifying how many positions to mask from transcript start and end when counting codon-relative counts",
                               type=int,
                               required=False,
@@ -172,10 +179,9 @@ class FivepseqArguments:
                               type=int,
                               required=False,
                               default=10,
-                              choices=range(0,10000),
+                              choices=range(0, 10000),
                               metavar="0:10000"
                               )
-
 
         advanced.add_argument("--loci-file",
                               help="coordinates of loci relative to which mapping positions are to be plotted",
@@ -202,9 +208,15 @@ class FivepseqArguments:
                               required=False)
 
         advanced.add_argument("-queue",
-                              #help="perform rq-score analysis with the specified size",
+                              # help="perform rq-score analysis with the specified size",
                               type=int,
-                              #default=30,
+                              # default=30,
+                              required=False)
+
+        advanced.add_argument("-cspan",
+                              # help="perform rq-score analysis with the specified size",
+                              type=int,
+                              default=30,
                               required=False)
 
         advanced.add_argument("--oof",
@@ -277,7 +289,7 @@ class FivepseqArguments:
             print("%s%s" % (pad_spaces("\tTranscript boundary masking for codon counts:"), config.args.no_mask))
             if not config.args.no_mask:
                 print("%s%s" % (
-                pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
+                    pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
 
             print("%s" % (pad_spaces(
                 "\tTripeptides will be sorted at position %d from the A site:" % config.args.tripeptide_pos)))
@@ -343,11 +355,14 @@ class FivepseqArguments:
             if hasattr(config.args, "transcript_type"):
                 print("%s%s" % (pad_spaces("\tTranscript type:"), config.args.transcript_type))
             # advanced arguments
+            if hasattr(config.args, "thrp") and config.args.thrp:
+                print("%s" % (pad_spaces("\t3' prime mode activated!")))
+
             if config.args.no_mask:
                 print("%s%s" % (pad_spaces("\tTranscript boundary masking for codon counts:"), "OFF"))
             else:
                 print("%s%s" % (
-                pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
+                    pad_spaces("\tTranscript boundary mask size for codon counts:"), config.args.codon_mask_size))
 
             if hasattr(config.args, "tripeptide_pos"):
                 print("%s%s" % (pad_spaces("\tSort tripeptides from A site at:"), config.args.tripeptide_pos))
@@ -357,11 +372,14 @@ class FivepseqArguments:
 
             if hasattr(config.args, "triangle_threshold") and config.args.triangle_threshold is not None:
                 print("%s%s" % (pad_spaces("\tCounts threshold to include genes in the triangle plot:"),
-                    config.args.triangle_threshold))
+                                config.args.triangle_threshold))
 
             if hasattr(config.args, "queue") and config.args.queue is not None:
                 print("%s%s" % (pad_spaces("\tRibosome queue score will be computed with size:"),
-                    config.args.queue))
+                                config.args.queue))
+
+            if hasattr(config.args, "cspan"):
+                print("%s%s" % (pad_spaces("\tspan size for codon counts:"), config.args.cspan))
 
             if config.args.loci_file is not None:
                 print("%s%s" % (pad_spaces("\tLoci file:"), config.args.loci_file))
@@ -512,7 +530,8 @@ def generate_and_store_fivepseq_counts(plot=False):
     # set up annotation
 
     if hasattr(config.args, "subset") and config.args.subset is not None:
-        annotation_reader = AnnotationReader(config.annot, transcript_type=config.args.transcript_type, break_after=config.args.subset)
+        annotation_reader = AnnotationReader(config.annot, transcript_type=config.args.transcript_type,
+                                             break_after=config.args.subset)
     else:
         annotation_reader = AnnotationReader(config.annot, transcript_type=config.args.transcript_type)
 
@@ -542,7 +561,10 @@ def generate_and_store_fivepseq_counts(plot=False):
 
     for bam in bam_files:
         # set up bam input and output
-        bam_reader = BamReader(bam)
+        if hasattr(config.args, "thrp") and config.args.thrp:
+            bam_reader = BamReader(bam, config.args.thrp)
+        else:
+            bam_reader = BamReader(bam)
         bam_name = os.path.basename(bam)
         if bam_name.endswith(".bam"):
             bam_name = bam_name[0:len(bam_name) - 4]
@@ -602,7 +624,7 @@ def generate_and_store_fivepseq_counts(plot=False):
 
 def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
                       count_folders, success_values, downsample_constant=None,
-                      filter_name="protein_coding", is_geneset = False, filter=None, loci_file=None):
+                      filter_name="protein_coding", is_geneset=False, filter=None, loci_file=None):
     logging.getLogger(config.FIVEPSEQ_LOGGER). \
         info("\n##################\nCounting for sample %s and gene set %s\n##################\n"
              % (bam_name, filter_name))
@@ -619,7 +641,7 @@ def bam_filter_counts(bam_name, alignment, annotation, genome, bam_out_dir,
                                      # outlier_probability=config.args.op,
                                      config=config,
                                      downsample_constant=downsample_constant,
-                                     is_geneset = is_geneset)
+                                     is_geneset=is_geneset)
     fivepseq_counts.loci_file = loci_file
     fivepseq_counts.fpat = config.args.fpat
 

@@ -78,11 +78,12 @@ class BamReader(TopReader):
     # TODO should we allow for sam files?
     EXTENSION_BAM = "bam"
     EXTENSION_SAM = "sam"
+    three_prime = False
     valid_extensions = [EXTENSION_BAM, EXTENSION_SAM]
 
     alignment = None
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, three_prime = False):
         """
         Initializes a BamReader with the given file path.
         Checks the validity of the file. Raises IOError if the file does not exist or is a directory.
@@ -96,8 +97,10 @@ class BamReader(TopReader):
         :param file_path:
         """
         TopReader.__init__(self, file_path)
+        self.three_prime = three_prime
         self.create_bam_array()
         # TODO check if index file exists
+
 
     def create_bam_array(self):
         """
@@ -106,7 +109,7 @@ class BamReader(TopReader):
         """
         # REQ this will work only if the index file is in the same directory as the bam file, and is named in a standard manner : https://pysam.readthedocs.io/en/latest/api.html
         alignment_file = pysam.AlignmentFile(self.file)
-        self.alignment = Alignment(alignment_file, self.file)
+        self.alignment = Alignment(alignment_file, self.file, self.three_prime)
         # TODO the gene set file should be converted to a filter and then used to filter the transcript assembly
         # TODO (or should it be added to the mapping function?)
 

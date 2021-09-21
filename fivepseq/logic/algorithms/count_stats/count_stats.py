@@ -130,7 +130,6 @@ class CountStats:
                 self.logger.info("Writing summary data")
                 self.fivepseq_out.write_series_to_file(self.data_summary_series, FivePSeqOut.DATA_SUMMARY_FILE)
 
-
     def compute_fft_stats(self):
         if config.args.conflicts == config.ADD_FILES and \
                 (os.path.exists(self.fivepseq_out.get_file_path(FivePSeqOut.FFT_SIGNALS_TERM)) &
@@ -149,14 +148,15 @@ class CountStats:
                 lengths[i] = len(count_vector)
 
             # align start
-            size = int(stats.scoreatpercentile(tuple(lengths), per=25)) # determine the length that 75% of vectors will stretch to
-            num = int(np.ceil((3. / 4) * len(count_vector_list))) # only those 75% of vectors will be computed
+            size = int(stats.scoreatpercentile(tuple(lengths),
+                                               per=25))  # determine the length that 75% of vectors will stretch to
+            num = int(np.ceil((3. / 4) * len(count_vector_list)))  # only those 75% of vectors will be computed
             start_array = np.zeros((num, size))
             term_array = np.zeros((num, size))
 
             i = 0
             while i < num:
-            #for i in range(len(count_vector_list)):
+                # for i in range(len(count_vector_list)):
                 count_vector = count_vector_list[i][span_size:len(count_vector_list[i]) - span_size]
                 if (len(count_vector)) >= size:
                     start_array[i, :] = count_vector[0:size]
@@ -226,20 +226,21 @@ class CountStats:
 
         if config.args.conflicts == config.ADD_FILES and os.path.exists(
                 self.fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_START_PEAKS_FILE)):
-            self.logger.info("Skipping frame stats calculation: file %s exists" % FivePSeqOut.META_COUNT_START_PEAKS_FILE)
+            self.logger.info(
+                "Skipping frame stats calculation: file %s exists" % FivePSeqOut.META_COUNT_START_PEAKS_FILE)
         else:
-            meta_count_series = self.fivepseq_counts.get_meta_count_series(FivePSeqCounts.START).copy(deep = True)
+            meta_count_series = self.fivepseq_counts.get_meta_count_series(FivePSeqCounts.START).copy(deep=True)
             self.meta_count_peaks_start_df = CountStats.poisson_df_from_count_series(meta_count_series)
             self.fivepseq_out.write_df_to_file(self.meta_count_peaks_start_df, FivePSeqOut.META_COUNT_START_PEAKS_FILE)
 
         if config.args.conflicts == config.ADD_FILES and os.path.exists(
                 self.fivepseq_out.get_file_path(FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)):
-            self.logger.info("Skipping frame stats calculation: file %s exists" % FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)
+            self.logger.info(
+                "Skipping frame stats calculation: file %s exists" % FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)
         else:
-            meta_count_series = self.fivepseq_counts.get_meta_count_series(FivePSeqCounts.TERM).copy(deep = True)
+            meta_count_series = self.fivepseq_counts.get_meta_count_series(FivePSeqCounts.TERM).copy(deep=True)
             self.meta_count_peaks_term_df = self.poisson_df_from_count_series(meta_count_series)
             self.fivepseq_out.write_df_to_file(self.meta_count_peaks_term_df, FivePSeqOut.META_COUNT_TERM_PEAKS_FILE)
-
 
     @staticmethod
     def poisson_df_from_count_series(meta_count_series):
@@ -267,11 +268,11 @@ class CountStats:
         ind = list()
         for i in range(len(ps_df)):
             if ps_df['pval'][i] < 0.01:
-                if i ==0:
-                    if ps_df['C'][i] > ps_df['C'][i+1]:
+                if i == 0:
+                    if ps_df['C'][i] > ps_df['C'][i + 1]:
                         ind.append(i)
                 elif i == len(ps_df) - 1:
-                    if ps_df['C'][i] > ps_df['C'][i-1]:
+                    if ps_df['C'][i] > ps_df['C'][i - 1]:
                         ind.append(i)
                 else:
                     if ps_df['C'][i] > ps_df['C'][i - 1] and ps_df['C'][i] > ps_df['C'][i + 1]:
@@ -280,9 +281,7 @@ class CountStats:
         ps_df = ps_df.iloc[ind,].reset_index(drop=True)
         ps_df = ps_df.sort_values(by=['pval']).sort_values(by=['C'], ascending=False)
 
-
         return ps_df
-
 
     def compute_frame_preference_stats(self):
         """
@@ -332,11 +331,11 @@ class CountStats:
                     padj = np.nan
                     logratio = []
                     for a, b in zip(fi, fi_1):
-                        if a >0 and b >0:
-                            logratio.append(np.log2(a/b))
+                        if a > 0 and b > 0:
+                            logratio.append(np.log2(float(a) / b))
 
                     if len(logratio) > 0:
-                        padj = 3*stats.ttest_1samp(logratio, 0).pvalue # perform a multiple test correction by 3*
+                        padj = 3 * stats.ttest_1samp(logratio, 0).pvalue  # perform a multiple test correction by 3*
                         if padj > 1:
                             padj = 1
 
@@ -350,7 +349,6 @@ class CountStats:
             self.frame_stats_df = frame_stats_df
 
             self.fivepseq_out.write_df_to_file(self.frame_stats_df, FivePSeqOut.FRAME_STATS_DF_FILE)
-
 
     def compute_fpi_per_transcript(self):
         """

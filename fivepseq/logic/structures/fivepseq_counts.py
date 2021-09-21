@@ -86,6 +86,7 @@ class FivePSeqCounts:
     MASK_DIST = 20
     TRIPEPTIDE_POS = -11
     DIPEPTIDE_POS = -14
+    CSPAN = -30
 
     missing_chroms = []
 
@@ -698,37 +699,37 @@ class FivePSeqCounts:
 
     def get_amino_acid_pauses(self):
         if self.amino_acid_count_df is None:
-            self.compute_codon_pauses()
+            self.compute_codon_pauses(dist_from=self.get_cspan())
 
         return self.amino_acid_count_df
 
     def get_codon_pauses(self):
         if self.codon_count_df is None:
-            self.compute_codon_pauses()
+            self.compute_codon_pauses(dist_from=self.get_cspan())
 
         return self.codon_count_df
 
     def get_tricodon_pauses(self):
         if self.tricodon_count_df is None:
-            self.compute_codon_pauses()
+            self.compute_codon_pauses(dist_from=self.get_cspan())
 
         return self.tricodon_count_df
 
     def get_dicodon_pauses(self):
         if self.dicodon_count_df is None:
-            self.compute_codon_pauses()
+            self.compute_codon_pauses(dist_from=self.get_cspan())
 
         return self.dicodon_count_df
 
     def get_dipeptide_pauses(self):
         if self.dipeptide_count_df is None:
-            self.compute_codon_pauses()
+            self.compute_codon_pauses(dist_from=self.get_cspan())
 
         return self.dipeptide_count_df
 
     def get_tripeptide_pauses(self):
         if self.tripeptide_count_df is None:
-            self.compute_codon_pauses()
+            self.compute_codon_pauses(dist_from=self.get_cspan())
 
         return self.tripeptide_count_df
 
@@ -1097,6 +1098,16 @@ class FivePSeqCounts:
             pos = self.DIPEPTIDE_POS
 
         return pos
+
+    def get_cspan(self):
+
+        if hasattr(config.args, "cspan"):
+            pos = config.args.cspan
+        else:
+            pos = self.CSPAN
+
+        return pos
+
 
     def filter_codon_counts(self, codon_count_df, pos, top=50):
         """
@@ -1771,7 +1782,7 @@ class CountManager:
             cds_vec = vec[0 + tail: len(vec) - tail - 3: 1]  # TODO check this
 
             if (len(cds_vec) < size):
-                mid_vec = [0] * (floor((size - len(cds_vec)) / 6) * 3) + \
+                mid_vec = [0] * int(floor((size - len(cds_vec)) / 6) * 3) + \
                           cds_vec + \
                           [0] * int(np.ceil((size - len(cds_vec)) / 6) * 3)
 

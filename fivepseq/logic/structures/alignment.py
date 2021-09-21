@@ -5,6 +5,7 @@ import logging
 
 from plastid import BAMGenomeArray
 from plastid import FivePrimeMapFactory
+from plastid import ThreePrimeMapFactory
 from preconditions import preconditions
 from pysam import AlignmentFile
 
@@ -19,7 +20,7 @@ class Alignment:
     logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     @preconditions(lambda alignment_file: isinstance(alignment_file, AlignmentFile))
-    def __init__(self, alignment_file, bam_file):
+    def __init__(self, alignment_file, bam_file, three_prime = False):
 
         """
         Initiates an Alignment class object with the given pysam.AlignmentFile.
@@ -30,7 +31,10 @@ class Alignment:
         """
         self.bam_file = bam_file
         self.alignment_file = alignment_file
-        self.bam_array = BAMGenomeArray(alignment_file, mapping=FivePrimeMapFactory())
+        if(not three_prime):
+            self.bam_array = BAMGenomeArray(alignment_file, mapping=FivePrimeMapFactory())
+        else:
+            self.bam_array = BAMGenomeArray(alignment_file, mapping=ThreePrimeMapFactory())
 
         # check if alignment file read successfully
         if self.bam_array is None:

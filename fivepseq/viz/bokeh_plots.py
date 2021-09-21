@@ -945,7 +945,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
     for key in frame_df_dict.keys():
         legend_items = []
         color = color_dict.get(key)
-        counts = counts_dict.get(key).copy()
+        counts = counts_dict.get(key)[:] # copying
         if counts is None:
             # mainLayout.children[0].children.append(None)
             logging.getLogger(config.FIVEPSEQ_LOGGER).warn("Frame counts stats not found for sample %s" % key)
