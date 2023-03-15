@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+    <title>{name}</title>
+</head>
+<body>
+{svg}
+&nbsp;
+&nbsp;
+&nbsp;
+{title}
+
+
+<h2>Input and run configurations</h2>
+<h4>Main input:</h4>
+<table>
+    <tr>
+        <td>Bam directory:</td>
+        <td>{bam_dir}</td>
+    </tr>
+    <tr>
+        <td>Bam files:</td>
+        <td>{bam}</td>
+    </tr>
+    <tr>
+        <td>Genome file:</td>
+        <td>{fa}</td>
+    </tr>
+    <tr>
+        <td>Annotation file:</td>
+        <td>{gff}</td>
+    </tr>
+</table>
+<h4>Auxiliary files</h4>
+<table>
+    <tr>
+        <td>Gene set file:</td>
+        <td>{gene_set}</td>
+    </tr>
+    <tr>
+        <td>Gene filter file:</td>
+        <td>{gene_filter}</td>
+    </tr>
+</table>
+<h4>Other options</h4>
+<table>
+    <tr>
+        <td>Output directory:</td>
+        <td>{out_dir}</td>
+    </tr>
+    <tr>
+        <td>Conflict mode:</td>
+        <td>{conflicts}</td>
+    </tr>
+    <tr>
+        <td>Span size:</td>
+        <td>{span_size}</td>
+    </tr>
+    <tr>
+        <td>Transcript type:</td>
+        <td>{transcript_type}</td>
+    </tr>
+    <tr>
+        <td>Outlier detection p value [--op]:</td>
+        <td>{op}</td>
+    </tr>
+    <tr>
+        <td>Down-sampling constant [--ds]</td>
+        <td>{ds}</td>
+    </tr>
+    <tr>
+        <td>Masking transcript boundaries for codon counts [--no-mask --mask_codon_size]:</td>
+        <td>{mask}</td>
+    </tr>
+    <tr>
+        <tr>
+        <td>Dipeptide relative counts sorted at A-site relative position [--dipeptide_pos]:</td>
+        <td>{dipeptide_pos}</td>
+    </tr>
+    <tr>
+        <tr>
+        <td>Tripeptide relative counts sorted at A-site relative position [--tripeptide_pos]:</td>
+        <td>{tripeptide_pos}</td>
+    </tr>
+
+</table>
+&nbsp;
+&nbsp;
+
+<h2>Summary statistics</h2>
+{lib_size_table}
+&nbsp;
+&nbsp;
+<h2>Report files</h2>
+<h4>Main</h4>
+<table>
+    <tr>
+        <td>Main report</td>
+        <td><a href={main_report}>{main_report}</a></td>
+    </tr>
+    <tr>
+        <td>Combined samples</td>
+        <td><a href={combined_report}>{combined_report}</a></td>
+    </tr>
+</table>
+<h4>Supplement</h4>
+<table>
+    <tr>
+        <td>Amino acid line-charts</td>
+        <td><a href={suppl_amino_acid_line_report}>{suppl_amino_acid_line_report}</a></td>
+    </tr>
+    <tr>
+        <td>Codon line-charts:</td>
+        <td><a href={suppl_codon_line_report}>{suppl_codon_line_report}</a></td>
+    </tr>
+    <tr>
+        <td>Codon heatmaps:</td>
+        <td><a href={suppl_codon_report}>{suppl_codon_report}</a></td>
+    </tr>
+    <tr>
+        <td>Dipeptide linecharts:</td>
+        <td><a href={suppl_dipeptide_linecharts}>{suppl_dipeptide_linecharts}</a></td>
+    </tr>
+    <tr>
+        <td>Tripeptide linecharts:</td>
+        <td><a href={suppl_tripeptide_linecharts}>{suppl_tripeptide_linecharts}</a></td>
+    </tr>
+    <tr>
+        <td>Dicodon linecharts:</td>
+        <td><a href={suppl_dicodon_linecharts}>{suppl_dicodon_linecharts}</a></td>
+    </tr>
+    <tr>
+        <td>Tricodon linecharts:</td>
+        <td><a href={suppl_tricodon_linecharts}>{suppl_tricodon_linecharts}</a></td>
+    </tr>
+</table>
+<h4>Comparisons</h4>
+<table>
+    <tr>
+        <td>Differential heatmaps:</td>
+        <td><a href={differential_heatmaps}>{differential_heatmaps}</a></td>
+    </tr>
+</table>
+<h4>Gene sets</h4>
+<table>
+    <tr>
+        <td>Compare samples in each gene-set</td>
+        <td><a href={geneset_sample_per_gs_report}>{geneset_sample_per_gs_report}</a></td>
+    </tr>
+    <tr>
+        <td>Compare gene-sets in each sample</td>
+        <td><a href={geneset_genesets_per_sample_report}>{geneset_genesets_per_sample_report}</a></td>
+    </tr>
+</table>
+
+&nbsp;
+
+<footer>
+    {footer}
+</footer>
+
+</body>
+</html>

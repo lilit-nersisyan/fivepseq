@@ -1,7 +1,7 @@
 import unittest
 
 from fivepseq.util.readers import BamReader
-from tests import test_files
+from fivepseq.tests import test_files
 
 
 class AlignmentTest(unittest.TestCase):

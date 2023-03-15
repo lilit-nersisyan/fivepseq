@@ -1,20 +1,26 @@
 """
 This module is meant to keep properties of alignment files and functions associated with those in one place .
 """
-from preconditions import preconditions
-from pysam import AlignmentFile
+import logging
+
 from plastid import BAMGenomeArray
 from plastid import FivePrimeMapFactory
+from plastid import ThreePrimeMapFactory
+from preconditions import preconditions
+from pysam import AlignmentFile
+
 from fivepseq import config
 
 
 class Alignment:
+    bam_file = None
     alignment_file = None
     bam_array = None
     num_chromosomes = None
+    logger = logging.getLogger(config.FIVEPSEQ_LOGGER)
 
     @preconditions(lambda alignment_file: isinstance(alignment_file, AlignmentFile))
-    def __init__(self, alignment_file):
+    def __init__(self, alignment_file, bam_file, three_prime = False):
 
         """
         Initiates an Alignment class object with the given pysam.AlignmentFile.
@@ -23,19 +29,22 @@ class Alignment:
         :param alignment_file: pysam.AlignmentFile
 
         """
-
+        self.bam_file = bam_file
         self.alignment_file = alignment_file
-        self.bam_array = BAMGenomeArray(alignment_file, mapping=FivePrimeMapFactory())
+        if(not three_prime):
+            self.bam_array = BAMGenomeArray(alignment_file, mapping=FivePrimeMapFactory())
+        else:
+            self.bam_array = BAMGenomeArray(alignment_file, mapping=ThreePrimeMapFactory())
 
         # check if alignment file read successfully
         if self.bam_array is None:
             error_message = "Unknown problem occurred while reading the alignment file" % alignment_file
-            config.logger.error(error_message)
+            self.logger.error(error_message)
             raise Exception(error_message)
 
         # set the number of chromosomes from the bam array
         self.num_chromosomes = len(self.bam_array.chroms())
 
         # report success
-        config.logger.debug("Read in the alignment file %s with %d chromosomes"
+        self.logger.debug("Read in the alignment file %s with %d chromosomes"
                             % (alignment_file.filename, self.num_chromosomes))
