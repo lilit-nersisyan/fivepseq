@@ -1,0 +1,329 @@
+.. _count_files:
+
+***********************
+Count files
+***********************
+
+=============================================
+fivepseq_count directory listing
+=============================================
+Sometimes you might want to use the files that contain raw counts or stats in text formats for alternative downstream applications. Fivepseq stores the count files in the fivepseq_counts directory in the output folder. Each sample has a default folder named **protein_coding**, where the count files and stats for all protein coding genes are stored. If fivepseq is run with the ``--geneset`` option enabled, count folders corresponding to each gene set will also appear along with the **protein_coding** folder.
+The files you should find inside each of these folders are listed below.
+
+.. code-block:: shell
+
+    fivepseq
+    ├── fivepseq_counts
+    │   ├── 1_eIF5A_mut_R1
+    │       ├── protein_coding
+    │           ├── amino_acid_pauses.txt
+    │           ├── canonical_transcript_index.txt
+    │           ├── codon_pauses.txt
+    │           ├── count_distribution.txt
+    │           ├── counts_FULL_LENGTH.txt
+    │           ├── counts_START.txt
+    │           ├── counts_TERM.txt
+    │           ├── data_summary.txt
+    │           ├── dicodon_pauses.txt
+    │           ├── dipeptide_pauses.txt
+    │           ├── fft_signals_start.txt
+    │           ├── fft_signals_term.txt
+    │           ├── fft_stats.txt
+    │           ├── frame_counts_START.txt
+    │           ├── frame_counts_TERM.txt
+    │           ├── frame_stats.txt
+    │           ├── meta_count_peaks_START.txt
+    │           ├── meta_count_peaks_TERM.txt
+    │           ├── meta_counts_TERM.txt
+    │           ├── meta_counts_TERM.txt
+    │           ├── meta_counts_START.txt
+    │           ├── meta_counts_TERM.txt
+    │           ├── outlier_lower.txt
+    │           ├── outliers_df.txt
+    │           ├── start_codon_dict.txt
+    │           ├── term_codon_dict.txt
+    │           ├── transcript_assembly.txt
+    │           ├── transcript_descriptors.txt
+    │           ├── transcript_fft.txt
+    │           ├── transcript_frame_prefs.txt
+    │           ├── tricodon_pauses.txt
+    │           ├── tripeptide_pauses.txt
+    │   ├── 2_WT_R3
+    │   ├── 3_eIF5A_mut_R1
+    ├── fivepseq_plots
+    ├── log
+    ├── count_summary.txt
+
+data_summary
+_____________________________
+
+This file contains general statistics on the number of reads in the protein coding regions (or the geneset) used by fivepseq.
+
+.. code-block:: shell
+
+ NumOfReads:                     Number of reads in the coding regions, accounting for transcript filters
+ NumOfMapPositions:              Number of genome positions with at leads one mapping reads (more than one reads in the same position are counted as one)
+ NumOfReadsDownsampled:          Number of reads in the coding regions after downsampling (noise removal)
+ NumOfTranscripts:               Number of transcripts in the given annotation for the given filter
+ NumOfMapTranscripts:            Number of transcripts with at least one mapping read
+ MinNumOfReadsPerTranscript:     Minumum number of reads per transcript
+ MaxNumOfReadsPerTranscript:     Maximum number of reads per transcript
+ MedianNumOfReadsPerTranscript:  Median  number of reads per transcript
+
+transcript_assembly
+_____________________________
+
+This file contains transcript descriptors: a row per transcript and six fields (columns).
+Note that transcript assemblies for each gene set filter will be different and will only include transcripts in the filter. Also, if ``--genefilter`` option is given, only the filtered transcripts will be included in the assembly.
+
+.. code-block:: shell
+
+    ID:         transcript ID
+    gene:       gene ID (if found in the annotation)
+    chr:        chromosome name
+    cds_start:  start coordinate of the CDS
+    cds_end:    end coordinate of the CDS
+    type:       the transcript type (e.g. mRNA, tRNA, etc.)
+
+transcript_descriptors
+_____________________________
+
+This file contains basic stats for each transcript. The order of transcripts corresponds to that of the **transcript_assembly.txt**.
+Each transcript is described by six fields:
+
+.. code-block:: shell
+
+    start:                      the codon at transcript CDS start
+    stop:                       the codon at transcript CDS stop
+    len:                        transcript length
+    3nt:                        presence of 3-nucleotide periodicity in the transcript (1 for present, 0 for absent)
+    NumOfReads:                 number of reads mapping to that transcript
+    NumOfMapPositions:          number of positions in the transcript with at least one mapped read (multiple reads per position are counted as one)
+
+start_codon_dict.txt
+_____________________________
+
+This file lists all the codons present at CDS start of the transcripts. For each codon, the number of transcripts where it is present is indicated. The codons are sorted in decreasing order of occurrence.
+
+.. code-block:: shell
+
+    ATG     6590
+    TTG     1
+    GCT     2
+    AAC     1
+    ATA     6
+
+term_codon_dict.txt
+_____________________________
+
+This file lists all the codons present at CDS stop of the transcripts. For each codon, the number of transcripts where it is present is indicated. The codons are sorted in decreasing order of occurrence.
+
+.. code-block:: shell
+
+    TAG     1511
+    TGA     1951
+    TAA     3138
+
+canonical_transcript_index
+_____________________________
+
+The indices (as they appear in the **transcript_descriptors.txt**) of transcripts containing canonical start (AUG) and termination ({TAG, TGA, TAA}) codons are listed in this file.
+
+count_distribution
+_____________________________
+
+This file describes the distribution of read 5' endpoint counts (those greater than 0). 
+
+outlier_lower
+_____________________________
+
+This file contains the maximum count value that falls into Poisson distribution according to the count distribution in the file above. All the counts greater than this value are down-scaled to it.
+
+outliers_df
+_____________________________
+
+This file contains genomic positions with counts greater than the maximum allowed count (indicated in *outlier_lower.txt*) and shows the down-scaled (downsampled) count for it.
+Each such genomic position is described by the following fields:
+
+.. code-block:: shell
+
+    ID:                     transcript ID
+    Name:                   gene Name (if such attribute exists for the annotation)
+    position_from_start:    the relative position of the location from the transcript CDS start (first nucleotide = 0)
+    position_from_term:     the relative position of the location from the transcript CDS stop (last nucleotide = 0)
+    actual_count:           the actual count of read 5' endpoint at the position
+    downasampled_count:     the count set at the location after noise removal
+
+counts_FULL_LENGTH
+_____________________________
+
+Each row is a transcript in the order of **transcript_assembly.txt**.
+The counts correspond to the number of read 5' endpoints mapping to each position in the transcript. The coordinates span the CDS and -100/+100 nucleotides around it.
+
+counts_START
+_____________________________
+
+Each row is a transcript in the order of **transcript_assembly.txt**.
+The counts correspond to the number of read 5' endpoints mapping to each position within the initial part of the transcript. The coordinates start from -100 to +99 from start (first nucleotide = 0).
+
+counts_TERM
+_____________________________
+
+Each row is a transcript in the order of **transcript_assembly.txt**.
+The counts correspond to the number of read 5' endpoints mapping to each position within the terminal part of the transcript. The coordinates start from -97 to +102 from stop (first nucleotide of the STOP codon = 0).
+
+meta_counts_START
+_____________________________
+
+This file contains cumulative counts for each genomic position in the region -100 to +99 from CDS start of all the protein-coding genes (0 - the first nucleotide of the START codon).
+There are two columns - the first one keeps the relative positions, the second one - the cumulative counts.
+
+meta_counts_TERM
+_____________________________
+
+This file contains cumulative counts for each genomic position in the region -97 to +102 from CDS stop of all the protein-coding genes (0 - the first nucleotide of the STOP codon).
+There are two columns - the first one keeps the relative positions, the second one - the cumulative counts.
+
+meta_count_peaks_START
+_____________________________
+
+This file provides significance p-values of the peaks observed in the meta-counts at the start. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.
+
+The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.
+
+There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.
+
+meta_count_peaks_TERM
+_____________________________
+
+This file provides significance p-values of the peaks observed in the meta-counts at the termination. Significance computations assume that the counts follow a Poisson distribution with lambda equal to the 0.84 quantile of the meta-counts (an approximation for the median of each peak in each codon). The probability of a count falling into this distribution can be regarded as significance p-value for the count being a peak.
+
+The file outputs sorted counts that have p-values less than 0.01 and that are the highest points compared to two neighboring positions.
+
+There are four columns - (1) the index, (2) the count relative positions, (3) the counts and (4) the p-values.
+
+frame_counts_START
+_____________________________
+
+This file contains the number of read 5' endpoints in each translation frame for each transcript. The frame is counted relative to the CDS start.
+After the index column there are three columns representing the frames: F0 (corresponds to the first nucleotide of the START codon), F1 and F2.
+Each row is a transcript, ordered as in the **transcript_assembly.txt** file.
+
+
+.. code-block:: shell
+
+            F0      F1      F2
+    0       0       0       0
+    1       0       0       0
+    2       0       0       0
+    3       0       0       0
+
+
+frame_counts_TERM
+_____________________________
+
+This file contains the number of read 5' endpoints in each translation frame for each transcript. The frame is counted relative to the CDS stop.
+After the index column there are three columns representing the frames: F0 (corresponds to the first nucleotide of the STOP codon), F1 and F2.
+Each row is a transcript, ordered as in the **transcript_assembly.txt** file.
+
+frame_stats
+_____________________________
+
+This file contains general statistics on the count frame preference for frames F0, F1 and F2 described above. Each frame is described the following fields:
+
+.. code-block:: shell
+
+    f_count:        the raw counts at each frame
+    f_perc:         the fraction of counts falling into each frame
+    fpi:            frame protection index computed as (log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)))
+    p_val_pair:     the p value of t-test computed on the difference of transcript-wise counts between the frame and its neighboring frame to the right (F0 vs F1, F1 vs F2 or F2 vs F0)
+    p_val_fpi:      the p value of t-test computed on the difference of transcript-wise counts between the frame and the other two frames combined
+    p_val_pair_max: the p value of t-test computed on the difference of transcript-wise counts between the frame and another frame with closest counts to it
+
+
+transcript_frame_prefs
+_____________________________
+
+For each transcript, this file contains columns in the following order:
+
+.. code-block:: shell
+
+    count:          the total counts at the transcript
+    F:              the frame of preference {0,1,2}
+    f_count:        the counts at the preferred frame
+    f_perc:         the percentage of those counts compared to the total counts at the transcript
+    fpi:            the frame protection index (FPI)
+
+The FPI is computed as (log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)))
+
+
+fft_stats.txt
+_____________________________
+
+This file contains information regarding periodicity of read 5' endpoints across transcript coordinates. Fivepseq applies Fast Fourier transformation (FFT) to compute presence and strength of periodic count waves.
+The transcripts are aligned either at the start (prefix START) or at the end (prefix TERM), truncated at the 0.75 percentile of lengths and short transcripts are padded with zeros. The counts are then summed at each position across the transcripts. The FFT is applied on the resulting metavector.
+
+The file contains the following statistics for the top five periodicity waves (marked with columns named 0-to-4)
+
+.. code-block:: shell
+
+    START_periods:      the periodicity, number of nucleotides
+    START_signals:      the strength of the signal (the real component of FFT transformation)
+    START_scales:       the relative strength of the signal compared to background
+    TERM_periods:       the periodicity, number of nucleotides
+    TERM_signals:       the strength of the signal (the real component of FFT transformation)
+    TERM_scales:        the relative strength of the signal compared to background
+
+
+fft_signals_start
+_____________________________
+
+This file contains two columns with the START_period (periodicity) and START_signal (strength of the FFT signal at that periodicity) statistics described above. All of the identified waves are included (as opposed to top five only in the "fft_stats.txt" file).
+
+
+fft_signals_term
+_____________________________
+
+This file contains two columns with the TERM_period (periodicity) and TERM_signal (strength of the FFT signal at that periodicity) statistics described above. All of the identified waves are included (as opposed to top five only in the "fft_stats.txt" file).
+
+transcript_fft
+_____________________________
+
+This file contains FFT statistics for each transcript. Each row is described by the followings stats:
+
+.. code-block:: shell
+
+    count:      the total count of read 5' endpoints at the transcript
+    period:     the periodicity at the strongest FFT wave
+    signal:     the strength of the FFT signal at that periodicity
+
+amino_acid_pauses
+_____________________________
+
+Cumulative raw counts at certain distance (columns -50 to -1) from each amino acid (rows) are indicated. The distance is counted from the first nucleotide of each amino acid, with the first nucleotide considered as position 0 (not in the file).
+
+codon_pauses
+_____________________________
+
+Cumulative raw counts at certain distance (columns -30 to +5) from each codon(rows) are indicated. The distance is counted from the first nucleotide of each codon, with the first nucleotide considered as position 0.
+
+dicodon_pauses
+_____________________________
+
+Cumulative raw counts at certain distance (columns -27 to +5) from the top 50 dicodons (rows) are indicated. The distance is counted from the first nucleotide of each dicodon, with the first nucleotide considered as position 0. The dicodons are sorted from highest to lowest based on counts in the -14nt distance (if not changed at input) relative to the background counts in the range.
+
+dipeptide_pauses
+_____________________________
+
+Cumulative raw counts at certain distance (columns -27 to +5) from the top 50 dipeptides (rows) are indicated. The distance is counted from the first nucleotide of each dipeptide motif, with the first nucleotide considered as position 0. The dipeptides are sorted from highest to lowest based on counts in the -14nt distance (if not changed at input) relative to the background counts in the range.
+
+tricodon_pauses
+_____________________________
+
+Cumulative raw counts at certain distance (columns -24 to +8) from the top 50 tricodons (rows) are indicated. The distance is counted from the first nucleotide of each tricodon, with the first nucleotide considered as position 0. The tricodons are sorted from highest to lowest based on counts in the -11nt distance (if not changed at input) relative to the background counts in the range.
+
+tripeptide_pauses
+_____________________________
+
+Cumulative raw counts at certain distance (columns -24 to +8) from the top 50 tripeptides (rows) are indicated. The distance is counted from the first nucleotide of each tripeptide motif, with the first nucleotide considered as position 0. The tripeptides are sorted from highest to lowest based on counts in the -11nt distance (if not changed at input) relative to the background counts in the range.
+
