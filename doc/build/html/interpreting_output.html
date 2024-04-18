@@ -1,18 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Interpreting the output &#8212; fivepseq 1.0b0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Count files" href="count_files.html" />
@@ -33,9 +33,9 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="interpreting-the-output">
+  <section id="interpreting-the-output">
 <span id="interpreting-output"></span><h1>Interpreting the output<a class="headerlink" href="#interpreting-the-output" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="demo-data">
+<section id="demo-data">
 <h2>Demo data<a class="headerlink" href="#demo-data" title="Permalink to this headline">¶</a></h2>
 <p>The following examples are produced by fivepseq v1.0b0 taking as input <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b0/yeat_eIF5A/">alignment and genome files</a> from yeast of three strains: wild type (BY4741) and translation elongation factor eIF5A mutants (hyp2-3 and hyp2-1). You may find description of the dataset in the _README.txt file.</p>
 <p>Download and navigate to the yest_eIF5A folder and run the following command to produce fivepseq output:</p>
@@ -82,40 +82,40 @@
 </pre></div>
 </div>
 <p>You may directly download the report files <a class="reference external" href="http://data.pelechanolab.com/software/fivepseq/data/test_data_1.0b5/yeast_eIF5A_fivepseq_reports/">from here</a>.</p>
-</div>
-<div class="section" id="entry-point-fivepseq-plots-runname-html">
+</section>
+<section id="entry-point-fivepseq-plots-runname-html">
 <h2>Entry point: fivepseq_plots/RUNNAME.html<a class="headerlink" href="#entry-point-fivepseq-plots-runname-html" title="Permalink to this headline">¶</a></h2>
 <p>This file contains a summary of your run, and links to variuos reports.</p>
-<div class="section" id="input-and-run-configurations">
+<section id="input-and-run-configurations">
 <h3>Input and run configurations<a class="headerlink" href="#input-and-run-configurations" title="Permalink to this headline">¶</a></h3>
 <p>This paragraph stores absolute paths to your input files and options provided.</p>
-</div>
-<div class="section" id="summary-statistics">
+</section>
+<section id="summary-statistics">
 <h3>Summary statistics<a class="headerlink" href="#summary-statistics" title="Permalink to this headline">¶</a></h3>
 <p>For now, the number of reads in the coding regions is provided for each sample, in millions (M).</p>
-</div>
-<div class="section" id="report-files">
+</section>
+<section id="report-files">
 <h3>Report files<a class="headerlink" href="#report-files" title="Permalink to this headline">¶</a></h3>
 <p>This section contains hyperlinks to various report files. <strong>Note</strong> that your files should be in the same subfolders to be found and opened with your browser. If you’ve made rearrangements, you should find and open the files directly.</p>
-</div>
-</div>
-<div class="section" id="general-notes-on-interacting-with-html-report-files">
+</section>
+</section>
+<section id="general-notes-on-interacting-with-html-report-files">
 <h2>General notes on interacting with html report files<a class="headerlink" href="#general-notes-on-interacting-with-html-report-files" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="be-patient-when-loading-please">
+<section id="be-patient-when-loading-please">
 <h3>Be patient when loading, please<a class="headerlink" href="#be-patient-when-loading-please" title="Permalink to this headline">¶</a></h3>
 <p>The report files are heavy due to the large number of points contained in them. Please, <strong>wait for a couple of minutes</strong> until the white screen is replaced with charts.</p>
-</div>
-<div class="section" id="selecting-samples">
+</section>
+<section id="selecting-samples">
 <h3>Selecting samples<a class="headerlink" href="#selecting-samples" title="Permalink to this headline">¶</a></h3>
 <p>Sometimes plotting many samples may produce messy graphs that are hard to make sense of. You may use the legend box to filter the samples you’d like to focus on. The legend box is located at the top of each graph in the report file. Clicking on each of the samples in the box will make it disappear or appear back.</p>
 <img alt="_images/hide_samples.png" src="_images/hide_samples.png" />
-</div>
-<div class="section" id="hovering">
+</section>
+<section id="hovering">
 <h3>Hovering<a class="headerlink" href="#hovering" title="Permalink to this headline">¶</a></h3>
 <p>To get exact count information for each sample at the point of interest, simply hover with the mouse over the point and pick your desired sample. A tooltip will appear to provide the necessary information on your selection.</p>
 <img alt="_images/hovering.png" src="_images/hovering.png" />
-</div>
-<div class="section" id="navigation-tools">
+</section>
+<section id="navigation-tools">
 <h3>Navigation tools<a class="headerlink" href="#navigation-tools" title="Permalink to this headline">¶</a></h3>
 <img alt="_images/navigation_tools.png" src="_images/navigation_tools.png" />
 <p>On the left side of all your reports files you will find the navigation tools, which you can use to interactively explore each graph separately.</p>
@@ -129,23 +129,23 @@
 <p>The save button will export all the images in the report file to a folder.</p>
 <img alt="_images/reset_tool.png" src="_images/reset_tool.png" />
 <p>The reset button will reset all the graphs in the file to their original views.</p>
-</div>
-</div>
-<div class="section" id="main-report-fivepseq-plots-main-runname-main-html">
+</section>
+</section>
+<section id="main-report-fivepseq-plots-main-runname-main-html">
 <h2>Main report: fivepseq_plots/main/RUNNAME_main.html<a class="headerlink" href="#main-report-fivepseq-plots-main-runname-main-html" title="Permalink to this headline">¶</a></h2>
 <p>This report contains general information on metagene count distribution, gene-specific and genome wide 3-nucleotide (3nt) periodicity patterns and frame preferences, and count heatmaps relative to amino-acids.</p>
-<div class="section" id="metagene-counts-start-and-stop">
+<section id="metagene-counts-start-and-stop">
 <h3>Metagene counts (START and STOP)<a class="headerlink" href="#metagene-counts-start-and-stop" title="Permalink to this headline">¶</a></h3>
 <p>Metagenes counts are produced by aligning the transcripts at the translation start/stop sites and summing up the counts in each position across the transcripts. The x axis plots the base positions relative to translation start/stop, with the first nucleotide of the first/last codon corresponding to the 0 start/stop positions. By default, the counts are spanned 100bp around the start/stop site, but this value may be changed with the –span option. The charts with _raw suffix contain raw counts along the y axis, while those with _scaled suffix represent reads per million of mapped reads in the coding regions (RPM) along the y axis.
 Usually you may want to focus your attention on peaks relative to start/stop positions. For yeast, the peaks 14 nt and 17 nt upstream from start and stop (-14/-17) respectively, indicate on ribosome stalling at translation initiation/termination. These numbers may differ depending on the species, strain or experimental conditions. You may also focus on additional peaks/valleys of possible importance. The count files fivepseq_counts/meta_count_peaks_START.txt and fivepseq_counts/meta_count_peaks_TERM.txt also show the significance of observed peaks (see the section “Count files” for details).</p>
 <img alt="_images/metagene_counts.png" src="_images/metagene_counts.png" />
-</div>
-<div class="section" id="global-frame-preference">
+</section>
+<section id="global-frame-preference">
 <h3>Global frame preference<a class="headerlink" href="#global-frame-preference" title="Permalink to this headline">¶</a></h3>
 <p>For each sample, the total (cumulative) number of read 5’ endpoints within each frame of coding transcripts is depicted with frame barplots. The x axis shows the frame (F0, F1 and F2), while the y axis – the total counts across all the transcripts (or the percentage in the plots below). At the top of each chart, are the statistics for frame preferences. For reach frame i, the frame protection index (FPI) is computed with the formula: log<sub>2</sub>(2F<sub>i</sub>/(F<sub>total</sub>- F<sub>i</sub>)). An FPI greater than 0 indicates that the frame is preferred and vice versa. The preference p values are computed for each pair of frames with a t test, and for each frame, the maximum p-value between two possible comparisons is displayed.</p>
 <img alt="_images/global_frame_preference.png" src="_images/global_frame_preference.png" />
-</div>
-<div class="section" id="gene-frame-preference">
+</section>
+<section id="gene-frame-preference">
 <h3>Gene frame preference<a class="headerlink" href="#gene-frame-preference" title="Permalink to this headline">¶</a></h3>
 <p>The read 5’ endpoints in each frame can be counted for each gene transcript separately. These counts can be converted to two-dimensional coordinates with a so-called triangle transformation:</p>
 <blockquote>
@@ -155,72 +155,72 @@ Usually you may want to focus your attention on peaks relative to start/stop pos
 <p>Using these transformations, each gene is represented as a point within a triangle, where it is placed near its frame of preference. If all the frames are equally preferred the point will be closer to the center, while if either of the frames is preferred, it will lean towards its tip.</p>
 <p>Note that only the genes having counts greater than 10 are displayed by default. This threshold may be changed at input.</p>
 <img alt="_images/gene_frame_preference.png" src="_images/gene_frame_preference.png" />
-</div>
-<div class="section" id="fourier-transform-start-and-stop">
+</section>
+<section id="fourier-transform-start-and-stop">
 <h3>Fourier transform (START and STOP)<a class="headerlink" href="#fourier-transform-start-and-stop" title="Permalink to this headline">¶</a></h3>
 <p>The presence of 3-nt periodicity pattern, which may indicate on co-translational generation of the 5’ mRNA intermediates, is best demonstrated with fast Fourier transformations. For this, the transcripts are aligned to the start or to the stop, and are trimmed from end/beginning to the 0.75 percentile of lengths. Transcripts shorter than this are padded with 0s. The counts at each position are then summed to produce a one-dimensional vector of metacounts. This vector is then subjected to fast Fourier transformation, which de-convolutes it into waves of varying frequencies. These frequencies are converted to periodicity values and displayed on the x axis, while the intensity of each wave is displayed on the y axis. When hovering over with the mouse at the toll peak in our example, you may see that it is close to the periodicity value of 3. The clearer the 3-nt pattern, the higher the intensity will be.
 Most of the times the patterns will not differ much whether the transcripts are aligned to the start or to the stop. However, when certain periodicity patterns prevail closer to the termination or to the initiation, you may as well observe a difference between the two charts.</p>
 <img alt="_images/fourier_transform.png" src="_images/fourier_transform.png" />
-</div>
-<div class="section" id="amino-acid-relative-count-heatmaps">
+</section>
+<section id="amino-acid-relative-count-heatmaps">
 <h3>Amino acid relative count heatmaps<a class="headerlink" href="#amino-acid-relative-count-heatmaps" title="Permalink to this headline">¶</a></h3>
 <p>The amino acid heatmaps highlight the cumulative counts in the gene body (discarding the start and termination regions) relative to the distance from each codon representing an amino acid or termination. These are computed by summing up the counts at certain distance from a certain amino acid across all the transcripts. In these heatmaps, the columns correspond to the relative distance from each amino acid, while the rows represent each amino acid. The values in the heatmaps are either the raw cumulative counts (top charts) or those scaled in each row (bottom charts). The values are then colored on the blue-to-yellow scale, with yellow corresponding to higher values.</p>
 <img alt="_images/amino_acid_heatmaps.png" src="_images/amino_acid_heatmaps.png" />
-</div>
-</div>
-<div class="section" id="combined-report-fivepseq-plots-main-runname-combined-html">
+</section>
+</section>
+<section id="combined-report-fivepseq-plots-main-runname-combined-html">
 <h2>Combined report: fivepseq_plots/main/RUNNAME_combined.html<a class="headerlink" href="#combined-report-fivepseq-plots-main-runname-combined-html" title="Permalink to this headline">¶</a></h2>
 <p>This report contains the same set of charts, as those found in main, but it merges or combines all the samples. There are two ways to combine the samples: either sum the reads without accounting for the relative library sizes (top chart), or assign weights to each sample according to the library size and sum afterwards (bottom chart). Library sizes are the number of reads in the coding regions.</p>
 <img alt="_images/combined_plots.png" src="_images/combined_plots.png" />
-</div>
-<div class="section" id="supplement-fivepseq-plots-supplement-runname-amino-acid-linecharts-html">
+</section>
+<section id="supplement-fivepseq-plots-supplement-runname-amino-acid-linecharts-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_amino_acid_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-amino-acid-linecharts-html" title="Permalink to this headline">¶</a></h2>
 <p>This report contains linecharts for cumulative counts in the gene body (discarding the start and termination regions) relative to the distance from each codon representing an amino acid or termination for individual samples (left) or the samples combined (right). Samples are combined by accounting for their library size. The read counts are normalized to reads per million (RPM). In essence, these are the same data seen in amino acid heatmaps in the main report, in a different format.</p>
 <img alt="_images/PRO_linecharts.png" src="_images/PRO_linecharts.png" />
-</div>
-<div class="section" id="supplement-fivepseq-plots-supplement-runname-codon-linecharts-html">
+</section>
+<section id="supplement-fivepseq-plots-supplement-runname-codon-linecharts-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_codon_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-codon-linecharts-html" title="Permalink to this headline">¶</a></h2>
 <p>This report contains the same charts as the one for amino acids, but for each codon separately. Note: as there are 64 charts in this report, loading the file in your browser may take long.</p>
-</div>
-<div class="section" id="supplement-fivepseq-plots-supplement-runname-codon-heatmaps-html">
+</section>
+<section id="supplement-fivepseq-plots-supplement-runname-codon-heatmaps-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_codon_heatmaps.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-codon-heatmaps-html" title="Permalink to this headline">¶</a></h2>
 <p>The heatmaps in this report are the same as amino acid heatmaps in the main report, but are expanded for each codon individually and also expanded to the distance from -30 to +6. The top charts contain raw counts, the second line is scaled for each row. The third and the forth lines contain raw and scaled heatmaps too, but there the rows are sorted alphabetically, based on codons.</p>
 <p>Then follow heatmaps for counts relative to dicodons, dipeptides, tricodons and tripeptides. For each, first the raw counts are shown, then those scaled by row. Note that each sample may differ by the codon motifs presented and their order, because only top 50 motifs sorted by relative counts in position (-14 nt) and (-11 nt) are included, unless these positions are modified at input.</p>
-</div>
-<div class="section" id="supplement-fivepseq-plots-supplement-runname-dicodon-linecharts-html">
+</section>
+<section id="supplement-fivepseq-plots-supplement-runname-dicodon-linecharts-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_dicodon_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-dicodon-linecharts-html" title="Permalink to this headline">¶</a></h2>
 <p>This report contains overlaid linecharts for top 20 dicodon motifs for each sample. Note, as top 20 motifs may not be the same for each sample, some of the linecharts may not include all of the samples and the number of linecharts will usually exceed 20.</p>
-</div>
-<div class="section" id="supplement-fivepseq-plots-supplement-runname-dipeptide-linecharts-html">
+</section>
+<section id="supplement-fivepseq-plots-supplement-runname-dipeptide-linecharts-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_dipeptide_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-dipeptide-linecharts-html" title="Permalink to this headline">¶</a></h2>
 <p>The same for dipeptide motifs.</p>
-</div>
-<div class="section" id="supplement-fivepseq-plots-supplement-runname-tricodon-linecharts-html">
+</section>
+<section id="supplement-fivepseq-plots-supplement-runname-tricodon-linecharts-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_tricodon_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-tricodon-linecharts-html" title="Permalink to this headline">¶</a></h2>
 <p>The same for tricodon motifs.</p>
-</div>
-<div class="section" id="supplement-fivepseq-plots-supplement-runname-tripeptide-linecharts-html">
+</section>
+<section id="supplement-fivepseq-plots-supplement-runname-tripeptide-linecharts-html">
 <h2>Supplement: fivepseq_plots/supplement/RUNNAME_tripeptide_linecharts.html<a class="headerlink" href="#supplement-fivepseq-plots-supplement-runname-tripeptide-linecharts-html" title="Permalink to this headline">¶</a></h2>
 <p>The same for tripeptide motifs.</p>
-</div>
-<div class="section" id="genesets-fivepseq-plots-genesets-runname-genesets-per-sample-html">
+</section>
+<section id="genesets-fivepseq-plots-genesets-runname-genesets-per-sample-html">
 <h2>Genesets: fivepseq_plots/genesets/RUNNAME_genesets_per_sample.html<a class="headerlink" href="#genesets-fivepseq-plots-genesets-runname-genesets-per-sample-html" title="Permalink to this headline">¶</a></h2>
 <p>These reports are generated only if the option -gs is provided, with a few sets of genes annotated to different categories. This report compares the charts described for the main report across different genesets. These comparisons are made for each sample.</p>
 <p>For layouting purposes, the genesets provided by the user are converted to short names, described in the top of the report.</p>
 <img alt="_images/geneset_mapping.png" src="_images/geneset_mapping.png" />
 <p>The charts contain tabs, which allow to switch from sample to sample, and compare the geneset-specific patterns for each sample individually.</p>
 <img alt="_images/genesets_per_sample.png" src="_images/genesets_per_sample.png" />
-</div>
-<div class="section" id="genesets-fivepseq-plots-genesets-runname-samples-per-geneset-html">
+</section>
+<section id="genesets-fivepseq-plots-genesets-runname-samples-per-geneset-html">
 <h2>Genesets: fivepseq_plots/genesets/RUNNAME_samples_per_geneset.html<a class="headerlink" href="#genesets-fivepseq-plots-genesets-runname-samples-per-geneset-html" title="Permalink to this headline">¶</a></h2>
 <p>This report is structured in the same way, but here, instead of comparing genesets for each sample, samples are compared with each other - for each geneset separately.</p>
 <img alt="_images/samples_per_geneset.png" src="_images/samples_per_geneset.png" />
-</div>
-<div class="section" id="text-output">
+</section>
+<section id="text-output">
 <h2>Text output<a class="headerlink" href="#text-output" title="Permalink to this headline">¶</a></h2>
 <p>Aside from the HTML formatted report files, you may also want to observe and use the count distribution patterns elsewhere. For this reason, fivepseq also stores a wide variety of text files in the fivepseq_counts folder of the output path. The folder contains text formatted files for each sample and each gene set individually. By default, only the protein_coding geneset is provided, which refers to all the mRNA transcripts. If the -gs option is provided, text files for each gene set are stored in respective subfolders. The text files contain transcript tables, count vectors, count distribution, amino acid relative counts, fourier transformation vectors, frame-specific counts, etc.</p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -286,17 +286,15 @@ Most of the times the patterns will not differ much whether the transcripts are 
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
 
 
 
@@ -313,7 +311,7 @@ Most of the times the patterns will not differ much whether the transcripts are 
       &copy;2019, Lilit Nersisyan, Maryia Ropat, Vicente Pelechano.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

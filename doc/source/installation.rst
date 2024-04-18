@@ -16,10 +16,13 @@ To set up fivepseq, the following python packages need to be pre-installed manua
 
 Paste the following lines into the shell terminal: 
 
+
 .. code-block:: shell
 
- pip install --upgrade numpy pysam cython
- pip install plastid
+ git clone https://github.com/joshuagryphon/plastid -b develop
+ cd plastid
+ python setup.py install
+ pip install --upgrade numpy==1.19.5 pysam==0.19.0 cython==0.29.28
 
 
 In order to enable exporting vector and portable image files, you'll also need to have phantomjs installed as follows:

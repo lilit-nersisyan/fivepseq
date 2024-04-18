@@ -19,6 +19,8 @@ Citation
 
 Installation
 ------------
+Fivepseq works with python versions <=3.8. If you have a higher version of python you may run into problems with some dependencies.
+
 Install dependencies:
 
 To set up fivepseq, the following python packages need to be pre-installed manually using pip (if you don't have pip you may install it as described `here <ht\
@@ -28,20 +30,18 @@ Paste the following lines into the shell terminal:
 
 .. code-block:: shell
 
- pip install --upgrade numpy pysam cython
- pip install plastid
+ git clone https://github.com/joshuagryphon/plastid -b develop
+ cd plastid
+ python setup.py install
+ pip install --upgrade numpy==1.19.5 pysam==0.19.0 cython==0.29.28
 
 
-Clone the project from github:
+To install fivepseq, clone the project from github:
 
 .. code-block:: shell
 
  git clone https://github.com/lilit-nersisyan/fivepseq.git
-
-Navigate into the fivepseq directory and install:
-
-.. code-block:: shell
-
+ cd fivepseq
  python setup.py install
 
 To check if fivepseq was installed correctly, type the following in the command line:

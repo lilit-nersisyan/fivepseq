@@ -408,11 +408,12 @@ class VizPipeline:
         self.frame_stats_df_dict.update({sample: self.read_frame_stats_df(fivepseq_out)})
         self.transcript_names_dict.update({sample: self.read_transcript_names(fivepseq_out)})
         self.amino_acid_df_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=False)})
-        self.amino_acid_island_df_dict.update({
-            sample: self.read_amino_acid_df(
-                fivepseq_out=fivepseq_out,
-                file=fivepseq_out.get_file_path(FivePSeqOut.AMINO_ACID_ISLAND_PAUSES_FILE),
-                full=True)})
+        if "aa_islands" in config.args and config.args.aa_islands is True:
+            self.amino_acid_island_df_dict.update({
+                sample: self.read_amino_acid_df(
+                    fivepseq_out=fivepseq_out,
+                    file=fivepseq_out.get_file_path(FivePSeqOut.AMINO_ACID_ISLAND_PAUSES_FILE),
+                    full=True)})
         self.amino_acid_df_full_dict.update({sample: self.read_amino_acid_df(fivepseq_out, full=True)})
         self.codon_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=False)})
         if "oof" in config.args and config.args.oof is True:
