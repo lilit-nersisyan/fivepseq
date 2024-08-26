@@ -31,6 +31,8 @@ class FivePSeqOut:
     DIPEPTIDE_PAUSES_FILE = "dipeptide_pauses.txt"
     AMINO_ACID_STATS_FILE = "amino_acid_stats.txt"
     CODON_STATS_FILE = "codon_stats.txt"
+    DIPEPTIDE_STATS_FILE = "dipeptide_stats.txt"
+    TRIPEPTIDE_STATS_FILE = "tripeptide_stats.txt"
     LOCI_PAUSES_FILE = "loci_pauses.txt"
     LOCI_PAUSES_FILE_PREFIX = "loci_pauses"
     LOCI_OVERLAPS_FILE = "loci_overlaps.txt"

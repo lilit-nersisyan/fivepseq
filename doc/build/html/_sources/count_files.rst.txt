@@ -88,7 +88,7 @@ Note that transcript assemblies for each gene set filter will be different and w
 transcript_descriptors
 _____________________________
 
-This file contains basic stats for each transcript. The order of transcripts corresponds to that of the transcript_assembly.txt.
+This file contains basic stats for each transcript. The order of transcripts corresponds to that of the **transcript_assembly.txt**.
 Each transcript is described by six fields:
 
 .. code-block:: shell
@@ -98,7 +98,6 @@ Each transcript is described by six fields:
     len:                        transcript length
     3nt:                        presence of 3-nucleotide periodicity in the transcript (1 for present, 0 for absent)
     NumOfReads:                 number of reads mapping to that transcript
-    NumOfReadsDownsampled:      number of reads mapping to that transcript after noise removal
     NumOfMapPositions:          number of positions in the transcript with at least one mapped read (multiple reads per position are counted as one)
 
 start_codon_dict.txt
@@ -128,7 +127,7 @@ This file lists all the codons present at CDS stop of the transcripts. For each 
 canonical_transcript_index
 _____________________________
 
-The indices (as they appear in the transcript_descriptors.txt) of transcripts containing canonical start (AUG) and termination ({TAG, TGA, TAA}) codons are listed in this file.
+The indices (as they appear in the **transcript_descriptors.txt**) of transcripts containing canonical start (AUG) and termination ({TAG, TGA, TAA}) codons are listed in this file.
 
 count_distribution
 _____________________________
@@ -158,19 +157,19 @@ Each such genomic position is described by the following fields:
 counts_FULL_LENGTH
 _____________________________
 
-Each row is a transcript in the order of transcript_assembly.txt.
+Each row is a transcript in the order of **transcript_assembly.txt**.
 The counts correspond to the number of read 5' endpoints mapping to each position in the transcript. The coordinates span the CDS and -100/+100 nucleotides around it.
 
 counts_START
 _____________________________
 
-Each row is a transcript in the order of transcript_assembly.txt.
+Each row is a transcript in the order of **transcript_assembly.txt**.
 The counts correspond to the number of read 5' endpoints mapping to each position within the initial part of the transcript. The coordinates start from -100 to +99 from start (first nucleotide = 0).
 
 counts_TERM
 _____________________________
 
-Each row is a transcript in the order of transcript_assembly.txt.
+Each row is a transcript in the order of **transcript_assembly.txt**.
 The counts correspond to the number of read 5' endpoints mapping to each position within the terminal part of the transcript. The coordinates start from -97 to +102 from stop (first nucleotide of the STOP codon = 0).
 
 meta_counts_START
@@ -225,7 +224,7 @@ _____________________________
 
 This file contains the number of read 5' endpoints in each translation frame for each transcript. The frame is counted relative to the CDS stop.
 After the index column there are three columns representing the frames: F0 (corresponds to the first nucleotide of the STOP codon), F1 and F2.
-Each row is a transcript, ordered as in the transcript_assembly.txt file.
+Each row is a transcript, ordered as in the **transcript_assembly.txt** file.
 
 frame_stats
 _____________________________
@@ -237,8 +236,9 @@ This file contains general statistics on the count frame preference for frames F
     f_count:        the raw counts at each frame
     f_perc:         the fraction of counts falling into each frame
     fpi:            frame protection index computed as (log\ :sub:`2`\(2F\ :sub:`i`\/(F\ :sub:`total`\ - F\ :sub:`i`\)))
-    p_val_pair:     the p value of t-test computed on the log2 ratio of transcript-wise counts between the frame and its neighboring frame to the right (F0 vs F1, F1 vs F2 or F2 vs F0)
-    p_val_pair_max: the p value of t-test computed on the log2 ratio of transcript-wise counts between the frame and another frame with closest counts to it
+    p_val_pair:     the p value of t-test computed on the difference of transcript-wise counts between the frame and its neighboring frame to the right (F0 vs F1, F1 vs F2 or F2 vs F0)
+    p_val_fpi:      the p value of t-test computed on the difference of transcript-wise counts between the frame and the other two frames combined
+    p_val_pair_max: the p value of t-test computed on the difference of transcript-wise counts between the frame and another frame with closest counts to it
 
 
 transcript_frame_prefs

@@ -5,7 +5,7 @@ They also retrieve and store the file properties (e.g. compression, extension) f
 """
 import logging
 import os
-
+import gzip
 # PORT: pathlib2 is for python version 2.7, use pathlib in version 3  <>
 import dill
 import pathlib2
@@ -206,9 +206,17 @@ class AnnotationReader(TopReader):
         self.logger.info("Reading in transcript assembly with transcript type %s" % biotype)
 
         if self.extension == self.EXTENSION_GTF:
-            transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)
+            if self.compression is COMPRESSION_GZ:
+                file_stream = gzip.open(self.file, 'rt', encoding='utf-8')
+                transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(file_stream, return_type=plastid.Transcript)
+            else:
+                transcript_assembly_generator = plastid.GTF2_TranscriptAssembler(self.file, return_type=plastid.Transcript)
         else:
-            transcript_assembly_generator = plastid.GFF3_TranscriptAssembler(self.file, return_type=plastid.Transcript)
+            if self.compression is COMPRESSION_GZ:
+                file_stream = gzip.open(self.file, 'rt', encoding='utf-8')
+                transcript_assembly_generator = plastid.GFF3_TranscriptAssembler(file_stream, return_type=plastid.Transcript)
+            else:
+                transcript_assembly_generator = plastid.GFF3_TranscriptAssembler(self.file, return_type=plastid.Transcript)
 
         transcript_assembly = [None] * 1000000
         index = 0

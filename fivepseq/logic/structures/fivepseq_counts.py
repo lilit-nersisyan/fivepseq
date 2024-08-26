@@ -66,6 +66,8 @@ class FivePSeqCounts:
     tripeptide_count_df = None
     codon_stats_df = None
     amino_acid_stats_df = None
+    dipeptide_stats_df = None
+    tripeptide_stats_df = None
 
     amino_acid_genome_usage_df = None
 
@@ -946,8 +948,9 @@ class FivePSeqCounts:
         self.amino_acid_genome_usage_df.loc[:, "fraction"] = self.amino_acid_genome_usage_df.loc[:, "abs"] / sum(
             self.amino_acid_genome_usage_df.loc[:, "abs"])
         self.amino_acid_count_df = self.codon_to_amino_acid_count_df(codon_count_df)
-        self.tripeptide_count_df = self.filter_codon_counts(tripeptide_count_df, self.get_tripeptide_pos())
-        self.dipeptide_count_df = self.filter_codon_counts(dipeptide_count_df, self.get_dipeptide_pos())
+
+        self.tripeptide_count_df = self.filter_codon_counts(tripeptide_count_df, self.get_tripeptide_pos(), all = True)
+        self.dipeptide_count_df = self.filter_codon_counts(dipeptide_count_df, self.get_dipeptide_pos(), all = True)
 
         # rename codon_count_df indices by adding amino acid names
         new_index = [Codons.CODON_TABLE.get(codon) + '_' + codon for codon in codon_count_df.index]
@@ -957,12 +960,12 @@ class FivePSeqCounts:
         # rename codon_count_df indices by adding amino acid names
         self.logger.info("Mapping tricodons to amino acid names")
         tricodon_count_df.index = Codons.get_tricodon_full_index()
-        self.tricodon_count_df = self.filter_codon_counts(tricodon_count_df, self.get_tripeptide_pos())
+        self.tricodon_count_df = self.filter_codon_counts(tricodon_count_df, self.get_tripeptide_pos(), all = True)
 
         # rename codon_count_df indices by adding amino acid names
         self.logger.info("Mapping dicodons to amino acid names")
         dicodon_count_df.index = Codons.get_dicodon_full_index()
-        self.dicodon_count_df = self.filter_codon_counts(dicodon_count_df, self.get_dipeptide_pos())
+        self.dicodon_count_df = self.filter_codon_counts(dicodon_count_df, self.get_dipeptide_pos(), all = True)
 
         return
 
@@ -1200,7 +1203,7 @@ class FivePSeqCounts:
         if hasattr(config.args, "tripeptide_pos"):
             pos = config.args.tripeptide_pos
         else:
-            pos = self.TRIPEPTIDE_POS
+            pos = FivePSeqCounts.TRIPEPTIDE_POS
 
         return pos
 
@@ -1209,7 +1212,7 @@ class FivePSeqCounts:
         if hasattr(config.args, "dipeptide_pos"):
             pos = config.args.dipeptide_pos
         else:
-            pos = self.DIPEPTIDE_POS
+            pos = FivePSeqCounts.DIPEPTIDE_POS
 
         return pos
 
@@ -1223,7 +1226,7 @@ class FivePSeqCounts:
         return pos
 
 
-    def filter_codon_counts(self, codon_count_df, pos, top=50):
+    def filter_codon_counts(self, codon_count_df, pos, top=50, all = False):
         """
         Filter the di/tricodon (or di/tripeptide) counts to exclude low counts (rowSums less than the specified threshold) and
         to include only the top di/tricodons with highest relative counts at the given position
@@ -1231,13 +1234,23 @@ class FivePSeqCounts:
         :param codon_count_df: the codon_df to filter
         :param top: the number of highest relative count tricodons to keep
         :param pos: the position to filter the top counts
+        :param all: boolean indicating if top features should be taken, or all
         :return codon_filtered_df: the filtered count dataframe
         """
 
-        self.logger.info("Sorting and selecting top %d peptides/codons at position %d from the A site" %
-                         (top, pos))
+        if all:
+            top = codon_count_df.shape[0]
+            if self is not None:
+                self.logger.info("Sorting and selecting all peptides/codons at position %d from the A site" %
+                                 pos)
+        else:
+            if self is not None:
+                self.logger.info("Sorting and selecting top %d peptides/codons at position %d from the A site" %
+                                (top, pos))
 
-        codon_filtered_df = codon_count_df[codon_count_df.sum(1) >= self.COUNT_THRESHOLD]
+        codon_filtered_df = codon_count_df[codon_count_df.sum(1) >= FivePSeqCounts.COUNT_THRESHOLD]
+        if pos not in codon_filtered_df.columns:
+            pos = str(pos)
         pos_rel_counts = codon_filtered_df[pos] / codon_filtered_df.sum(1)
         codon_filtered_df = codon_filtered_df.iloc[
             sorted(range(len(pos_rel_counts)), reverse=True, key=lambda k: pos_rel_counts[k])[0:top]]
@@ -1254,6 +1267,16 @@ class FivePSeqCounts:
             self.codon_stats_df = self.compute_codon_stats_codon()
         return self.codon_stats_df
 
+    def get_dipeptide_stats(self):
+        if self.dipeptide_stats_df is None:
+            self.dipeptide_stats_df = self.compute_dipeptide_stats()
+        return self.dipeptide_stats_df
+
+    def get_tripeptide_stats(self):
+        if self.tripeptide_stats_df is None:
+            self.tripeptide_stats_df = self.compute_tripeptide_stats()
+        return self.tripeptide_stats_df
+
     def compute_codon_genome_usage(self):
         self.codon_genome_usage_df = pd.DataFrame(data=0, index=Codons.CODON_TABLE.keys(),
                                                   columns=['abs', 'fraction'])
@@ -1266,7 +1289,13 @@ class FivePSeqCounts:
     def compute_codon_stats_codon(self):
         return self.compute_codon_stats(self.get_codon_pauses(), self.codon_genome_usage_df)
 
-    def compute_codon_stats(self, codon_counts, codon_genome_usage, until=-3):
+    def compute_dipeptide_stats(self):
+        return self.compute_codon_stats(self.get_dipeptide_pauses(), until=-6)
+
+    def compute_tripeptide_stats(self):
+        return self.compute_codon_stats(self.get_tripeptide_pauses(), until=-9)
+
+    def compute_codon_stats(self, codon_counts, codon_genome_usage = None, until=-3):
         """
         Counts usage and frame protection stats for each codon/amino-acid.
 
@@ -1301,22 +1330,23 @@ class FivePSeqCounts:
             codon_stats['peak_pos'] = [np.argmax(codon_counts.iloc[i, :]) for i in range(len(codon_stats))]
             codon_stats['peak_scale'] = np.zeros(len(codon_stats))
 
-            for i in range(len(codon_stats)):
-                for i in range(len(codon_stats)):
-                    counts = list(codon_counts.iloc[i, :])
-                    if sum(counts) > 0:
-                        frame = int(codon_stats.loc[i, 'F'])
-                        frame_inds = [j for j in reversed(range(len(counts) - 3 + frame, -1, -3))]
-                        frame_counts = [counts[j] for j in frame_inds]
-                        codon_stats.loc[i, 'peak_scale'] = len(frame_counts) * max(frame_counts) / sum(frame_counts)
-                        codon_stats.loc[i, 'peak_pos'] = codon_counts.columns[frame_inds[np.argmax(frame_counts)]]
 
-            codon_stats['usage'] = list(sum([codon_counts.iloc[:, i] for i in range(0, stop_ind)]))
-            codon_stats['genome_usage_abs'] = list(codon_genome_usage.loc[:, 'abs'])
-            codon_stats['genome_usage_fraction'] = list(codon_genome_usage.loc[:, 'fraction'])
-            usage_norm = codon_stats['usage'] / codon_stats['genome_usage_fraction']
-            usage_norm /= sum(usage_norm)
-            codon_stats['usage_normalized'] = usage_norm
+            for i in range(len(codon_stats)):
+                counts = list(codon_counts.iloc[i, :])
+                if sum(counts) > 0:
+                    frame = int(codon_stats.loc[i, 'F'])
+                    frame_inds = [j for j in reversed(range(len(counts) - 3 + frame, -1, -3))]
+                    frame_counts = [counts[j] for j in frame_inds]
+                    codon_stats.loc[i, 'peak_scale'] = len(frame_counts) * max(frame_counts) / sum(frame_counts)
+                    codon_stats.loc[i, 'peak_pos'] = codon_counts.columns[frame_inds[np.argmax(frame_counts)]]
+
+            if codon_genome_usage is not None:
+                codon_stats['usage'] = list(sum([codon_counts.iloc[:, i] for i in range(0, stop_ind)]))
+                codon_stats['genome_usage_abs'] = list(codon_genome_usage.loc[:, 'abs'])
+                codon_stats['genome_usage_fraction'] = list(codon_genome_usage.loc[:, 'fraction'])
+                usage_norm = codon_stats['usage'] / codon_stats['genome_usage_fraction']
+                usage_norm /= sum(usage_norm)
+                codon_stats['usage_normalized'] = usage_norm
 
             codon_stats.index = codon_counts.index
 

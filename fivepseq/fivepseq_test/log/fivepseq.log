@@ -1,0 +1,18 @@
+	SETUP:	Log file:                                                             /mnt/proj/microbiome/bin/fivepseq/fivepseq/fivepseq_test/log/fivepseq.log
+FIVEPSEQ STARTED
+________________
+	Input bam files:                                                     
+No bam files found at preprocess/align_dedup/sa-315_ctr*.bam
+SUCCESS! Fivepseq count finished in	0.0012650489807128906	seconds. The report files maybe accessed at:		/mnt/proj/microbiome/bin/fivepseq/fivepseq/fivepseq_test 
+	SETUP:	Log file:                                                             /mnt/proj/microbiome/bin/fivepseq/fivepseq/fivepseq_test/log/fivepseq.log
+FIVEPSEQ STARTED
+________________
+	Input bam files:                                                     
+No bam files found at preprocess/align_dedup/sa-315_ctr*.bam
+SUCCESS! Fivepseq count finished in	0.0016605854034423828	seconds. The report files maybe accessed at:		/mnt/proj/microbiome/bin/fivepseq/fivepseq/fivepseq_test 
+	SETUP:	Log file:                                                             /mnt/proj/microbiome/bin/fivepseq/fivepseq/fivepseq_test/log/fivepseq.log
+FIVEPSEQ STARTED
+________________
+	Input bam files:                                                     
+No bam files found at preprocess/align_dedup/sa-315_ctr*.bam
+SUCCESS! Fivepseq count finished in	0.0016810894012451172	seconds. The report files maybe accessed at:		/mnt/proj/microbiome/bin/fivepseq/fivepseq/fivepseq_test 

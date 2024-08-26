@@ -42,7 +42,22 @@ def bokeh_composite(title, figure_list, filename, ncols=2):
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of figures: %d" % len(figure_list))
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Number of columns: %d" % ncols)
 
-    p = gridplot(figure_list, ncols=ncols, toolbar_location="left")
+    # generate rows and then merge into a grid so that figures are not scattered to the right side of the page
+
+    i = 0
+    rows = []
+    for r in range(int(len(figure_list)/ncols)):
+        fig_row = row(row(), name=title)
+        for c in range(ncols):
+            if i == len(figure_list):
+                break
+            fig = figure_list[i]
+            if fig is not None:
+                fig_row.children[0].children.append(fig)
+            i += 1
+        rows.append(fig_row)
+    p = gridplot(rows, ncols=1, toolbar_location="left")
+    #p = gridplot(figure_list, ncols=ncols, toolbar_location="left") < fivepseq v1.3.1
     div_logo = Div(text=get_div_logo())
     div_title = Div(text=get_div_title(title))
     div_footer = Div(text=get_div_footer())
@@ -583,10 +598,6 @@ def bokeh_triangle_plot(title, frame_df_dict, color_dict, transcript_names_dict,
             p_key_svg = get_empty_triangle_canvas(key_title)
 
         transcript_names = transcript_names_dict.get(key)
-        if transcript_names is None:
-            print("here: %s" % key)
-        else:
-            print("here: %s" % key)
 
         frame_df = frame_df_dict.get(key)
         if transcript_index_filter is None:
@@ -945,7 +956,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
     for key in frame_df_dict.keys():
         legend_items = []
         color = color_dict.get(key)
-        counts = counts_dict.get(key)[:] # copying
+        counts = counts_dict.get(key)[:]  # copying
         if counts is None:
             # mainLayout.children[0].children.append(None)
             logging.getLogger(config.FIVEPSEQ_LOGGER).warn("Frame counts stats not found for sample %s" % key)
@@ -1067,7 +1078,6 @@ def bokeh_frame_line_charts(title_prefix, region_count_series_dict, w=20,
         "Making frame line charts %s with options: smoothing window(%d), " %
         (title_prefix, w))
 
-
     my_y_label = "5' counts per base (averaged over %d codon window), RPM" % w
 
     figure_list = []
@@ -1106,7 +1116,7 @@ def bokeh_frame_line_charts(title_prefix, region_count_series_dict, w=20,
                         data=dict(
                             x=list(count_series.D[f_start_ind::3]),
                             y=list(y),
-                            name=["f" + str(f)]*len(y)
+                            name=["f" + str(f)] * len(y)
                         ))
                     line = p.line('x', 'y', line_color=c, line_width=2, source=source)
                     legend_items.append((sample + ": F" + str(f), [line]))
@@ -1144,23 +1154,24 @@ def average_counts_over_window(counts, w):
 
     av_vec = [0] * len(counts)
     for i in range(len(counts)):
-        if i < w/2:
-            if len(counts) > 2*i:
-                av_vec[i] = sum(counts[:2*i+1])/(2*i+1)
+        if i < w / 2:
+            if len(counts) > 2 * i:
+                av_vec[i] = sum(counts[:2 * i + 1]) / (2 * i + 1)
             else:
                 av_vec[i] = sum(counts) / len(counts)
         else:
-            if len(counts) >= i + int(np.ceil(w/2)):
+            if len(counts) >= i + int(np.ceil(w / 2)):
                 av_vec[i] = sum(counts[i - int(np.floor(w / 2)): i + int(np.ceil(w / 2))]) / w
             else:
-                av_vec[i] = sum(counts[i:])/(len(counts)-i)
+                av_vec[i] = sum(counts[i:]) / (len(counts) - i)
 
     return av_vec
+
 
 """
 def bokeh_pca_plot(title, codon_df_dict, color_dict, start_pos = '-20', end_pos = '-2',
                    png_dir=None, svg_dir=None):
-    
+
     def scale(df):
         sdf = df.copy(deep = True)
         for i in range(sdf.shape[0]):

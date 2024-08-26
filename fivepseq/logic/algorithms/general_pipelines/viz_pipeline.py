@@ -423,23 +423,31 @@ class VizPipeline:
                 FivePSeqOut.CODON_PAUSES_F2_FILE), basesort=False)})
         self.codon_basesorted_df_dict.update({sample: self.read_codon_df(fivepseq_out, basesort=True)})
 
-        self.dicodon_df_dict.update({sample: self.read_codon_df(fivepseq_out,
-                                                                file=fivepseq_out.get_file_path(
-                                                                    FivePSeqOut.DICODON_PAUSES_FILE),
-                                                                basesort=False)})
-        self.dipeptide_df_dict.update({sample: self.read_codon_df(fivepseq_out,
-                                                                  file=fivepseq_out.get_file_path(
-                                                                      FivePSeqOut.DIPEPTIDE_PAUSES_FILE),
-                                                                  basesort=False)})
+        self.dicodon_df_dict.update({sample: FivePSeqCounts.filter_codon_counts(
+            None,
+            self.read_codon_df(fivepseq_out,
+                               file=fivepseq_out.get_file_path(FivePSeqOut.DICODON_PAUSES_FILE),
+                               basesort=False),
+            FivePSeqCounts.get_dipeptide_pos(None))})
+        self.dipeptide_df_dict.update({sample: FivePSeqCounts.filter_codon_counts(
+            self.fivepseq_counts,
+            self.read_codon_df(fivepseq_out,
+                               file=fivepseq_out.get_file_path(FivePSeqOut.DIPEPTIDE_PAUSES_FILE),
+                               basesort=False),
+            FivePSeqCounts.get_dipeptide_pos(None))})
 
-        self.tricodon_df_dict.update({sample: self.read_codon_df(fivepseq_out,
-                                                                 file=fivepseq_out.get_file_path(
-                                                                     FivePSeqOut.TRICODON_PAUSES_FILE),
-                                                                 basesort=False)})
-        self.tripeptide_df_dict.update({sample: self.read_codon_df(fivepseq_out,
-                                                                   file=fivepseq_out.get_file_path(
-                                                                       FivePSeqOut.TRIPEPTIDE_PAUSES_FILE),
-                                                                   basesort=False)})
+        self.tricodon_df_dict.update({sample: FivePSeqCounts.filter_codon_counts(
+            self.fivepseq_counts,
+            self.read_codon_df(fivepseq_out,
+                               file=fivepseq_out.get_file_path(FivePSeqOut.TRICODON_PAUSES_FILE),
+                               basesort=False),
+            FivePSeqCounts.get_tripeptide_pos(None))})
+        self.tripeptide_df_dict.update({sample: FivePSeqCounts.filter_codon_counts(
+            self.fivepseq_counts,
+            self.read_codon_df(fivepseq_out,
+                               file=fivepseq_out.get_file_path(FivePSeqOut.TRIPEPTIDE_PAUSES_FILE),
+                               basesort=False),
+            FivePSeqCounts.get_tripeptide_pos(None))})
 
         self.fft_signal_start_dict.update({sample: self.read_fft_signal_start(fivepseq_out)})
         self.fft_signal_term_dict.update({sample: self.read_fft_signal_term(fivepseq_out)})
