@@ -136,7 +136,7 @@ class FastaReader(TopReader):
         """
         TopReader.__init__(self, file_path)
         self.logger.info("Reading in genome file...")
-        self.genome = Genome(file_path)
+        self.genome = Genome(file_path, self.compression)
 
 
 class AnnotationReader(TopReader):

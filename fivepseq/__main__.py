@@ -95,7 +95,7 @@ class FivepseqArguments:
                               help="the number of bases to span around a genomic position",
                               type=int,
                               required=False,
-                              choices=range(-100, -20),
+                              choices=range(0, 1000),
                               default=100)
 
         optional.add_argument('--conflicts',

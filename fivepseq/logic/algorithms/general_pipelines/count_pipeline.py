@@ -222,24 +222,6 @@ class CountPipeline:
                                                # generate more than needed for visualization
                                                self.fivepseq_out.AMINO_ACID_STATS_FILE)
 
-        #   codon stats
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.CODON_STATS_FILE)):
-            self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_codon_stats(),
-                                               # generate more than needed for visualization
-                                               self.fivepseq_out.CODON_STATS_FILE)
-
-        #   dipeptide stats
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.DIPEPTIDE_STATS_FILE)):
-            self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_dipeptide_stats(),
-                                               # generate more than needed for visualization
-                                               self.fivepseq_out.DIPEPTIDE_STATS_FILE)
-
-        #   tripeptide stats
-        if not self.skip(self.fivepseq_out.get_file_path(self.fivepseq_out.TRIPEPTIDE_STATS_FILE)):
-            self.fivepseq_out.write_df_to_file(self.fivepseq_counts.get_tripeptide_stats(),
-                                               # generate more than needed for visualization
-                                               self.fivepseq_out.TRIPEPTIDE_STATS_FILE)
-
     def run_out_of_frame_codon_stats(self):
 
         if "oof" in config.args and config.args.oof is True:

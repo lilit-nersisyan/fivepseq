@@ -54,6 +54,8 @@ def bokeh_composite(title, figure_list, filename, ncols=2):
             fig = figure_list[i]
             if fig is not None:
                 fig_row.children[0].children.append(fig)
+            else:
+                print(f"None for figure {i} at r: {r} and c: {c}")
             i += 1
         rows.append(fig_row)
     p = gridplot(rows, ncols=1, toolbar_location="left")

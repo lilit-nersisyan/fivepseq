@@ -26,17 +26,14 @@ Install dependencies:
 To set up fivepseq, the following python packages need to be pre-installed manually using pip (if you don't have pip you may install it as described `here <ht\
 tps://pip.pypa.io/en/stable/installing/>`_ ).
 
-Note, because of difficulties with installing plastid and all its requirements, we recommend setting up a separate python environment before proceeding to installation.
-
 Paste the following lines into the shell terminal:
 
 .. code-block:: shell
 
- pip install --upgrade numpy==1.19.5 pysam==0.19.0 cython==0.29.28
  git clone https://github.com/joshuagryphon/plastid -b develop
  cd plastid
  python setup.py install
- cd ..
+ pip install --upgrade numpy==1.19.5 pysam==0.19.0 cython==0.29.28
 
 
 To install fivepseq, clone the project from github:
