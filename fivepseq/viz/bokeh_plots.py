@@ -94,8 +94,8 @@ def bokeh_tabbed_line_chart(title, region, group_count_series_dict_dict, color_d
     if group_count_series_dict_dict is None:
         return None
 
-    logging.getLogger(config.FIVEPSEQ_LOGGER).info(
-        "Making count line charts with geneset-tabs: " + title + ": " + region)
+    #logging.getLogger(config.FIVEPSEQ_LOGGER).info(
+    #    "Making count line charts with geneset-tabs: " + title + ": " + region)
 
     tab_list = []
     for group in group_count_series_dict_dict.keys():
@@ -154,13 +154,13 @@ def bokeh_line_chart(title, region, count_series_dict, color_dict, scale=False, 
             c = get_random_color()
         color_dict = {suffix: c}
 
-    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count line chart %s with options: scaled(%s), "
-                                                   "combine_sum(%s), comine_weighted(%s): " % (title + ": " +
-                                                                                               region,
-                                                                                               str(scale),
-                                                                                               str(combine_sum),
-                                                                                               str(
-                                                                                                   combine_weighted)))
+    #logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count line chart %s with options: scaled(%s), "
+    #                                               "combine_sum(%s), comine_weighted(%s): " % (title + ": " +
+    #                                                                                           region,
+    #                                                                                           str(scale),
+    #                                                                                           str(combine_sum),
+    #                                                                                           str(
+    #                                                                                               combine_weighted)))
 
     output_file(title + ".png")
 
@@ -328,12 +328,12 @@ def bokeh_fft_plot(title, align_region, signal_series_dict, color_dict, period_m
             c = get_random_color()
         color_dict = {suffix: c}
 
-    logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count line chart %s with options: "
-                                                   "combine_sum(%s), comine_weighted(%s): "
-                                                   % (title + ": " +
-                                                      align_region,
-                                                      str(combine_sum),
-                                                      str(combine_weighted)))
+    #logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making count line chart %s with options: "
+    #                                               "combine_sum(%s), comine_weighted(%s): "
+    #                                               % (title + ": " +
+    #                                                  align_region,
+    #                                                  str(combine_sum),
+    #                                                  str(combine_weighted)))
 
     logging.getLogger(config.FIVEPSEQ_LOGGER).info("Making FFT signal line chart: " + align_region)
     output_file(title + ".html")
@@ -780,12 +780,12 @@ def bokeh_heatmap_grid(title_prefix, amino_acid_df_dict, scale=False, lib_size_d
             logging.getLogger(config.FIVEPSEQ_LOGGER).error(e_msg)
             return None
 
-    logging.getLogger(config.FIVEPSEQ_LOGGER).info(
-        "Making heatmaps for amino acid relative counts for %s with options: scaled(%s), "
-        "combine_sum(%s), comine_weighted(%s): " % (title_prefix,
-                                                    str(scale),
-                                                    str(combine_sum),
-                                                    str(combine_weighted)))
+    #logging.getLogger(config.FIVEPSEQ_LOGGER).info(
+    #    "Making heatmaps for amino acid relative counts for %s with options: scaled(%s), "
+    #    "combine_sum(%s), comine_weighted(%s): " % (title_prefix,
+    #                                                str(scale),
+    #                                                str(combine_sum),
+    #                                                str(combine_weighted)))
 
     mainLayout = row(row(), name=title_prefix + ' amino acid pauses')
 
@@ -942,7 +942,7 @@ def bokeh_frame_barplots(title_prefix, frame_df_dict, frame_stats_df_dict, color
             frame_stats_df = frame_stats_df_dict.get(key)
         else:
             frame_stats_df = None
-        logging.getLogger(config.FIVEPSEQ_LOGGER).debug("key: %s\n%s" % (key, str(frame_stats_df)))
+        #logging.getLogger(config.FIVEPSEQ_LOGGER).debug("key: %s\n%s" % (key, str(frame_stats_df)))
         if frame_stats_df is not None:
 
             counts = [frame_stats_df.loc[CountStats.FRAME_COUNT, CountStats.F0],
@@ -1076,9 +1076,9 @@ def bokeh_frame_line_charts(title_prefix, region_count_series_dict, w=20,
     if region_count_series_dict is None:
         return None
 
-    logging.getLogger(config.FIVEPSEQ_LOGGER).info(
-        "Making frame line charts %s with options: smoothing window(%d), " %
-        (title_prefix, w))
+    #logging.getLogger(config.FIVEPSEQ_LOGGER).info(
+    #    "Making frame line charts %s with options: smoothing window(%d), " %
+    #    (title_prefix, w))
 
     my_y_label = "5' counts per base (averaged over %d codon window), RPM" % w
 

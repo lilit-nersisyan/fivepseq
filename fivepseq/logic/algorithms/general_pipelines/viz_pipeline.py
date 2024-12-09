@@ -90,7 +90,7 @@ class VizPipeline:
     tripeptide_df_dict = {}
 
     triangle_threshold = None
-    top = 20  # choose this many top multicodons/peptides from each sample to plot
+    top = 10  # choose this many top multicodons/peptides from each sample to plot
 
     frame_count_term_dict = {}
     frame_count_start_dict = {}
@@ -706,7 +706,7 @@ class VizPipeline:
         self.logger.info("Generating supplement plots: amino acid line-charts")
         aa_linecharts = []
         for aa in Codons.AMINO_ACID_TABLE.keys():
-            self.logger.info("Plotting line charts for %s counts" % aa)
+            #self.logger.info("Plotting line charts for %s counts" % aa)
 
             aa_count_dict = {}
 
@@ -736,7 +736,7 @@ class VizPipeline:
         # amino acid island linecharts
         if "aa_islands" in config.args and config.args.aa_islands is True:
 
-            self.logger.info("Generating supplement plots: amino acid island line-charts")
+            #self.logger.info("Generating supplement plots: amino acid island line-charts")
             aa_linecharts = []
             for aa in Codons.AMINO_ACID_TABLE.keys():
                 self.logger.info("Plotting line charts for %s counts" % aa)
@@ -771,7 +771,7 @@ class VizPipeline:
         codon_linecharts = []
         for aa in Codons.AMINO_ACID_TABLE.keys():
             for codon in Codons.AMINO_ACID_TABLE[aa]:
-                self.logger.info("Plotting line charts for %s counts" % codon)
+                #self.logger.info("Plotting line charts for %s counts" % codon)
 
                 codon_count_dict = {}
 
@@ -958,18 +958,22 @@ class VizPipeline:
 
         p.output_backend = "svg"
         try:
+            # TODO this is only for us - will have to remove in the production version
+            #os.environ['PATH'] = '/snap/firefox/current/usr/lib/firefox:' + os.environ['PATH']
+
             test_file_name = "fivepseq.phantom.test.svg"
             export_svgs(p, filename=test_file_name)
             self.phantomjs_installed = True
             os.remove(test_file_name)
+
         except Exception as e:
             self.phantomjs_installed = False
 
             logging.getLogger(config.FIVEPSEQ_LOGGER).warning(
                 f"It seems like phantomjs is not installed no your system or there is a runtime issue. "                
-                "Files may not be exported in svg and png formats, while html will still be available for viewing."
-                f"Error message: {str(e)}"
-                f"\nTo install phantomjs, run 'conda install phantomjs selenium pillow'"
+                f"Files may not be exported in svg and png formats, while html will still be available for viewing. "
+                f"Error message: {str(e)} "
+                f"To install phantomjs, run 'conda install phantomjs selenium pillow' "
             )
         return self.phantomjs_installed
 
