@@ -63,6 +63,10 @@ In order to enable exporting vector and portable image files, you'll also need t
 
  conda install phantomjs selenium pillow
 
+Installation with Docker 
+========================
+If you're struggling with the dependencies, and if your computing environment supports Dockers, you can find a Docker image with all the dependencies available from Dawid Bielewicz's GitHub repository here: https://github.com/Dawcio85/fivepseq_docker
+
 
 Running fivepseq
 ==================
